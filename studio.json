@@ -34,20 +34,13 @@
     "guild_id": "1483989123516596225",
     "custom_channels": [
       "tb-123",
-      "tb-123-build",
-      "tb-123-radio"
+      "tb-123-feedback"
     ],
     "channel_map": {
-      "#announcements": "#tb-123-radio",
-      "#engineering": "#tb-123-build",
-      "#feedback": "#tb-123-radio",
       "#general": "#tb-123",
-      "#happy-hour": "#tb-123",
-      "#investors": "#tb-123-radio",
-      "#random": "#tb-123",
-      "#sales": "#tb-123-radio",
-      "#standup": "#tb-123-build",
-      "#talk-to-the-team": "#tb-123-radio"
+      "#engineering": "#tb-123",
+      "#feedback": "#tb-123-feedback",
+      "#announcements": "#tb-123-feedback"
     }
   },
   "compute": {
