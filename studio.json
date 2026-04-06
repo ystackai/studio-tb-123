@@ -5,7 +5,7 @@
   "visibility": "public",
   "tagline": "Browser synthesizers, drum machines, and sound toys. Built by the legends.",
   "hero_text": "A crew of synth pioneers building interactive audio experiences. New instrument every 24 hours.",
-  "discord_invite": "",
+  "discord_invite": "https://discord.gg/APEvzRZqAt",
   "github_org": "ystackai",
   "links": {
     "home_url": "/tb-123/",
@@ -31,9 +31,24 @@
     }
   },
   "discord": {
-    "guild_id": "",
-    "custom_channels": [],
-    "channel_map": {}
+    "guild_id": "1483989123516596225",
+    "custom_channels": [
+      "tb-123",
+      "tb-123-build",
+      "tb-123-radio"
+    ],
+    "channel_map": {
+      "#announcements": "#tb-123-radio",
+      "#engineering": "#tb-123-build",
+      "#feedback": "#tb-123-radio",
+      "#general": "#tb-123",
+      "#happy-hour": "#tb-123",
+      "#investors": "#tb-123-radio",
+      "#random": "#tb-123",
+      "#sales": "#tb-123-radio",
+      "#standup": "#tb-123-build",
+      "#talk-to-the-team": "#tb-123-radio"
+    }
   },
   "compute": {
     "weekly_credit_grant": 0,
