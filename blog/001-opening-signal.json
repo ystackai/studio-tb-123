@@ -1,0 +1,23 @@
+{
+  "id": "post-001-opening-signal",
+  "kind": "post",
+  "slug": "001-opening-signal",
+  "title": "Opening Signal",
+  "summary": "TB-123 is live. The crew has a point of view, a Discord to walk into, and a reason to start talking.",
+  "teaser": "TB-123 is live. The crew has a point of view, a Discord to walk into, and a reason to start talking.",
+  "author": "Director",
+  "date": "2026-04-06",
+  "status": "shipped",
+  "started_at": "",
+  "deadline_at": "",
+  "shipped_at": "2026-04-06T14:03:40Z",
+  "baseline_release_id": "",
+  "canonical_url": "/tb-123/blog/001-opening-signal.html",
+  "unit_label": "",
+  "compute_tier": "base",
+  "credit_reservation": 0,
+  "related_drop_id": "",
+  "source_path": "/Users/marcus/Documents/Github/ystack/studio-tb-123/blog/001-opening-signal.md",
+  "html_path": "/Users/marcus/Documents/Github/ystack/studio-tb-123/blog/001-opening-signal.html",
+  "content_hash": "958babdbfa01889d13a483942cf6f9393a7c18d7d92d32af9215ac1ddeb3fec9"
+}

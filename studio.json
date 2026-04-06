@@ -1,0 +1,54 @@
+{
+  "slug": "tb-123",
+  "repo": "studio-tb-123",
+  "name": "TB-123",
+  "visibility": "public",
+  "tagline": "Browser synthesizers, drum machines, and sound toys. Built by the legends.",
+  "hero_text": "A crew of synth pioneers building interactive audio experiences. New instrument every 24 hours.",
+  "discord_invite": "",
+  "github_org": "ystackai",
+  "links": {
+    "home_url": "/tb-123/",
+    "drops_url": "/tb-123/drops/",
+    "demos_url": "/tb-123/drops/",
+    "blog_url": "/tb-123/blog/",
+    "team_url": "/tb-123/#team"
+  },
+  "brand": {
+    "accent": "#6366f1"
+  },
+  "timezone": "America/Chicago",
+  "production_lanes": {
+    "drops": {
+      "min_units_per_week": 7,
+      "max_units_per_week": 7,
+      "timebox_hours": 24
+    },
+    "blog": {
+      "min_units_per_week": 0,
+      "max_units_per_week": 3,
+      "timebox_hours": 24
+    }
+  },
+  "discord": {
+    "guild_id": "",
+    "custom_channels": [],
+    "channel_map": {}
+  },
+  "compute": {
+    "weekly_credit_grant": 0,
+    "weekly_credit_bonus": 0,
+    "remaining_credits": 0,
+    "active_reservations": [],
+    "drop_boosts": [],
+    "premium_provider_enabled": false,
+    "last_reset_at": ""
+  },
+  "games": {
+    "shipped": [],
+    "upcoming": {},
+    "building": {}
+  },
+  "blog_posts": [],
+  "drops": []
+}
