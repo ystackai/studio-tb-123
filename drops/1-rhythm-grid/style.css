@@ -1,0 +1,129 @@
+/* Semantic CSS variables for rhythm grid */
+:root {
+  --primary-color: #4361ee;
+  --secondary-color: #3a0ca3;
+  --accent-color: #f72585;
+  --background-color: #1d3557;
+  --text-color: #f8f9fa;
+  --grid-pad-color: #4cc9f0;
+  --grid-pad-active-color: #f72585;
+  --grid-pad-hover-color: #4895ef;
+  --border-radius: 8px;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.2s ease;
+}
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Container styles */
+.container {
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+}
+
+/* Grid container */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: var(--border-radius);
+}
+
+/* Grid pad styles */
+.grid-pad {
+  aspect-ratio: 1;
+  background-color: var(--grid-pad-color);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  font-weight: bold;
+  box-shadow: var(--box-shadow);
+}
+
+.grid-pad:hover {
+  background-color: var(--grid-pad-hover-color);
+  transform: scale(1.05);
+}
+
+.grid-pad.active {
+  background-color: var(--grid-pad-active-color);
+  transform: scale(0.95);
+  box-shadow: 0 0 15px var(--grid-pad-active-color);
+}
+
+/* Control buttons */
+.controls {
+  margin: 20px 0;
+}
+
+.controls button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  margin: 0 10px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.controls button:hover {
+  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+}
+
+.controls button:active {
+  transform: translateY(0);
+}
+
+.sequence-display {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius);
+}
+
+.sequence-display div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sequence-pad {
+  width: 30px;
+  height: 30px;
+  background-color: var(--grid-pad-color);
+  border-radius: 50%;
+}
+
+.sequence-pad.active {
+  background-color: var(--grid-pad-active-color);
+}
