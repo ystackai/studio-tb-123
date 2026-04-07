@@ -1,5 +1,6 @@
 /* CSS Variables for Semantic Tokens */
 :root {
+  /* Color Palette */
   --color-primary: #6c5ce7;
   --color-primary-dark: #5d4de0;
   --color-secondary: #00cec9;
@@ -11,24 +12,28 @@
   --color-pad-default: #2d3436;
   --color-pad-active: #00cec9;
   --color-pad-highlight: #fd79a8;
-  --border-radius: 8px;
-  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --color-pad-disabled: #4a4a6a;
+  --color-grid-border: rgba(255, 255, 255, 0.1);
+  
+  /* Spacing */
+  --border-radius: 10px;
+  --box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   --transition-speed: 0.2s;
-  --grid-gap: 10px;
+  --grid-gap: 12px;
   --pad-size: 80px;
   --pad-border-width: 2px;
-  --pad-border-color: rgba(255, 255, 255, 0.1);
+  --pad-border-color: var(--color-grid-border);
   --pad-active-border-color: var(--color-secondary);
   --pad-highlight-border-color: var(--color-accent);
   --pad-active-shadow: 0 0 15px var(--color-secondary);
-  --pad-highlight-shadow: 0 0 20px var(--color-accent);
+  --pad-highlight-shadow: 0 0 25px var(--color-accent);
   --status-height: 40px;
   --control-height: 40px;
-  --container-padding: 20px;
-  --header-font-size: 2rem;
-  --button-padding: 10px 15px;
-  --button-font-size: 1rem;
-  --grid-padding: 20px;
+  --container-padding: 25px;
+  --header-font-size: 2.2rem;
+  --button-padding: 12px 20px;
+  --button-font-size: 1.1rem;
+  --grid-padding: 25px;
 }
 
 /* Reset and Base Styles */
@@ -47,6 +52,8 @@ body {
   justify-content: center;
   align-items: center;
   padding: 20px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background-attachment: fixed;
 }
 
 #game-container {
@@ -59,6 +66,7 @@ body {
   width: 100%;
   position: relative;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 h1 {
@@ -74,13 +82,15 @@ h1 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--grid-gap);
-  margin-bottom: 20px;
+  margin-bottom: 25px;
   justify-content: center;
   padding: var(--grid-padding);
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: var(--border-radius);
   position: relative;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
 }
 
 #rhythm-grid::before {
@@ -117,10 +127,28 @@ h1 {
   z-index: 2;
 }
 
+.pad::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--pad-size);
+  height: var(--pad-size);
+  background-color: var(--color-pad-default);
+  border-radius: var(--border-radius);
+  z-index: -1;
+  transition: all var(--transition-speed) ease;
+}
+
 .pad:hover {
   transform: translateY(-2px);
   background-color: #3a3a5a;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.pad.active::before {
+  background-color: var(--color-pad-active);
+  box-shadow: var(--pad-active-shadow);
 }
 
 .pad.active {
@@ -160,8 +188,11 @@ h1 {
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   min-height: var(--control-height);
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: var(--border-radius);
 }
 
 button {
@@ -179,12 +210,33 @@ button {
   min-width: 80px;
   flex: 1;
   max-width: 120px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
 }
 
 button:hover {
   background-color: var(--color-primary-dark);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+button:hover::after {
+  opacity: 1;
 }
 
 button:active {
@@ -199,8 +251,9 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%);
   border-radius: var(--border-radius);
   font-weight: 500;
   text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
