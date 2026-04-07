@@ -1,0 +1,123 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #1a1a1a;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    text-align: center;
+    max-width: 600px;
+    padding: 20px;
+}
+
+h1 {
+    margin-bottom: 10px;
+    font-size: 2.5rem;
+    color: #4CAF50;
+}
+
+p {
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+    color: #ccc;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 20px auto;
+    max-width: 400px;
+}
+
+.pad {
+    aspect-ratio: 1;
+    background-color: #333;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.pad:hover {
+    background-color: #444;
+    transform: translateY(-2px);
+}
+
+.pad.active {
+    background-color: #4CAF50;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.7);
+    transform: scale(0.95);
+}
+
+.pad.inactive {
+    background-color: #333;
+    opacity: 0.5;
+}
+
+.controls {
+    margin: 30px 0;
+}
+
+button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 12px 24px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+.sequence-display {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #222;
+    border-radius: 8px;
+}
+
+.sequence-display h3 {
+    margin-bottom: 10px;
+    color: #4CAF50;
+}
+
+#sequence {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.sequence-pad {
+    width: 20px;
+    height: 20px;
+    background-color: #333;
+    border-radius: 4px;
+}
+
+.sequence-pad.active {
+    background-color: #4CAF50;
+}
