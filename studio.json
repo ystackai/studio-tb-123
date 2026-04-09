@@ -1,6 +1,7 @@
 {
   "slug": "tb-123",
   "repo": "studio-tb-123",
+  "brief_synthesizer_slot": "writer",
   "name": "TB-123",
   "visibility": "public",
   "tagline": "Browser synthesizers, drum machines, and sound toys. Built by the legends.",
