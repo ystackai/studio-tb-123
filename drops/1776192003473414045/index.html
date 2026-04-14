@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sacrificial Buffer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #00ffff;
+            text-align: center;
+        }
+
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            white-space: nowrap;
+            transition: transform 0.1s linear;
+        }
+
+        #slider-container {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+        }
+
+        #slider {
+            width: 100%;
+            height: 20px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        #slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #00ffff;
+            cursor: pointer;
+        }
+
+        #fracture {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .fracture-line {
+            position: absolute;
+            background: #00ffff;
+        }
+
+        #reset-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="text">SACRIFICE</div>
+        <div id="slider-container">
+            <input type="range" id="slider" min="0" max="100" value="0">
+        </div>
+        <div id="fracture"></div>
+        <div id="reset-message">TAP TO RESET</div>
+    </div>
+
+    <script>
+        // Audio context and variables
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let analyser;
+        let isPlaying = false;
+        let buffer = new ArrayBuffer(1024);
+        let memoryUsage = 0;
+        let resetTimeout;
+
+        // DOM elements
+        const textElement = document.getElementById('text');
+        const slider = document.getElementById('slider');
+        const container = document.getElementById('container');
+        const fractureElement = document.getElementById('fracture');
+        const resetMessage = document.getElementById('reset-message');
+
+        // Initialize audio on first user interaction
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                gainNode.connect(analyser);
+            }
+        }
+
+        // Create oscillator
+        function createOscillator() {
+            if (oscillator) {
+                oscillator.stop();
+            }
+
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 440;
+
+            // Create noise burst for "agony"
+            const noise = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
+            const output = noise.getChannelData(0);
+            for (let i = 0; i < output.length; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            const noiseSource = audioContext.createBufferSource();
+            noiseSource.buffer = noise;
+
+            // Filter the noise
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 5000;
+            noiseSource.connect(filter);
+
+            // Connect everything
+            oscillator.connect(gainNode);
+            filter.connect(gainNode);
+
+            oscillator.start();
+        }
+
+        // Update memory usage and visuals
+        function updateMemory() {
+            const value = parseInt(slider.value);
+            memoryUsage = value;
+
+            // Update text stretching based on memory usage
+            const scale = 1 + (value / 100) * 2; // Scale from 1 to 3
+            textElement.style.transform = `translate(-50%, -50%) scaleX(${scale})`;
+
+            // Update audio based on memory usage
+            if (value > 0) {
+                if (!isPlaying) {
+                    initAudio();
+                    createOscillator();
+                    isPlaying = true;
+                }
+
+                // Set volume based on memory usage
+                gainNode.gain.value = value / 100;
+
+                // Modulate oscillator pitch based on memory usage
+                oscillator.frequency.value = 440 - (value * 4);
+
+                // Add "agony" noise burst that speeds up as memory decreases
+                if (value > 50) {
+                    // Speed up noise bursts as memory decreases
+                    const noiseInterval = 1000 - (value * 5);
+                    // This would be implemented with setInterval, but for simplicity we'll just show the concept
+                }
+            } else {
+                // Stop audio when slider is at 0
+                if (isPlaying && oscillator) {
+                    oscillator.stop();
+                    isPlaying = false;
+                }
+            }
+
+            // Check if memory is depleted
+            if (value === 0) {
+                // Clear memory buffer and trigger visual effects
+                clearMemory();
+            }
+        }
+
+        // Clear memory and trigger effects
+        function clearMemory() {
+            // Clear the buffer
+            buffer = new ArrayBuffer(1024);
+
+            // Create fracture effect
+            createFractureEffect();
+
+            // Stop audio
+            if (oscillator) {
+                oscillator.stop();
+                isPlaying = false;
+            }
+
+            // Set volume to 0
+            if (gainNode) {
+                gainNode.gain.value = 0;
+            }
+
+            // Hide text and show reset message
+            textElement.style.opacity = '0';
+            resetMessage.style.opacity = '1';
+
+            // Reset after 1 second
+            clearTimeout(resetTimeout);
+            resetTimeout = setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+
+        // Create fracture effect
+        function createFractureEffect() {
+            fractureElement.style.opacity = '1';
+
+            // Create fracture lines
+            const lines = 20;
+            for (let i = 0; i < lines; i++) {
+                const line = document.createElement('div');
+                line.className = 'fracture-line';
+
+                // Random position and orientation
+                const startX = Math.random() * window.innerWidth;
+                const startY = Math.random() * window.innerHeight;
+                const endX = startX + (Math.random() - 0.5) * 200;
+                const endY = startY + (Math.random() - 0.5) * 200;
+
+                // Calculate line properties
+                const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+
+                line.style.width = `${length}px`;
+                line.style.height = '2px';
+                line.style.left = `${startX}px`;
+                line.style.top = `${startY}px`;
+                line.style.transform = `rotate(${angle}deg)`;
+
+                fractureElement.appendChild(line);
+            }
+        }
+
+        // Event listeners
+        slider.addEventListener('input', updateMemory);
+
+        // Initialize on first interaction
+        document.addEventListener('click', function init() {
+            initAudio();
+            document.removeEventListener('click', init);
+        });
+
+        // Handle reset
+        document.addEventListener('click', function reset() {
+            if (resetMessage.style.opacity === '1') {
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html>
