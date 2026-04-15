@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Exorcism Protocol</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      overflow: hidden;
+      cursor: none;
+    }
+    
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+    
+    #title {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      text-align: center;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      white-space: nowrap;
+      transition: opacity 0.5s;
+    }
+    
+    #drain-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5rem;
+      text-align: center;
+      transition: transform 0.1s, opacity 0.5s;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+    
+    #status {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+    
+    #led {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #00ffff;
+      box-shadow: 0 0 8px #00ffff;
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+    
+    #grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="overlay">
+    <div id="title">NOSTALGIA DRAIN</div>
+    <div id="drain-label">NOSTALGIA DRAIN</div>
+    <div id="status">READY</div>
+    <div id="led"></div>
+    <div id="grid"></div>
+  </div>
+
+  <script>
+    // Audio context and state
+    let audioContext;
+    let micStream;
+    let isRunning = false;
+    let bootPhase = 0; // 0: boot, 1: rhythm, 2: drain, 3: crash
+    let drainLevel = 1.0;
+    let lastKickTime = 0;
+    let holdStartTime = 0;
+    let isHolding = false;
+    let holdTimer = null;
+    let noiseFloor = 0;
+    let noiseHistory = [];
+    
+    // Canvas setup
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const title = document.getElementById('title');
+    const drainLabel = document.getElementById('drain-label');
+    const status = document.getElementById('status');
+    const led = document.getElementById('led');
+    const grid = document.getElementById('grid');
+    
+    // Initialize canvas size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    // WebAudio setup
+    async function initAudio() {
+      try {
+        // Create audio context
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Get microphone input
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioContext.createMediaStreamSource(micStream);
+        
+        // Create analyser for noise detection
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        
+        // Create oscillator for main sound
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 440;
+        
+        // Create gain node for volume control
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0;
+        
+        // Create filter for sweep effect
+        const filter = audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 2000;
+        filter.Q.value = 1;
+        
+        // Connect nodes
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Start oscillator
+        oscillator.start();
+        
+        // Start audio processing
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        function processAudio() {
+          if (!isRunning) return;
+          
+          analyser.getByteFrequencyData(dataArray);
+          
+          // Calculate noise floor (average of frequencies)
+          let sum = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / bufferLength;
+          noiseFloor = average / 255;
+          
+          // Update noise history for smoothing
+          noiseHistory.push(noiseFloor);
+          if (noiseHistory.length > 10) {
+            noiseHistory.shift();
+          }
+          
+          // Smooth noise floor
+          const smoothedNoise = noiseHistory.reduce((a, b) => a + b, 0) / noiseHistory.length;
+          
+          // Update LED based on noise floor
+          led.style.opacity = Math.min(1, smoothedNoise * 3);
+          
+          // Update visual elements based on noise floor
+          if (bootPhase > 0) {
+            // Fade in grid lines when noise is detected
+            const gridOpacity = Math.min(1, smoothedNoise * 10);
+            grid.style.opacity = gridOpacity;
+            
+            // Draw grid
+            drawGrid(smoothedNoise);
+          }
+          
+          requestAnimationFrame(processAudio);
+        }
+        
+        processAudio();
+        
+        return { oscillator, gainNode, filter };
+      } catch (err) {
+        console.error('Audio initialization error:', err);
+        status.textContent = 'MIC ACCESS REQUIRED';
+        return null;
+      }
+    }
+    
+    // Draw grid visualization
+    function drawGrid(noise) {
+      if (gridOpacity <= 0.01) return;
+      
+      const gridCtx = grid.getContext('2d');
+      gridCtx.clearRect(0, 0, grid.width, grid.height);
+      
+      gridCtx.strokeStyle = '#00ffff';
+      gridCtx.lineWidth = 1;
+      
+      const width = grid.width;
+      const height = grid.height;
+      const gridSize = 50 + noise * 200;
+      
+      // Draw vertical lines
+      for (let x = 0; x < width; x += gridSize) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(x, 0);
+        gridCtx.lineTo(x, height);
+        gridCtx.stroke();
+      }
+      
+      // Draw horizontal lines
+      for (let y = 0; y < height; y += gridSize) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(0, y);
+        gridCtx.lineTo(width, y);
+        gridCtx.stroke();
+      }
+    }
+    
+    // Trigger kick sound based on noise
+    function triggerKick() {
+      if (!audioContext || !isRunning) return;
+      
+      const now = audioContext.currentTime;
+      
+      // Create kick sound with noise
+      const oscillator = audioContext.createOscillator();
+      oscillator.type = 'sine';
+      
+      // Create gain node for volume envelope
+      const gainNode = audioContext.createGain();
+      
+      // Create filter for low-pass effect
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1000;
+      
+      // Connect nodes
+      oscillator.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Set up envelope for kick sound
+      gainNode.gain.setValueAtTime(0.8, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+      
+      // Set up pitch envelope
+      oscillator.frequency.setValueAtTime(120, now);
+      oscillator.frequency.exponentialRampToValueAtTime(0.1, now + 0.1);
+      
+      // Start and stop
+      oscillator.start(now);
+      oscillator.stop(now + 0.1);
+      
+      // Visual feedback
+      title.style.opacity = 0.5;
+      setTimeout(() => {
+        title.style.opacity = 0.8;
+      }, 100);
+      
+      lastKickTime = now;
+    }
+    
+    // Handle user interaction
+    function handleInteraction() {
+      if (!isRunning) {
+        startBoot();
+        return;
+      }
+      
+      // Check if we're in hold mode
+      if (isHolding) {
+        return;
+      }
+      
+      // If enough time has passed since last kick, start holding
+      const now = audioContext ? audioContext.currentTime : Date.now() / 1000;
+      if (now - lastKickTime > 0.3) {
+        startHold();
+      }
+      
+      // Trigger kick if noise is sufficient
+      if (noiseFloor > 0.3) {
+        triggerKick();
+        
+        // If we're in the rhythm phase, start drain
+        if (bootPhase === 1) {
+          bootPhase = 2;
+          drainLevel = 1.0;
+          status.textContent = 'DRAINING';
+        }
+      }
+    }
+    
+    // Start holding mechanism
+    function startHold() {
+      isHolding = true;
+      holdStartTime = audioContext ? audioContext.currentTime : Date.now() / 1000;
+      
+      // Clear any existing timer
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+      }
+      
+      // Set timer to force 4/4 grid
+      holdTimer = setTimeout(() => {
+        if (isHolding) {
+          forceGrid();
+        }
+      }, 3000);
+    }
+    
+    // Force 4/4 grid mode
+    function forceGrid() {
+      if (!isRunning) return;
+      
+      isHolding = false;
+      status.textContent = 'GRID LOCKED';
+      
+      // Start rhythmic grid kick
+      setInterval(() => {
+        if (isRunning && bootPhase === 2) {
+          triggerKick();
+        }
+      }, 500);
+    }
+    
+    // Start boot sequence
+    function startBoot() {
+      if (isRunning) return;
+      
+      isRunning = true;
+      bootPhase = 0;
+      drainLevel = 1.0;
+      lastKickTime = 0;
+      isHolding = false;
+      
+      status.textContent = 'BOOTING';
+      title.textContent = 'BOOTING';
+      
+      // Initialize audio
+      initAudio().then(() => {
+        bootPhase = 1;
+        status.textContent = 'READY';
+        title.textContent = 'NOSTALGIA DRAIN';
+        
+        // Start periodic checks
+        setInterval(() => {
+          if (isRunning && bootPhase === 2) {
+            drain();
+          }
+        }, 100);
+      });
+    }
+    
+    // Drain the RAM
+    function drain() {
+      if (!isRunning || bootPhase !== 2) return;
+      
+      drainLevel -= 0.005;
+      
+      // Update drain label size based on drain level
+      const scale = 1 + (1 - drainLevel) * 2;
+      drainLabel.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      
+      // Update typography based on drain level
+      const fontSize = 1.5 + (1 - drainLevel) * 2;
+      drainLabel.style.fontSize = `${fontSize}rem`;
+      
+      // Change color as drain progresses
+      const intensity = Math.max(0.2, drainLevel);
+      drainLabel.style.color = `rgba(255, 255, 255, ${intensity})`;
+      
+      // Update LED brightness
+      led.style.opacity = drainLevel;
+      
+      // Check if drain is complete
+      if (drainLevel <= 0) {
+        endExorcism();
+      }
+    }
+    
+    // End the exorcism
+    function endExorcism() {
+      if (!isRunning) return;
+      
+      isRunning = false;
+      bootPhase = 3;
+      
+      // Create final ghost note
+      if (audioContext) {
+        const now = audioContext.currentTime;
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 440;
+        
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.5, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        
+        const filter = audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 2000;
+        filter.Q.value = 1;
+        
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Sweep filter to create ghost note effect
+        filter.frequency.setValueAtTime(2000, now);
+        filter.frequency.exponentialRampToValueAtTime(200, now + 0.5);
+        
+        oscillator.start(now);
+        oscillator.stop(now + 0.5);
+      }
+      
+      // Visual effects for crash
+      status.textContent = 'CRASHING';
+      title.style.display = 'none';
+      drainLabel.style.display = 'none';
+      led.style.opacity = 0;
+      
+      // Black screen with grid
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw final grid
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 2;
+      
+      // Draw grid lines
+      const gridSize = 50;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+      
+      // Fade out the grid
+      setTimeout(() => {
+        grid.style.opacity = 0;
+      }, 500);
+      
+      // Final text effect
+      setTimeout(() => {
+        const finalText = document.createElement('div');
+        finalText.textContent = 'NOSTALGIA DRAIN';
+        finalText.style.position = 'absolute';
+        finalText.style.top = '50%';
+        finalText.style.left = '50%';
+        finalText.style.transform = 'translate(-50%, -50%)';
+        finalText.style.fontSize = '3rem';
+        finalText.style.textAlign = 'center';
+        finalText.style.opacity = 1;
+        finalText.style.transition = 'opacity 2s';
+        overlay.appendChild(finalText);
+        
+        setTimeout(() => {
+          finalText.style.opacity = 0;
+        }, 2000);
+      }, 1000);
+    }
+    
+    // Handle window visibility change (for crash detection)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && isRunning) {
+        endExorcism();
+      }
+    });
+    
+    // Mouse/touch interaction
+    canvas.addEventListener('mousedown', handleInteraction);
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleInteraction();
+    });
+    
+    // Initialize
+    window.addEventListener('load', () => {
+      // Show initial instructions
+      setTimeout(() => {
+        title.textContent = 'CLICK TO BOOT';
+        title.style.opacity = 1;
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
