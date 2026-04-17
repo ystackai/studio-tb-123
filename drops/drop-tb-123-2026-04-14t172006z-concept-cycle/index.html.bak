@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAM Drain Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .ram-display {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .initiate-btn {
+            background-color: #fff;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 30px;
+            transition: none;
+        }
+
+        .initiate-btn:active {
+            background-color: #ccc;
+        }
+
+        .status {
+            font-size: 20px;
+            margin-bottom: 30px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #333;
+            border: 2px solid #fff;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #00ff00;
+            width: 100%;
+            transition: none;
+        }
+
+        .instructions {
+            font-size: 16px;
+            margin-top: 30px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RAM DRAIN SIMULATION</h1>
+        <div class="ram-display" id="ramDisplay">100%</div>
+        <div class="status" id="status">READY</div>
+        <button class="initiate-btn" id="initiateBtn">INITIATE</button>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="instructions">
+            <p>Hold the INITIATE button to drain RAM</p>
+            <p>Audio pitch will detune as RAM decreases</p>
+            <p>Typography will stretch horizontally</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize variables
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let isDraining = false;
+        let drainRate = 0.5; // RAM drain per second
+        let currentRam = 100;
+        let startTime = 0;
+        let lastUpdate = 0;
+
+        // DOM elements
+        const ramDisplay = document.getElementById('ramDisplay');
+        const statusElement = document.getElementById('status');
+        const initiateBtn = document.getElementById('initiateBtn');
+        const progressFill = document.getElementById('progressFill');
+
+        // Initialize audio context on first user interaction
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+            }
+        }
+
+        // Start draining RAM
+        function startDrain() {
+            if (!audioContext) {
+                initAudio();
+            }
+
+            isDraining = true;
+            startTime = performance.now();
+            statusElement.textContent = "DRAINING RAM...";
+            initiateBtn.textContent = "STOP DRAINING";
+
+            // Start oscillator with sawtooth wave
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.value = 220; // Base frequency
+            oscillator.connect(gainNode);
+            oscillator.start();
+
+            // Start animation loop
+            requestAnimationFrame(update);
+        }
+
+        // Stop draining RAM
+        function stopDrain() {
+            isDraining = false;
+            statusElement.textContent = "READY";
+            initiateBtn.textContent = "INITIATE";
+
+            // Stop oscillator
+            if (oscillator) {
+                oscillator.stop();
+                oscillator = null;
+            }
+
+            // Reset RAM
+            currentRam = 100;
+            updateDisplay();
+        }
+
+        // Update display elements
+        function updateDisplay() {
+            ramDisplay.textContent = Math.round(currentRam) + '%';
+            progressFill.style.width = currentRam + '%';
+
+            // Apply typography stretching effect
+            const stretchFactor = 1 + (100 - currentRam) * 0.02;
+            ramDisplay.style.transform = `scaleX(${stretchFactor})`;
+        }
+
+        // Main update loop
+        function update(timestamp) {
+            if (!isDraining) return;
+
+            // Calculate time delta
+            const deltaTime = (timestamp - lastUpdate) / 1000;
+            lastUpdate = timestamp;
+
+            // Drain RAM linearly
+            currentRam -= drainRate * deltaTime;
+
+            // Ensure RAM doesn't go below 0
+            if (currentRam <= 0) {
+                currentRam = 0;
+                stopDrain();
+            }
+
+            // Update audio pitch (detune by a minor third)
+            if (oscillator && currentRam > 0) {
+                const pitchDetune = (100 - currentRam) * 10; // Detune from 0 to 100 cents (minor third)
+                oscillator.frequency.value = 220 + pitchDetune;
+            }
+
+            // Update display
+            updateDisplay();
+
+            // Continue animation loop
+            requestAnimationFrame(update);
+        }
+
+        // Event listeners
+        initiateBtn.addEventListener('mousedown', startDrain);
+        initiateBtn.addEventListener('touchstart', startDrain);
+        initiateBtn.addEventListener('mouseup', stopDrain);
+        initiateBtn.addEventListener('touchend', stopDrain);
+        initiateBtn.addEventListener('mouseleave', stopDrain);
+
+        // Initialize display
+        updateDisplay();
+    </script>
+</body>
+</html>
