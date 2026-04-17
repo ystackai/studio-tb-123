@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sacrificial Buffer — Linear RAM Drain</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#000; color:#fff; font-family:'Courier New',monospace;
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  height:100vh; overflow:hidden; user-select:none; -webkit-user-select:none;
+}
+#container { text-align:center; max-width:640px; width:100%; padding:0 20px; }
+h1 { font-size:14px; letter-spacing:4px; opacity:.45; margin-bottom:40px; }
+#ram { font-size:96px; font-weight:bold; transition:none; white-space:nowrap; }
+#detail { font-size:14px; margin-top:8px; opacity:.5; letter-spacing:2px; }
+#btn {
+  display:block; margin:48px auto 0; padding:16px 48px; font-size:20px;
+  font-family:'Courier New',monospace; font-weight:bold; cursor:pointer;
+  background:#fff; color:#000; border:none; letter-spacing:3px;
+}
+#btn:active { background:#ccc; }
+</style>
+</head>
+<body>
+<div id="container">
+   <h1>SACRIFICIAL BUFFER</h1>
+   <div id="ram">100%</div>
+   <div id="detail"></div>
+   <button id="btn">INITIATE</button>
+</div>
+
+<script>
+(function () {
+  /* Constants — raw data mapping, no easing */
+  var RAM_HI = 100;
+  var RAM_LO = 0;
+  var FREQ_0 = 220;          // base sawtooth frequency (A3)
+  var DEPLOYED = 300;        // minor third in cents
+  var BIT_DEPTH = 8;         // bit-crusher resolution at rest
+  var BUF_SIZE = 4096;       // ScriptProcessor buffer samples
+
+  /* Runtime state */
+  var ram      = RAM_HI;
+  var draining = false;
+  var ctx      = null;
+  var osc      = null;
+  var crunch   = null;
+
+  /* DOM refs */
+  var ramEl    = document.getElementById('ram');
+  var detailEl = document.getElementById('detail');
+  var btn      = document.getElementById('btn');
+
+  /* ── Audio graph: osc → crunch → gain → destination ─────── */
+  function initAudio() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    osc        = ctx.createOscillator();
+    osc.type   = 'sawtooth';
+
+    crunch     = ctx.createScriptProcessor(BUF_SIZE, 0, 1);
+    crunch.onaudioprocess = bitCrush;
+
+    var gain   = ctx.createGain();
+    gain.gain.value = 0.25;
+
+    osc.connect(crunch).connect(gain).connect(ctx.destination);
+    osc.start();
+  }
+
+  /* ── Bit-crush processor (raw quantisation, no smoothing) ── */
+  function bitCrush(e) {
+    var ins   = e.inputBuffer.getChannelData(0);
+    var outs  = e.outputBuffer.getChannelData(0);
+    var mask  = Math.pow(2, BIT_DEPTH) - 1;
+    for (var i = 0; i < BUF_SIZE; i++) {
+      outs[i] = Math.round(ins[i] * mask) / mask;
+    }
+  }
+
+  /* ── Raw linear mapping helpers (zero easing) ───────────── */
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function map01(v)       { return clamp((RAM_HI - v) / (RAM_HI - RAM_LO), 0, 1); }
+
+  /* ── One-pass update loop per frame — no interpolation ───── */
+  var lastT = 0;
+  function tick(now) {
+    if (!draining) return;
+
+    var dt = lastT ? (now - lastT) / 1000 : 0;  // seconds elapsed
+    lastT = now;
+
+    ram -= 40 * dt;                              // linear drain rate
+    if (ram <= RAM_LO) { stop(); return; }       // clamp and bail
+
+    /* detune: 0 → −300 cents (minor third down) */
+    osc.detune.value = map01(ram) * DEPLOYED;
+
+    /* bit depth crashes from 8→3 bits as RAM depletes */
+    var bits = Math.max(2, BIT_DEPTH - map01(ram) * 5);
+    crunch.onaudioprocess = function (e) {
+      var ins   = e.inputBuffer.getChannelData(0);
+      var outs  = e.outputBuffer.getChannelData(0);
+      var mask  = Math.pow(2, bits) - 1;
+      for (var i = 0; i < e.inputBuffer.length; i++) {
+        outs[i] = Math.round(ins[i] * mask) / mask;
+      }
+    };
+
+    /* typography stretch: scaleX from 1 → 4 */
+    var s = 1 + map01(ram) * 3;
+    ramEl.style.transform    = 'scaleX(' + s + ')';
+    ramEl.textContent        = Math.round(ram) + '%';
+    detailEl.textContent     = 'PITCH: -' + Math.round(map01(ram) * DEPLOYED) + 'c | BITS: ' + bits.toFixed(1);
+
+    requestAnimationFrame(tick);
+  }
+
+  /* ── Start / Stop (raw pointer events, no debounce) ─────── */
+  function start() {
+    initAudio();
+    if (ctx.state === 'suspended') ctx.resume();
+    draining = true; lastT = 0; ram = RAM_HI;
+    osc.frequency.value = FREQ_0;
+    btn.textContent = 'DRAINING';
+    requestAnimationFrame(tick);
+  }
+
+  function stop() {
+    if (draining) {
+      draining = false; lastT = 0;
+      osc.stop(); osc.disconnect(); crunch.disconnect();
+      osc = crunch = null;
+    }
+    ram = RAM_HI;
+    btn.textContent = 'INITIATE';
+    ramEl.style.transform = 'scaleX(1)';
+    ramEl.textContent = '100%';
+    detailEl.textContent = '';
+  }
+
+  btn.addEventListener('pointerdown', start);
+  btn.addEventListener('pointerup',   stop);
+  btn.addEventListener('pointercancel', stop);
+
+})();
+</script>
+</body>
+</html>
