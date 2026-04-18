@@ -1,6 +1,6 @@
 /**
  * snap.js — zero-latency font-weight snap synchronized to the
- * AudioContext clock tick via AudioBufferSource.onended.
+ * AudioContext clock tick via AudioBufferSourceNode.onended.
  *
  * The `onended` event fires at the sample-accurate moment playback
  * halts (driven by the audio hardware clock).  We attach a single
@@ -16,24 +16,24 @@
  * the `onended` event of a BufferSourceNode — i.e. at the exact
  * audio clock tick when playback stops.
  *
- * @param {AudioBufferSourceNode} src   — source that will be stopped
- * @param {string} titleElId            — id of the <h1> element
+ * @param {AudioBufferSourceNode} src    — source whose .onended triggers the snap
+ * @param {string}      titleElId  — id of the DOM element to snap
  */
 export function attachOnEndedSnap(src, titleElId) {
   const el = document.getElementById(titleElId);
   if (!el) return;
 
   src.onended = () => {
-     // ── synchronous mutation inside onended: < 1 ms from audio clock tick
-    el.style.transition = "none";           // disable CSS easing (brutalist snap)
-    el.style.fontWeight = "400";            // snap to canonical weight
+    // ── synchronous mutation inside onended: < 1 ms from audio clock tick
+    el.style.transition = 'none';             // disable CSS easing (brutalist snap)
+    el.style.fontWeight = '400';              // snap to canonical weight
 
-     // Force reflow so paint is committed before transition restoration.
+      // Force reflow so paint is committed before transition restoration.
     void el.offsetHeight;
 
     requestAnimationFrame(() => {
-       // Restore CSS transition for any future style changes.
-      el.style.transition = "";             // remove inline override
-     });
-   };
+        // Restore CSS transition for any future style changes.
+      el.style.transition = '';               // remove inline override
+    });
+  };
 }
