@@ -5,11 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sawtooth → Minor Third — TB-123</title>
 <style>
- /* ── Brutalist monospace stack ─────────────────────────────── */
  * {
    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code',
-                'IBM Plex Mono', 'Source Code Pro', 'Consolas',
-                'Liberation Mono', 'Courier New', monospace;
+                 'IBM Plex Mono', 'Source Code Pro', 'Consolas',
+                 'Liberation Mono', 'Courier New', monospace;
  }
 
  body {
@@ -46,7 +45,6 @@
 
  #trigger:active { background: #e94560; color: #0d0d0d; }
 
- /* Disable all transitions on body while snap is active */
 .snap-active * {
   transition: none !important;
 }
@@ -60,45 +58,57 @@
 <script type="module">
 import { attachOnEndedSnap } from './snap.js';
 
-const BASE_FREQ    = 220;                    // A3
-const SEMITONES    = 3;                      // minor third interval
-const FREQ_RATIO   = Math.pow(2, SEMITONES / 12);  // ≈ 1.1892 → ~261.6 Hz
-const DECAY_MS     = 10;                     // 10 ms linear decay window
+// ── Synthesis parameters ───────────────────────────────────────────────
+const BASE_FREQ     = 220;                  // A3 — root
+const SEMITONES     = -3;                   // minor third (down by 3 semitones)
+const FREQ_RATIO    = Math.pow(2, SEMITONES / 12); // ≈ 0.8409 → target ~185 Hz
+const DECAY_MS      = 10;                   // 10 ms decay window
 
 /**
- * Render a saw-tooth note on an OfflineAudioContext.
- * Pitch sweeps BASE_FREQ → BASE_FREQ × minor-third over DECAY_MS.
- * Amplitude decays from 1→0 in the same window.
- * Buffer is trimmed to the next zero-crossing after decay for a hard-cut.
+ * Render a saw-tooth note on an OfflineAudioContext at the given sample rate.
+ *
+ * • Oscillator: sawtooth, starting at BASE_FREQ, sliding to
+ *   BASE_FREQ × 2^(-3/12) ≈ 185 Hz over DECAY_MS (minor third interval).
+ *
+ * • Amplitude: linear decay from 1 → 0 across the same 10 ms window.
+ *
+ * • Zero-crossing hard-cut: after decay finishes, scan forward to the first
+ *   sample pair crossing zero and silence everything past that point.
+ *     Buffer is trimmed to that exact boundary so the AudioBufferSourceNode
+ *     ends cleanly — no audible click or pop.
  */
 function renderSawOscillator(sr) {
-  const decayFrames = Math.round(DECAY_MS / 1000 * sr);
-  const margin      = Math.max(2, Math.ceil(sr / 1000)); // +1 ms tail for safe stop
+  const decayFrames  = Math.round(DECAY_MS / 1000 * sr);          // e.g. 441 frames at 44100 Hz
+  const margin       = Math.max(2, Math.ceil(sr / 1000));           // +1 ms tail for zero-crossing scan
 
   const offline = new OfflineAudioContext(1, decayFrames + margin, sr);
   const t0      = offline.currentTime;
 
-  // ── Sawtooth oscillator with pitch & amplitude ramps ────────
-  const osc   = offline.createOscillator();
-  const gain  = offline.createGain();
+  // ── Sawtooth oscillator with simultaneous pitch & amplitude ramps ───
+  const osc  = offline.createOscillator();
+  const gain = offline.createGain();
 
-  osc.type     = 'sawtooth';
-  osc.frequency.setValueAtTime(BASE_FREQ,          t0);
+  osc.type = 'sawtooth';
+
+  // Pitch sweep: BASE_FREQ → target minor third (descending)
+  osc.frequency.setValueAtTime(BASE_FREQ,                    t0);
   osc.frequency.exponentialRampToValueAtTime(
-    BASE_FREQ * FREQ_RATIO, t0 + DECAY_MS / 1000   // A3 → minor third ~261.6 Hz
+    BASE_FREQ * FREQ_RATIO,         // ≈ 185.0 Hz from A3
+    t0 + DECAY_MS / 1000
   );
 
-  gain.gain.setValueAtTime(1,            t0);
-  gain.gain.linearRampToValueAtTime(0,   t0 + DECAY_MS / 1000);  // 10 ms decay
+  // Amplitude: 1 → 0 over the same 10 ms window
+  gain.gain.setValueAtTime(1,     t0);
+  gain.gain.linearRampToValueAtTime(0, t0 + DECAY_MS / 1000);
 
   osc.connect(gain).connect(offline.destination);
   osc.start(t0);
-  osc.stop(t0 + (decayFrames + margin) / sr);
+  osc.stop(t0 + (decayFrames + margin) / sr); // extend past decay for ZC scan
 
   return offline.startRendering().then(buf => {
     const d = buf.getChannelData(0);
 
-    // ── Find next zero-crossing after decay tail ─────────────
+    // ── Find first zero-crossing after the decay window ends ───────
     let cutAt = d.length;
     for (let i = decayFrames; i < d.length - 1; i++) {
       if ((d[i] >= 0 && d[i + 1] <= 0) || (d[i] <= 0 && d[i + 1] >= 0)) {
@@ -107,7 +117,7 @@ function renderSawOscillator(sr) {
       }
     }
 
-    // Hard-cut: silence everything past the zero-crossing
+    // Zero-crossing hard-cut: silence everything past the crossing
     for (let i = cutAt; i < d.length; i++) d[i] = 0;
 
     // Trim buffer to the exact crossing boundary
@@ -133,8 +143,8 @@ async function play() {
     finalGain.gain.setValueAtTime(1, ctx.currentTime);
 
     srcNode.connect(finalGain).connect(ctx.destination);
-    srcNode.start(ctx.currentTime + 0);          // sample-accurate trigger
-    attachOnEndedSnap(srcNode, 'title');         // visual snap on audio cut
+    srcNode.start(ctx.currentTime + 0);           // sample-accurate trigger
+    attachOnEndedSnap(srcNode, 'title');          // visual snap on audio cut
   } catch (err) {
     console.error('Render failed:', err);
     document.body.classList.remove('snap-active');
