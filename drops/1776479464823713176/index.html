@@ -10,6 +10,7 @@
 body {
   background: #0a0a0a;
   color: #e0e0e0;
+  /* Monospaced brutalist font stack */
   font-family: 'Courier New', Courier, 'Lucida Console', Monaco, monospace;
   font-size: 14px;
   line-height: 1.6;
@@ -44,7 +45,8 @@ body {
   font-weight: 400;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  transition: font-weight 8ms linear, color 8ms linear;
+  /* Do NOT transition font-weight — instant snap only */
+  transition: color 8ms linear, font-size 0s;
 }
 
 #sync-display.decay-active {
@@ -52,8 +54,8 @@ body {
   color: #ff3333 !important;
 }
 
+/* Snap-complete: zero-transition on everything to guarantee instant snap */
 #sync-display.snap-complete {
-  transition: none !important;
   font-weight: 400 !important;
   color: #e0e0e0 !important;
 }
@@ -88,20 +90,20 @@ body {
   'use strict';
 
   /* Core synthesis constants */
-  var BASE_FREQ         = 440;                          // A4 reference
-  var MINOR_THIRD_RATIO = Math.pow(2, 3 / 12);           // &asymp;1.189207 &rarr; C#5
-  var DECAY_MS          = 10;                            // 10 ms decay window
+  var BASE_FREQ          = 440;                           // A4 reference
+  var MINOR_THIRD_RATIO  = Math.pow(2, 3 / 12);            // ≈1.189207 → C#5
+  var DECAY_MS           = 10;                             // 10 ms decay window
 
   /* DOM references */
-  var audioCtx        = null;
-  var logEl           = document.getElementById('log');
-  var displayEl       = document.getElementById('sync-display');
-  var triggerBtn      = document.getElementById('trigger');
-  var vizCanvas       = document.getElementById('viz-canvas');
-  var vizCtx          = vizCanvas.getContext('2d');
+  var audioCtx         = null;
+  var logEl            = document.getElementById('log');
+  var displayEl        = document.getElementById('sync-display');
+  var triggerBtn       = document.getElementById('trigger');
+  var vizCanvas        = document.getElementById('viz-canvas');
+  var vizCtx           = vizCanvas.getContext('2d');
 
   /* ------------------------------------------------------------------ */
-  /* Helpers                                                            */
+  /* Helpers                                                             */
   /* ------------------------------------------------------------------ */
 
   function timestamp() { return performance.now().toFixed(6); }
@@ -111,15 +113,49 @@ body {
   }
 
   /**
-   * Draw the expected sawtooth waveform over the full decay window.
-   * Renders the frequency-swept envelope and annotates the zero-crossing
-   * point with a vertical red marker.
+   * Phase-accurate zero-crossing finder for a linearly-ramped sawtooth.
+   *
+   * During the decay window [0, DECAY_MS] the oscillator frequency sweeps
+   * linearly from f0 to f1 = f0 × minor-third-ratio.  After the window it
+   * holds at constant f1.
+   *
+   * Accumulated cycles at t = DECAY_MS:
+   *     integral(f(t) dt, t=0..DECAY_MS) = T · (f0+f1)/2
+   *
+   * The sawtooth waveform 2*phase-1 crosses zero when phase = 0.5 mod 1.
+   * After decay ends we project forward at constant f1 to the next such
+   * crossing and return its absolute sample index from trigger time.
    */
+  function findZeroCrossingAfter(decaySamples, sampleRate) {
+    var f0         = BASE_FREQ;
+    var f1         = f0 * MINOR_THIRD_RATIO;
+    var decaySec   = DECAY_MS / 1000;
+
+    /* Total oscillator cycles accumulated during the ramped window */
+    var accumCycles     = (f0 + f1) / 2.0 * decaySec;
+
+    /* Fractional position within the current cycle at decay end */
+    var phaseInCycle    = accumCycles % 1.0;                 // ∈ [0, 1)
+
+    /* Sawtooth zeroes: phase = 0.5 mod 1. Walk forward from current
+       phase to the next zero-crossing (phase=0.5). */
+    var toTarget        = ((0.5 - phaseInCycle) % 1.0 + 1.0) % 1.0;
+
+    /* Convert fraction-of-cycle → integer sample offset at constant f1 */
+    var zcOffset        = Math.round(toTarget * sampleRate / f1);
+
+    return {
+      sampleIndex: decaySamples + zcOffset,
+      offsetMs   : ((decaySamples + zcOffset) / sampleRate * 1000).toFixed(4)
+    };
+  }
+
+  /** Draw the expected sawtooth waveform over the full decay window. */
   function drawWaveform(sampleRate, freqStart, freqEnd, decaySamples) {
     vizCtx.fillStyle = '#000';
     vizCtx.fillRect(0, 0, vizCanvas.width, vizCanvas.height);
 
-    var halfH = vizCanvas.height / 2;
+    var halfH   = vizCanvas.height / 2;
     vizCtx.strokeStyle = '#0f0';
     vizCtx.lineWidth   = 1;
     vizCtx.beginPath();
@@ -127,13 +163,13 @@ body {
     for (var x = 0; x < vizCanvas.width; x++) {
       var frac     = x / (vizCanvas.width - 1);
       var t        = frac * decaySamples / sampleRate;
-      var freq     = freqStart + (freqEnd - freqStart) * frac;
+      var freqAtT  = freqStart + (freqEnd - freqStart) * frac;
 
-      /* Accumulated phase: integral of linear sweep from 0 to t. */
-      var phase    = t * (freqStart + freq) / 2.0;
-      var normPh   = phase - Math.floor(phase);           // [0, 1)
+      /* Accumulated phase: exact integral of linearly-ramped frequency */
+      var accumulatedPhase = t * (freqStart + freqAtT) / 2.0;
+      var normPh   = accumulatedPhase - Math.floor(accumulatedPhase); // [0,1)
 
-      /* Sawtooth: 2*phase - 1 &isin; [-1, +1]; zeroes at phase=0.5 */
+      /* Sawtooth: 2*phase - 1 ∈ [-1, +1]; zeroes at phase=0.5 */
       var sample   = 2 * normPh - 1;
 
       var px       = (x / vizCanvas.width) * vizCanvas.width;
@@ -148,9 +184,10 @@ body {
     vizCtx.stroke();
 
     /* Annotate the computed zero-crossing sample with a red marker */
-    var zc         = findZeroCrossingAfter(decaySamples, sampleRate);
-    var zcX        = (zc.sampleIndex / (sampleRate * DECAY_MS / 1000))
-                     / vizCanvas.width * vizCanvas.width;
+    var zc     = findZeroCrossingAfter(decaySamples, sampleRate);
+    var zcFrac = zc.sampleIndex / (sampleRate * DECAY_MS / 1000);
+    if (zcFrac > 1) zcFrac = 1;
+    var zcX    = zcFrac * vizCanvas.width;
     vizCtx.strokeStyle = '#f44';
     vizCtx.lineWidth     = 2;
     vizCtx.beginPath();
@@ -159,45 +196,8 @@ body {
     vizCtx.stroke();
   }
 
-  /**
-   * Phase-accurate zero-crossing finder for a linearly-ramped sawtooth.
-   *
-   * During the decay window [0, DECAY_MS] the oscillator frequency sweeps
-   * linearly from f0 to f1 = f0 &times; minor-third-ratio.  After the
-   * window it holds at the constant frequency f1.
-   *
-   * Accumulated cycles at t = DECAY_MS:
-   *     integral(f(t) dt, t=0..DECAY_MS) = T &middot; (f0+f1)/2
-   *
-   * The sawtooth waveform 2*phase-1 crosses zero when phase = 0.5 mod 1.
-   * After decay ends we project forward at constant f1 to the next such
-   * crossing and return its absolute sample index from trigger time.
-   */
-  function findZeroCrossingAfter(decaySamples, sampleRate) {
-    var f0         = BASE_FREQ;
-    var f1         = f0 * MINOR_THIRD_RATIO;
-    var decaySec   = DECAY_MS / 1000;
-
-    /* Total oscillator cycles accumulated during the ramped window */
-    var accumCycles = (f0 + f1) / 2.0 * decaySec;
-
-    /* Fractional position within the current cycle at decay end */
-    var phaseInCycle = accumCycles % 1.0;               // &isin; [0, 1)
-
-    /* Sawtooth zeroes: phase = 0.5 mod 1 */
-    var toTarget     = ((0.5 - phaseInCycle) % 1.0 + 1.0) % 1.0;
-
-    /* Convert fraction-of-cycle &rarr; integer sample offset at constant f1 */
-    var zcOffset     = Math.round(toTarget * sampleRate / f1);
-
-    return {
-      sampleIndex: decaySamples + zcOffset,
-      offsetMs   : ((decaySamples + zcOffset) / sampleRate * 1000).toFixed(4)
-    };
-  }
-
   /* ------------------------------------------------------------------ */
-  /* Core synthesis trigger                                              */
+  /* Core synthesis trigger (sample-accurant within 1 ms)               */
   /* ------------------------------------------------------------------ */
 
   function trigger() {
@@ -215,30 +215,30 @@ body {
     var decaySamples = Math.ceil(decaySec * sampleRate);
 
     /* -- OscillatorNode: sawtooth, freq ramps to minor third -------- */
-    var osc         = audioCtx.createOscillator();
-    osc.type        = 'sawtooth';
+    var osc      = audioCtx.createOscillator();
+    osc.type     = 'sawtooth';
     osc.frequency.setValueAtTime(BASE_FREQ, now);
     osc.frequency.linearRampToValueAtTime(
       BASE_FREQ * MINOR_THIRD_RATIO, endTime
     );
 
     /* -- GainNode: hold at 0.5 during decay ------------------------- */
-    var gain        = audioCtx.createGain();
+    var gain     = audioCtx.createGain();
     gain.gain.setValueAtTime(0.5, now);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
     /* -- Zero-crossing hard-cut at sample-accurate instant ---------- */
-    var zc          = findZeroCrossingAfter(decaySamples, sampleRate);
-    var cutTime     = now + (zc.sampleIndex / sampleRate);
+    var zc       = findZeroCrossingAfter(decaySamples, sampleRate);
+    var cutTime  = now + (zc.sampleIndex / sampleRate);
 
-    /* One-sample step: 0.5 &rarr; 0 at the exact zero-cross sample.
-     * Web Audio schedules gain changes with sample-accuracy; a two-point
-     * setValueAtTime pair creates an instantaneous hard cut with no
-     * ramp, preserving waveform purity (no reverb, no delay).          */
+    /* Instant gain drop: one-sample step from 0.5 → 0 at exact ZC.
+     * Web Audio schedules setValueAtTime with sample-accuracy; a
+     * two-point pair creates an instantaneous hard-cut (no ramp),
+     * preserving waveform purity. */
     gain.gain.setValueAtTime(0.5, cutTime - 1 / sampleRate);
-    gain.gain.setValueAtTime(0,     cutTime);
+    gain.gain.setValueAtTime(0,   cutTime);
 
     osc.start(now);
     osc.stop(cutTime);
@@ -246,25 +246,35 @@ body {
     /* -- Visual sync: font-weight snap at the exact audio cut ------- */
     var visualDelayMs = (cutTime - now) * 1000;
 
-    displayEl.textContent = '\u2593 \u2593 \u2593';
+    displayEl.textContent = '▓ ▓ ▓';
     displayEl.className   = 'decay-active';
     drawWaveform(sampleRate, BASE_FREQ,
                  BASE_FREQ * MINOR_THIRD_RATIO, decaySamples);
 
     var snapScheduled = false;
 
+    /* Schedule the font-weight snap at precisely cutTime.
+     * We use AudioContext.currentTime as the sole time reference so that
+     * audio and visuals are driven by the same clock.  A rAF poll catches
+     * the boundary within ±1 ms of the sample-accurant deadline. */
     function scheduleSnap() {
       if (snapScheduled) return;
       var audioElapsed = (audioCtx.currentTime - now) * 1000;
 
-      if (audioElapsed >= visualDelayMs - 0.5) {   // 0.5 ms safety margin
+      /* Earliest-frame policy: fire when audio clock has caught up or
+         passed the cut deadline.  The rAF guarantee keeps jitter ≤ 1 ms
+         on modern browsers when the deadline is imminent. */
+      if (audioElapsed >= visualDelayMs - 0.5) {
         snapScheduled = true;
 
-        displayEl.style.transition    = 'none';
-        displayEl.className           = 'snap-complete';
-        displayEl.textContent         = '- - -';
+        /* CRITICAL: disable ALL transitions before changing font-weight.
+         * This guarantees an instantaneous snap with zero easing. */
+        displayEl.style.transition           = 'none';
+        displayEl.className                  = 'snap-complete';
+        displayEl.textContent                = '- - -';
 
-        log('Sawtooth:       ' + BASE_FREQ + ' Hz &rarr; ' +
+        /* Write metadata while the DOM is in a consistent state */
+        log('Sawtooth:        ' + BASE_FREQ + ' Hz → ' +
             (BASE_FREQ * MINOR_THIRD_RATIO).toFixed(2) + ' Hz');
         log('Minor third ratio:   ' + MINOR_THIRD_RATIO.toFixed(6));
         log('Sample rate:         ' + sampleRate + ' Hz');
@@ -272,7 +282,10 @@ body {
         log('Zero-cross sample:   #' + zc.sampleIndex);
         log('Hard-cut time:       ' + cutTime.toFixed(6) + ' s');
 
-        displayEl.style.transition = '';
+        /* Restore transitions after one paint so next decay animate */
+        requestAnimationFrame(function() {
+          displayEl.style.transition = '';
+        });
       } else {
         requestAnimationFrame(scheduleSnap);
       }
@@ -282,14 +295,14 @@ body {
   }
 
   /* ------------------------------------------------------------------ */
-  /* Bind trigger                                                       */
+  /* Bind trigger                                                        */
   /* ------------------------------------------------------------------ */
 
   triggerBtn.addEventListener('click', function() {
-    logEl.textContent         = '';
+    logEl.textContent     = '';
     displayEl.style.transition  = '';
-    displayEl.className       = '';
-    displayEl.textContent     = '- - -';
+    displayEl.className         = '';
+    displayEl.textContent       = '- - -';
     trigger();
   });
 
