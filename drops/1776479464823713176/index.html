@@ -53,14 +53,14 @@ body {
 #sync-display.decay-active {
   font-weight: 700 !important;
   color: #ff3333 !important;
-  transition: none !important;        /* snap: kill any inherited transition */
+  transition: none !important;         /* snap: kill any inherited transition */
 }
 
 /* Snap-reset: back to normal weight – zero-latency visual hard-cut */
 #sync-display.snap-complete {
   font-weight: 400 !important;
   color: #e0e0e0 !important;
-  transition: none !important;       /* snap: kill transition on cut */
+  transition: none !important;        /* snap: kill transition on cut */
 }
 
 #log {
@@ -90,42 +90,42 @@ body {
 
 <script>
 (function() {
-  'use strict';
+   'use strict';
 
-  // ── Constants ──────────────────────────────────────────────
-  var BASE_FREQ         = 440;                     // A4
-  var MINOR_THIRD_RATIO = Math.pow(2, 3 / 12);     // ≈1.189207 → C5#
-  var DECAY_MS          = 10;                      // 10 ms decay window
+   // ── Constants ──────────────────────────────────────────────
+  var BASE_FREQ          = 440;                        // A4
+  var MINOR_THIRD_RATIO  = Math.pow(2, -3 / 12);       // ≈0.840896 → 3 semitones DOWN (C# below A)
+  var DECAY_MS           = 10;                         // 10 ms decay window
 
-  // ── DOM refs ───────────────────────────────────────────────
-  var audioCtx       = null;
-  var logEl          = document.getElementById('log');
-  var displayEl      = document.getElementById('sync-display');
-  var triggerBtn     = document.getElementById('trigger');
-  var vizCanvas      = document.getElementById('viz-canvas');
-  var vizCtx         = vizCanvas.getContext('2d');
+   // ── DOM refs ───────────────────────────────────────────────
+  var audioCtx        = null;
+  var logEl           = document.getElementById('log');
+  var displayEl       = document.getElementById('sync-display');
+  var triggerBtn      = document.getElementById('trigger');
+  var vizCanvas       = document.getElementById('viz-canvas');
+  var vizCtx          = vizCanvas.getContext('2d');
 
-  // ── Helpers ────────────────────────────────────────────────
+   // ── Helpers ────────────────────────────────────────────────
   function timestamp() { return performance.now().toFixed(6); }
 
   function log(msg) {
     logEl.textContent += '[' + timestamp() + '] ' + msg + '\n';
   }
 
-  // Draw a synthetic sawtooth waveform on the canvas.
+   // Draw a synthetic sawtooth waveform on the canvas.
   function drawWaveform(freq, sampleRate, numSamples) {
     vizCtx.fillStyle = '#000';
     vizCtx.fillRect(0, 0, vizCanvas.width, vizCanvas.height);
 
-    var halfH   = vizCanvas.height / 2;
+    var halfH    = vizCanvas.height / 2;
     vizCtx.strokeStyle = '#0f0';
-    vizCtx.lineWidth   = 1;
+    vizCtx.lineWidth    = 1;
     vizCtx.beginPath();
 
     for (var x = 0; x < numSamples; x++) {
-      var t      = x / sampleRate;
-      var phase  = (t * freq) % 1;
-      var sample = 2 * phase - 1;            // saw ∈ [-1, 1]
+      var t       = x / sampleRate;
+      var phase   = (t * freq) % 1;
+      var sample = 2 * phase - 1;             // saw ∈ [-1, 1]
 
       var px = (x / numSamples) * vizCanvas.width;
       var py = halfH - sample * (halfH - 2);
@@ -141,17 +141,16 @@ body {
 
   /**
    * Find the nearest zero-crossing strictly after `decaySamples`.
-   * Linearly interpolates between the last positive sample and the first
-   * negative sample to locate the exact crossing index.
+   * Uses the target (minor-third) frequency so the search matches the
+   * actual waveform present at the end of the decay ramp.
    */
-  function findZeroCrossingAfter(decaySamples, sampleRate) {
-    var freq = BASE_FREQ;
+  function findZeroCrossingAfter(decaySamples, sampleRate, targetFreq) {
     var lastSn = 0;
 
     for (var i = decaySamples; i < decaySamples + sampleRate; i++) {
-      var t       = i / sampleRate;
-      var phase   = (t * freq) % 1;
-      var sn      = 2 * phase - 1;
+      var t        = i / sampleRate;
+      var phase    = (t * targetFreq) % 1;
+      var sn       = 2 * phase - 1;
 
       if (lastSn > 0 && sn < 0) {
         // Interpolate exact crossing
@@ -159,7 +158,7 @@ body {
         var exactIdx = i - fraction;
         return {
           sampleIndex: Math.round(exactIdx),
-          offsetMs:    (exactIdx / sampleRate * 1000).toFixed(4),
+          offsetMs:     (exactIdx / sampleRate * 1000).toFixed(4),
           fraction:    fraction
         };
       }
@@ -169,12 +168,12 @@ body {
     // Fallback: cut at the decay boundary itself
     return {
       sampleIndex: decaySamples,
-      offsetMs:   (decaySamples / sampleRate * 1000).toFixed(4),
-      fraction:   1
+      offsetMs:    (decaySamples / sampleRate * 1000).toFixed(4),
+      fraction:    1
     };
   }
 
-  // ── Core synthesis trigger ─────────────────────────────────
+   // ── Core synthesis trigger ─────────────────────────────────
   function trigger() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)({
@@ -183,51 +182,52 @@ body {
     }
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
-    var now       = audioCtx.currentTime;
-    var decaySec  = DECAY_MS / 1000;
-    var endTime   = now + decaySec;
+    var now        = audioCtx.currentTime;
+    var decaySec   = DECAY_MS / 1000;
+    var endTime    = now + decaySec;
     var sampleRate = audioCtx.sampleRate;
     var decaySamples = Math.ceil(decaySec * sampleRate);
 
-    // — Oscillator: single sawtooth, freq sweeps to minor third —
-    var osc  = audioCtx.createOscillator();
+     // — Oscillator: single sawtooth, freq sweeps DOWN a minor third —
+    var osc   = audioCtx.createOscillator();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(BASE_FREQ, now);
     osc.frequency.linearRampToValueAtTime(
       BASE_FREQ * MINOR_THIRD_RATIO, endTime
     );
 
-    // — Gain: amplitude held during decay, hard-cut at ZC —
+     // — Gain: amplitude held during decay, hard-cut at ZC —
     var gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0.5, now);
 
     osc.connect(gain);
     gain.connect(audioCtx.destination);
 
-    // — Zero-crossing hard-cut calculation —
-    var zc      = findZeroCrossingAfter(decaySamples, sampleRate);
-    var cutTime = now + (zc.sampleIndex / sampleRate);
+     // — Zero-crossing hard-cut calculation —
+    var targetFreq = BASE_FREQ * MINOR_THIRD_RATIO;
+    var zc         = findZeroCrossingAfter(decaySamples, sampleRate, targetFreq);
+    var cutTime    = now + (zc.sampleIndex / sampleRate);
 
-    // Ramp gain to 0 over one sample at the zero-crossing → click-free hard-cut
+     // Ramp gain to 0 over one sample at the zero-crossing → click-free hard-cut
     if (cutTime > now) {
       gain.gain.setValueAtTime(0.5, Math.max(now, cutTime - 1 / sampleRate));
       gain.gain.linearRampToValueAtTime(0, cutTime);
     }
 
-    // ── Visual sync: schedule font-weight snap at audio-sample accuracy ─
+     // ── Visual sync: schedule font-weight snap at audio-sample accuracy ─
     var displayStartTime = performance.now();
 
-    // Pre-compute exact delay from now → cut-time so rAF fires right at the cut
-    var targetDelaySec  = cutTime - now;       // seconds on AudioContext clock
-    var targetDelayMs   = targetDelaySec * 1000;
+     // Pre-compute exact delay from now → cut-time so rAF fires right at the cut
+    var targetDelaySec   = cutTime - now;        // seconds on AudioContext clock
+    var targetDelayMs    = targetDelaySec * 1000;
 
-    // Phase 1: decay-active – bold font (snap disabled mid-transition)
+     // Phase 1: decay-active – bold font (snap disabled mid-transition)
     displayEl.textContent = '▓ ▓ ▓';
     displayEl.className   = 'decay-active';
     drawWaveform(BASE_FREQ, sampleRate, 480);
 
-    // Phase 2: at the exact audio cut moment → snap to normal weight
-    // rAF loop provides tighter wall-clock alignment than setTimeout.
+     // Phase 2: at the exact audio cut moment → snap to normal weight
+     // rAF loop provides tighter wall-clock alignment than setTimeout.
     var snapScheduled = false;
     var snapFrameId   = null;
 
@@ -236,9 +236,9 @@ body {
       var elapsedMs = performance.now() - displayStartTime;
       if (elapsedMs >= targetDelayMs) {
         snapScheduled = true;
-        // Zero-latency visual hard-cut: kill CSS transitions, snap font-weight
-        displayEl.style.transition = 'none';     // freeze transition mid-event
-        displayEl.className   = 'snap-complete'; // font-weight 400 !important
+         // Zero-latency visual hard-cut: kill CSS transitions, snap font-weight
+        displayEl.style.transition = 'none';      // freeze transition mid-event
+        displayEl.className   = 'snap-complete';  // font-weight 400 !important
         displayEl.textContent = '- - -';
         log('Oscillator: sawtooth, ' + BASE_FREQ + 'Hz → '
             + (BASE_FREQ * MINOR_THIRD_RATIO).toFixed(2) + 'Hz');
@@ -249,13 +249,13 @@ body {
         log('Hard-cut time: ' + cutTime.toFixed(6) + 's (ctx.currentTime)');
         log('Visual snap wall-clock: ' + performance.now().toFixed(3) + 'ms');
 
-        // Compute discrepancy between audio clock and wall-clock
-        var actualSnapDelta  = performance.now() - displayStartTime;
-        var discrepancy      = Math.abs(actualSnapDelta - targetDelayMs);
+         // Compute discrepancy between audio clock and wall-clock
+        var actualSnapDelta   = performance.now() - displayStartTime;
+        var discrepancy       = Math.abs(actualSnapDelta - targetDelayMs);
         log('Clock tick discrepancy: ' + discrepancy.toFixed(4) + 'ms');
         log('PASS | discrepancy < 1 ms: ' + (discrepancy < 1 ? 'YES' : 'NO'));
 
-        // Re-enable transitions for next trigger
+         // Re-enable transitions for next trigger
         displayEl.style.transition = '';
       } else {
         snapFrameId = requestAnimationFrame(scheduleSnap);
@@ -264,17 +264,17 @@ body {
 
     requestAnimationFrame(scheduleSnap);
 
-    // Start oscillator; hard-cut at ZC kills everything.
+     // Start oscillator; hard-cut at ZC kills everything.
     osc.start(now);
     osc.stop(cutTime);
   }
 
-  // ── Bind trigger ───────────────────────────────────────────
+   // ── Bind trigger ───────────────────────────────────────────
   triggerBtn.addEventListener('click', function() {
-    logEl.textContent       = '';
-    displayEl.style.transition = '';          // reset inline override
-    displayEl.className     = '';
-    displayEl.textContent   = '- - -';
+    logEl.textContent        = '';
+    displayEl.style.transition = '';           // reset inline override
+    displayEl.className      = '';
+    displayEl.textContent    = '- - -';
     trigger();
   });
 
