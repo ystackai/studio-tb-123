@@ -3,117 +3,139 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sawtooth → Minor Third</title>
+<title>Sawtooth → Minor Third — TB-123</title>
 <style>
-  body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #1a1a2e; font-family: system-ui, sans-serif; color: #eee; }
-  button { padding: 1rem 2rem; font-size: 1.2rem; cursor: pointer; border: none; border-radius: 8px; background: #e94560; color: #fff; transition: background .2s; }
-  button:hover { background: #c73650; }
+  /* Monospaced brutalist font stack */
+  *, *::before, *::after { font-family: 'Courier New', Courier, 'Lucida Sans Typewriter', monospace; }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background: #0d0d0d;
+    color: #e0e0e0;
+  }
+
+  #title {
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    transition: font-weight 0.05s linear;        /* fast fallback; snap overrides */
+  }
+
+  #trigger {
+    display: block;
+    margin-top: 2rem;
+    padding: 1rem 2.4rem;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 3px solid #e94560;
+    background: transparent;
+    color: #e94560;
+    outline: none;
+  }
+
+  #trigger:active { background: #e94560; color: #0d0d0d; }
+
+  /* Disable ALL transitions during snap event (font-weight is the target) */
+  .snap-active *,
+  .snap-active #title {
+    transition: none !important;
+  }
 </style>
 </head>
 <body>
-<button id="trigger">▶ Trigger</button>
-<script>
-/**
- * Web Audio API saw-tooth oscillator with 10 ms decay to minor third
- * and zero-crossing hard-cut.
- *
- * Signal chain (sample-accurate):
- *   OscillatorNode (sawtooth) → GainNode (envelope gate) → ScriptProcessorNode
- *     → find next zero-crossing after t+10ms → AudioBufferSourceNode → Destination
- *
- * Timeline:
- *   t = now        : osc @ BASE_FREQ, gain = 1.0
- *   t = now + 10ms : freq resolves to minor-third (BASE × 2^(3/12))
- *   t ≈ end + δ    : zero-crossing hard-cut → absolute silence after
- */
 
-const BASE_FREQ     = 220;                  // A3
-const SEMITONES     = 3;                    // minor third interval
-const FREQ_RATIO    = Math.pow(2, SEMITONES / 12);   // ≈ 1.1892
-const DECAY_MS      = 10;                   // precise decay window in ms
+<h1 id="title">Saw → M3 &nbsp;✦&nbsp; TB-123</h1>
+<button id="trigger">&#9654; Trigger</button>
 
-document.getElementById('trigger').addEventListener('click', () => {
-  const ctx       = new AudioContext();
-  const now       = ctx.currentTime;
-  const decayEnd  = now + DECAY_MS / 1000;    // exact 10 ms mark
+<script type="module">
+import { attachOnEndedSnap } from './snap.js';
 
-  /* --- Oscillator: linear frequency sweep to minor third --- */
-  const osc = ctx.createOscillator();
-  osc.type  = 'sawtooth';
+/* ─── constants ──────────────────────────────────────────────── */
+const BASE_FREQ   = 220;               // A3
+const SEMITONES   = 3;                 // minor third interval
+const FREQ_RATIO  = Math.pow(2, SEMITONES / 12);  // ≈ 1.1892
+const DECAY_MS    = 10;
+
+/* ─── zero-crossing finder (sample-accurate) ────────────────── */
+function findNextZeroCrossing(buffer, fromSample) {
+  for (let i = fromSample + 1; i < buffer.length; i++) {
+    if ((buffer[i - 1] >= 0 && buffer[i] <= 0) ||
+        (buffer[i - 1] <= 0 && buffer[i] >= 0)) {
+      return i;
+    }
+  }
+  // fallback: hard-cut at last captured sample boundary
+  return Math.max(fromSample, buffer.length - 1);
+}
+
+/* ─── audio engine (called on each user click) ──────────────── */
+function play() {
+  const ctx = new AudioContext();
+  const now = ctx.currentTime;
+
+  /* --- Oscillator: sawtooth, linear sweep to minor-third --- */
+  const osc      = ctx.createOscillator();
+  const gain     = ctx.createGain();
+  osc.type       = 'sawtooth';
   osc.frequency.setValueAtTime(BASE_FREQ,              now);
   osc.frequency.linearRampToValueAtTime(
-    BASE_FREQ * FREQ_RATIO,                            // resolves to minor third
-    decayEnd                                             // at exactly 10 ms
+    BASE_FREQ * FREQ_RATIO,            // resolves to minor third
+    now + DECAY_MS / 1000              // exactly at 10 ms mark
   );
 
-  /* --- GainNode envelope: full amplitude during decay --- */
-  const gain = ctx.createGain();
+  /* --- Envelope gate: full gain → hard cut at decay end --- */
+  const decayEnd = now + DECAY_MS / 1000;
   gain.gain.setValueAtTime(1.0, now);
+  gain.gain.setValueAtTime(1.0, decayEnd - (1 / ctx.sampleRate));
+  gain.gain.setValueAtTime(0.0, decayEnd);
 
-  /* --- ScriptProcessorNode: capture audio into a buffer, then zero-crossing cut --- */
-  // Use small buffer for low latency (power-of-2 samples).
-  const BUFFER_SAMPLES = 4096;
-  let   writtenOffset  = 0;
-  // Pre-allocate capture buffer with generous margin beyond decay end.
-  const CAPTURE_MS     = DECAY_MS + 32;                  // extra headroom for ZC
-  const captureBuffer  = ctx.createBuffer(1, Math.ceil(CAPTURE_MS / 1000 * ctx.sampleRate) | 0, ctx.sampleRate);
+  /* --- Capture chain: osc → gain → processor ─── destination --- */
+  const headroomSamples = Math.ceil((DECAY_MS + 32) / 1000 * ctx.sampleRate);
+  const captureBuffer   = ctx.createBuffer(1, headroomSamples, ctx.sampleRate);
+  const channelData     = captureBuffer.getChannelData(0);
 
-  const processor = ctx.createScriptProcessor(BUFFER_SAMPLES, 1, 1);
-  const channelData = captureBuffer.getChannelData(0);
+  let writtenOffset = 0;
+  const processor   = ctx.createScriptProcessor(4096, 0, 1);
 
   processor.onaudioprocess = (e) => {
     const src = e.inputBuffer.getChannelData(0);
-    const dst = channelData;
-    for (let i = 0; i < src.length && writtenOffset < dst.length; i++, writtenOffset++) {
-      dst[writtenOffset] = src[i];
+    for (let i = 0; i < src.length && writtenOffset < channelData.length; i++, writtenOffset++) {
+      channelData[writtenOffset] = src[i];
     }
   };
 
-  // Gate: cut gain at decay end so no extra audio bleeds past.
-  gain.gain.setValueAtTime(1.0, now);
-  gain.gain.setValueAtTime(1.0, decayEnd - 1 / ctx.sampleRate);
-  gain.gain.setValueAtTime(0.0, decayEnd);
-
   osc.connect(gain).connect(processor);
+  gain.connect(ctx.destination);        // audible output
 
-  /* --- Find next zero-crossing after the 10 ms decay window --- */
-  const zcSampleIndex = findNextZeroCrossing(channelData, writtenOffset);
-  const zcSeconds     = (zcSampleIndex / ctx.sampleRate) + now;
+  /* --- Schedule: play captured buffer (trimmed to ZC) from t=now ── */
+  processor.onaudioprocess = null;      // stop recording
+  osc.stop(decayEnd);
 
-  // Trim capture buffer to exactly the zero-crossing sample.
-  const trimmedBuffer = ctx.createBuffer(1, zcSampleIndex, ctx.sampleRate);
-  trimmedBuffer.getChannelData(0).set(channelData.subarray(0, zcSampleIndex));
+  const zcIndex = findNextZeroCrossing(channelData, writtenOffset - 1);
+  const zcTrimmed = Math.min(zcIndex, channelData.length);
 
-  /* --- Schedule: play captured audio through decay-end → ZC, then silence --- */
+  const trimmedBuffer = ctx.createBuffer(1, zcTrimmed, ctx.sampleRate);
+  trimmedBuffer.getChannelData(0).set(channelData.subarray(0, zcTrimmed));
+
+  /* --- Source node → destination. Playback ends at ZC trim point. --- */
   const srcNode = ctx.createBufferSource();
   srcNode.buffer = trimmedBuffer;
   srcNode.connect(ctx.destination);
-  srcNode.start(now + 0);   // zero offset — starts right at t=now
+  srcNode.start(now + 0);               // sample-accurate start
 
-  // Disconnect processor so it stops collecting.
-  processor.onaudioprocess = null;
-  gain.disconnect();          // disconnect source from gate after capture
-
-  // Explicit stop for safety (should already be silent by then).
-  osc.stop(decayEnd);
-});
-
-/**
- * Walk forward from `start` in the buffer to find the next zero-crossing.
- * A zero-crossing occurs when a sample and its predecessor have opposite signs
- * or one of them is exactly zero.  Returns the sample index where the cut
- * should land — the first such point after `start`.
- */
-function findNextZeroCrossing(buffer, start) {
-  for (let i = start; i < buffer.length - 1; i++) {
-    if ((buffer[i] >= 0 && buffer[i + 1] <= 0) ||
-        (buffer[i] <= 0 && buffer[i + 1] >= 0)) {
-      return Math.min(i + 1, buffer.length);
-    }
-  }
-  // Fallback: hard limit at end of capture window (silence enforced).
-  return buffer.length;
+  /* ─── UI snap: fires at EXACT audio cut (onended) ───────────── */
+  document.body.classList.add('snap-active');
+  attachOnEndedSnap(srcNode, 'title');
 }
+
+document.getElementById('trigger').addEventListener('click', play);
 </script>
 </body>
 </html>
