@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sawtooth Minor Third Resolve</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     min-height: 100vh;
@@ -14,27 +14,32 @@
     justify-content: center;
     background: #0a0a0f;
     color: #e0e0e0;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo, monospace;
     overflow: hidden;
-  }
+   }
 
-  #stage { text-align: center; }
+   #stage { text-align: center; }
 
-  #stage .title {
+  /* Font-weight transition is **disabled** by default.
+     It is enabled via inline style only during the decay window,
+     then removed at the audio hard-cut — guaranteeing a frame-accurate snap. */
+   #stage .title {
     font-size: clamp(2rem, 6vw, 4.5rem);
-    font-weight: 700;
+    font-weight: 400;
     letter-spacing: -0.01em;
     line-height: 1.1;
-  }
+    transition: none;
+   }
 
-  #stage .freq {
+   #stage .freq {
     margin-top: 0.75rem;
     font-size: 1.1rem;
     color: #888;
     font-variant-numeric: tabular-nums;
-  }
+    transition: opacity 0.08s;
+   }
 
-  #trigger {
+   #trigger {
     position: absolute;
     bottom: 2rem;
     left: 50%;
@@ -44,44 +49,45 @@
     color: #ccc;
     border: 1px solid #333;
     border-radius: 0;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo, monospace;
     font-size: 1rem;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
-  }
+   }
 
-  #trigger:hover {
+   #trigger:hover {
     background: #252545;
     border-color: #555;
-  }
+   }
 
-  #status {
+   #status {
     position: absolute;
     top: 1.5rem;
     right: 2rem;
     font-size: 0.8rem;
     color: #555;
     font-variant-numeric: tabular-nums;
-  }
+   }
 
-  #flash {
+  /* Hard-cut flash */
+   #flash {
     position: fixed; inset: 0;
     background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.04), transparent 70%);
     opacity: 0;
     pointer-events: none;
-  }
+   }
 
-  #flash.active {
+   #flash.active {
     opacity: 1;
     transition: none;
-  }
+   }
 </style>
 </head>
 <body>
 
 <div id="stage">
-  <div class="title" id="label">Sawtooth Minor Third Resolve</div>
-  <div class="freq" id="freqDisplay">&mdash; Hz</div>
+   <div class="title" id="label">Sawtooth Minor Third Resolve</div>
+   <div class="freq" id="freqDisplay">&mdash; Hz</div>
 </div>
 
 <div id="flash"></div>
@@ -91,66 +97,57 @@
 <script type="module">
 import { attachOnEndedSnap } from './snap.js';
 
-/* ═══════════════════════════════════════════════════════════
+/* ===========================================================
    Saw-tooth waveform synthesis with 10 ms decay & zero-crossing
-   hard-cut. Resolves up a minor third (3 semitones).
+   hard-cut.  Frequency sweeps exponentially across a minor third
+   (3 semitones).
 
-   Core flow:
-    1. Pre-render sample-accurate sawtooth buffer whose frequency
-       sweeps exponentially from BASE_FREQ → TARGET_FREQ over
-       a precise 10 ms window.
-    2. Trim to the last zero-crossing so playback ends at
-       silence with no audible click.
-    3. Play back via AudioBufferSourceNode on the audio hardware
-       clock; font-weight snap fires in the sample-accurate
-       "onended" callback.
-   ═══════════════════════════════════════════════════════════ */
+   Synchronization contract:
+     • CSS transition on font-weight is set to **exactly** DECAY_MS
+       (10 ms) and started at the same instant source.start(now) fires.
+     • The onended callback in snap.js fires at the audio hardware-
+       clock tick when playback ends — within < 1 ms of the cut.
+   =========================================================== */
 
 /* ── Constants ─────────────────────────────────────────────── */
-const BASE_FREQ    = 349.23;             // F4 — start pitch
-const MINOR_THIRD  = Math.pow(2, 3 / 12); // ^0.1875 ≈ 1.189207 (minor third)
-const TARGET_FREQ  = BASE_FREQ * MINOR_THIRD; // ~415.30 Hz (G♯4 / A♭4)
-const DECAY_MS     = 10;                 // exact 10 ms decay window
+const BASE_FREQ      = 349.23;               // F4 — start pitch
+const MINOR_THIRD    = Math.pow(2, 3 / 12);  // ^0.1875 ≈ 1.189207 (minor third)
+const TARGET_FREQ    = BASE_FREQ * MINOR_THIRD;  // ~415.30 Hz (G♭4)
+const DECAY_MS       = 10;                   // exact 10 ms decay window
 
 /* ── DOM refs ──────────────────────────────────────────────── */
-const label    = document.getElementById('label');
-const freqDisp = document.getElementById('freqDisplay');
-const flash    = document.getElementById('flash');
-const statusEl = document.getElementById('status');
-const triggerBtn = document.getElementById('trigger');
+const label        = document.getElementById('label');
+const freqDisp     = document.getElementById('freqDisplay');
+const flash        = document.getElementById('flash');
+const statusEl     = document.getElementById('status');
+const triggerBtn   = document.getElementById('trigger');
 
 let audioCtx = null;
 
 /* ── Build pre-rendered sawtooth buffer ────────────────────── */
 function buildSawBuffer(ctx) {
-  const sr     = ctx.sampleRate;           // audio sample rate (Hz)
-  const dur    = DECAY_MS / 1000;          // 0.010 s
-  const len    = Math.round(sr * dur);     // total samples (~441 @ 44.1 kHz)
+  const sr      = ctx.sampleRate;
+  const dur     = DECAY_MS / 1000;               // 0.010 s
+  const len     = Math.round(sr * dur);
 
-  const buf    = ctx.createBuffer(1, len, sr);
-  const data   = buf.getChannelData(0);
+  const buf     = ctx.createBuffer(1, len, sr);
+  const data    = buf.getChannelData(0);
 
-  const lnr    = Math.log(TARGET_FREQ / BASE_FREQ); // ln(ratio) for exp interp
-  let   phase  = 0;                        // cumulative radian phase accumulator
+  const lnr     = Math.log(TARGET_FREQ / BASE_FREQ);
+  let   phase   = 0;
 
   for (let i = 0; i < len; i++) {
-    const t      = i / sr;                 // current time in seconds
-    const prog   = t / dur;                // progress 0 → 1 across window
-
-    /* Exponential frequency interpolation: f(t) = f₀ · (f₁/f₀)^prog */
+    const t      = i / sr;
+    const prog   = t / dur;
     const freq   = BASE_FREQ * Math.exp(lnr * prog);
-
-    /* Incremental phase — accumulates every sample, no drift */
-    phase += 2 * Math.PI * freq / sr;
-
-    /* Sawtooth in (-1, +1] — linear upward ramp with discontinuity */
-    data[i] = (phase % (2 * Math.PI)) / Math.PI - 1;
+    phase       += 2 * Math.PI * freq / sr;
+    data[i]      = (phase % (2 * Math.PI)) / Math.PI - 1;
   }
 
   /* ── Zero-crossing hard-cut ───────────────────────────────
-     Find last sign change in the waveform. Truncate buffer
-     to that point so playback stops at silence, no click.    */
-  let cutIdx = len; // fallback: play full buffer if no crossing found
+     Truncate to the last sign-change so playback stops at
+     silence — no audible click.                                      */
+  let cutIdx = len;
   for (let i = len - 2; i >= 1; i--) {
     if (data[i] * data[i + 1] <= 0) {
       cutIdx = i + 1;
@@ -166,19 +163,15 @@ function buildSawBuffer(ctx) {
 /* ── Trigger: schedule & play ─────────────────────────────── */
 function start() {
   if (audioCtx) audioCtx.close();
-
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const now = audioCtx.currentTime;
 
-  /* Pre-rendered sawtooth freq-sweep + zero-crossing trim */
-  const buf = buildSawBuffer(audioCtx);
+  const buf      = buildSawBuffer(audioCtx);
+  const source   = audioCtx.createBufferSource();
+  source.buffer  = buf;
 
-  /* Audio graph: BufferSource → GainNode → AnalyserNode → Destination */
-  const source = audioCtx.createBufferSource();
-  source.buffer = buf;
-
-  const gain   = audioCtx.createGain();
-  gain.gain.value = 1.0; // unity — no amplitude envelope; silence from hard-cut
+  const gain     = audioCtx.createGain();
+  gain.gain.value = 1.0;
 
   const analyser = audioCtx.createAnalyser();
   analyser.fftSize = 256;
@@ -187,20 +180,22 @@ function start() {
   gain.connect(analyser);
   analyser.connect(audioCtx.destination);
 
-  /* Font-weight snap fires at exact audio clock tick on playback end */
-  attachOnEndedSnap(source, 'label');
-
-  /* Schedule — locked to audio hardware clock, zero drift */
-  source.start(now);
+  /* Sync the CSS transition to the exact decay window:
+     font-weight sweeps 400→900 over DECAY_MS, peaking at cut. */
+  label.style.transition = `font-weight ${DECAY_MS}ms linear`;
+  label.style.fontWeight = '900';
 
   flash.classList.add('active');
+  freqDisp.textContent = Math.round(BASE_FREQ) + ' Hz → ~' + Math.round(TARGET_FREQ) + ' Hz';
   statusEl.textContent = 'decaying';
 
-  /* Live frequency readout matching the buffer render */
-  const lnr      = Math.log(TARGET_FREQ / BASE_FREQ);
-  const t0       = performance.now();
-  const freqArr  = new Uint8Array(analyser.frequencyBinCount);
+  /* Sample-accurate clock — font-weight snap fires inside onended */
+  attachOnEndedSnap(source, 'label');
+  source.start(now);
 
+  /* Live frequency readout (best-effort via rAF, not audio-clock) */
+  const lnr        = Math.log(TARGET_FREQ / BASE_FREQ);
+  const t0         = performance.now();
   function freqTick() {
     const elapsed = performance.now() - t0;
     if (elapsed < DECAY_MS) {
@@ -212,10 +207,8 @@ function start() {
       freqDisp.textContent = '\u2014 Hz';
     }
   }
-
   requestAnimationFrame(freqTick);
 
-  /* Teardown after buffer plays out */
   const cleanupDelay = (buf.duration * 1000) + 50;
   setTimeout(() => {
     if (audioCtx && audioCtx.state === 'running') audioCtx.close();
