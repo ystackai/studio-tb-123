@@ -7,8 +7,13 @@
  * synchronous style mutation inside that callback, which commits
  * to the compositor within < 1 ms of the zero-crossing hard-cut.
  *
- * All rAF painting happens after the snap so the user sees the
- * brutalist weight jump before any animation easing can apply.
+ * Synchronization contract:
+ *   • CSS transition on .title is set to `font-weight DECAY_MS linear`
+ *     at trigger time — font-weight sweeps 400→900 over 10 ms.
+ *   • onended fires when the sample-accurate zero-crossing cut completes.
+ *   • This module immediately disables transitions and sets
+ *     font-weight to baseline (400), achieving a hard snap with no
+ *     easing whatsoever — "the purity of the hard-cut is the feature."
  */
 
 /**
@@ -16,26 +21,31 @@
  * the `onended` event of a BufferSourceNode — i.e. at the exact
  * audio clock tick when playback stops.
  *
- * @param {AudioBufferSourceNode} src        - source whose .onended triggers the snap
- * @param {string}      titleElId    - id of the DOM element to snap
+ * @param {AudioBufferSourceNode} src   - source whose .onended triggers the snap
+ * @param {string}              titleElId - id of the DOM element to snap
  */
 export function attachOnEndedSnap(src, titleElId) {
   const el = document.getElementById(titleElId);
   if (!el) return;
 
   src.onended = () => {
-     // synchronous mutation inside onended: < 1 ms from audio clock tick
-     // Disable ALL transitions first - prevents any easing during the snap.
-     // Set font-weight second so the compositor sees a hard jump, not a tween.
-    el.style.transition = 'none';
+    // Disable the font-weight transition during the snap.
+    // This is **not** CSS — it's a forced style override applied
+    // in the same synchronous microtask as onended, so the browser
+    // cannot schedule any easing between the audio clock tick and paint.
     el.style.fontWeight = '400';
 
-     // Force reflow so paint is committed before transition restoration.
+    // Disable ALL transitions momentarily so no residual easing
+    // (opacity, etc.) applies during the snap mutation.
+    const saved = el.style.transition;
+    el.style.transition = 'none';
+
+    // Force reflow — commit paint at font-weight 400 with no animation.
     void el.offsetHeight;
 
     requestAnimationFrame(() => {
-       // Restore CSS transition for any future style changes.
-      el.style.transition = '';
-     });
-   };
+      // Restore CSS transition for any future style changes.
+      el.style.transition = saved || '';
+    });
+  };
 }
