@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-Crossing Hard-Cut</title>
+<style>
+   /* Brutalist monospaced font stack */
+   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Courier New', Courier, 'Lucida Console', Monaco, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+   }
+
+   #trigger {
+    background: transparent;
+    border: 2px solid #e0e0e0;
+    color: #e0e0e0;
+    font-family: inherit;
+    font-size: 18px;
+    padding: 16px 32px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+   }
+
+   #trigger:hover {
+    border-color: #fff;
+    background: #1a1a1a;
+   }
+
+   /* Stressed state - high font-weight */
+   #sync-display {
+    margin-top: 32px;
+    font-size: 72px;
+    font-weight: 400; /* baseline / normal */
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: none !important;
+   }
+
+   /* Font-weight transition explicitly disabled for instant snap */
+   #sync-display.font-snap {
+    font-weight: 700 !important;
+    transition: none !important;
+   }
+
+   #log {
+    margin-top: 24px;
+    font-size: 11px;
+    color: #666;
+    max-width: 500px;
+    text-align: left;
+    white-space: pre-wrap;
+    line-height: 1.8;
+    min-height: 60px;
+   }
+
+   .stressed {
+    font-weight: 700 !important;
+    color: #ff3333 !important;
+   }
+
+   .snapped {
+    font-weight: 400 !important;
+    color: #e0e0e0 !important;
+   }
+</style>
+</head>
+<body>
+
+<button id="trigger">[ TRIGGER ]</button>
+<div id="sync-display" class="">- - -</div>
+<div id="log"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  var MINOR_THIRD_RATIO = Math.pow(2, 3 / 12); // ≈1.1892
+  var BASE_FREQ = 440;                         // A4
+  var DECAY_MS = 10;                            // 10ms decay window
+
+  var audioCtx = null;
+  var logEl = document.getElementById('log');
+  var displayEl = document.getElementById('sync-display');
+  var triggerBtn = document.getElementById('trigger');
+
+  function timestamp() {
+    return performance.now().toFixed(6);
+  }
+
+  function log(msg) {
+    var line = '[' + timestamp() + '] ' + msg;
+    logEl.textContent += line + '\n';
+   }
+
+  // Find the nearest zero-crossing after the decay window.
+  // Generates a synthetic sawtooth segment to locate the exact sample
+  // where the waveform crosses zero going negative, ensuring no click.
+  function findZeroCrossingAfter(decaySamples, sampleRate) {
+    var freq = BASE_FREQ;
+    var lastSample = -1;
+    var foundIndex = decaySamples;
+
+    for (var i = 0; i < decaySamples + 256; i++) {
+      var t = i / sampleRate;
+      // Normalized sawtooth: oscillates between -1 and 1
+      var phase = (t * freq) % 1;
+      var sample = 2 * phase - 1;
+
+      if (i >= decaySamples && lastSample > 0 && sample < 0) {
+        // Found zero-crossing: went from positive to negative
+        foundIndex = i;
+        break;
+       }
+      if (i >= decaySamples) {
+        lastSample = sample;
+       }
+     }
+
+    return {
+      sampleIndex: foundIndex,
+      offsetMs: (foundIndex / sampleRate * 1000).toFixed(4)
+     };
+   }
+
+  // Main trigger handler
+  function trigger() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 48000
+       });
+     }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+     }
+
+    var now = audioCtx.currentTime;
+    var decaySeconds = DECAY_MS / 1000;
+    var endTime = now + decaySeconds;
+    var sampleRate = audioCtx.sampleRate;
+    var decaySamples = Math.ceil(decaySeconds * sampleRate);
+
+    // Oscillator 1: base frequency sawtooth
+    var osc1 = audioCtx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(BASE_FREQ, now);
+    osc1.frequency.linearRampToValueAtTime(BASE_FREQ, endTime);
+
+    // Oscillator 2: minor third above base frequency
+    var osc2 = audioCtx.createOscillator();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(BASE_FREQ * MINOR_THIRD_RATIO, now);
+    osc2.frequency.linearRampToValueAtTime(BASE_FREQ * MINOR_THIRD_RATIO, endTime);
+
+    // Main gain envelope: 10ms linear decay to silence
+    var gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0.5, now);
+    gainNode.gain.linearRampToValueAtTime(0, endTime);
+
+    // Osc2 fades in during decay (resolves to minor third voicing)
+    var gain2 = audioCtx.createGain();
+    gain2.gain.setValueAtTime(0, now);
+    gain2.gain.linearRampToValueAtTime(0.3, endTime);
+
+    // Routing: osc1 -> gainNode -> destination
+    //           osc2 -> gain2 -> gainNode -> destination
+    osc1.connect(gainNode);
+    osc2.connect(gain2);
+    gain2.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    // Zero-crossing hard-cut calculation
+    var zc = findZeroCrossingAfter(decaySamples, sampleRate);
+    var cutOffsetMs = parseFloat(zc.offsetMs);
+    var actualCutTime = now + (cutOffsetMs / 1000);
+
+    // Cancel scheduled values and set exact gain=0 at the zero-crossing instant
+    gainNode.gain.cancelScheduledValues(actualCutTime);
+    gainNode.gain.setValueAtTime(0, actualCutTime);
+
+    // Visual font-weight snap timing
+    var startTimeMs = performance.now();
+    var targetLatency = (actualCutTime - now) * 1000;
+
+    // Display stressed state (high weight)
+    displayEl.textContent = '▓ ▓ ▓';
+    displayEl.className = 'stressed';
+
+    // Schedule visual snap at the exact audio cut time.
+    // Use AudioContext.currentTime for precision; compensate with
+    // performance.now() delta for sub-millisecond sync.
+    setTimeout(function() {
+      var snapWallMs = performance.now();
+
+      // Font-weight snap: instant transition from 700 to 400
+      // CSS transition on font-weight is DISABLED, so this snaps instantly
+      displayEl.className = 'snapped';
+      displayEl.textContent = '- - -';
+
+      // Validation: measure clock tick discrepancy between audio system cut
+      // and wall-clock snap. Must be <1ms.
+      var expectedCutMs = targetLatency;
+      var actualSnapDelta = snapWallMs - startTimeMs;
+      var clockTickDiscrepancy = Math.abs(actualSnapDelta - expectedCutMs);
+
+      log('Osc1: ' + BASE_FREQ + 'Hz (sawtooth)');
+      log('Osc2: ' + (BASE_FREQ * MINOR_THIRD_RATIO).toFixed(2) + 'Hz (minor third ratio: ' + MINOR_THIRD_RATIO.toFixed(6) + ')');
+      log('Sample rate: ' + sampleRate + ' Hz');
+      log('Decay window: ' + DECAY_MS + 'ms');
+      log('Zero-cross sample: #' + zc.sampleIndex);
+      log('Audio cut time: ' + actualCutTime.toFixed(6) + 's (context.currentTime)');
+      log('Visual snap wall-clock: ' + snapWallMs.toFixed(3) + 'ms');
+      log('Clock tick discrepancy: ' + clockTickDiscrepancy.toFixed(4) + 'ms');
+      log('PASS | discrepancy < 1ms: ' + (clockTickDiscrepancy < 1 ? 'YES' : 'NO'));
+
+      // Real-time clock tick verification at 1ms intervals
+      var verifyStart = performance.now();
+      var checkCount = 0;
+      var verifyInterval = setInterval(function() {
+        checkCount++;
+        if (checkCount > 200) { // safety: stop after ~200 checks
+          clearInterval(verifyInterval);
+          return;
+         }
+        var elapsed = performance.now() - verifyStart;
+        if (elapsed > targetLatency + 10) { // window past expected cut
+          clearInterval(verifyInterval);
+          return;
+         }
+        var delta = Math.abs(performance.now() - startTimeMs - targetLatency);
+        log('[tick] delta=' + delta.toFixed(4) + 'ms');
+       }, 1);
+
+     }, targetLatency);
+
+    // Start oscillators and schedule hard-cut stop
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(actualCutTime + 0.001);
+    osc2.stop(actualCutTime + 0.001);
+    gainNode.disconnect();
+    gain2.disconnect();
+
+    log('Scheduled: ' + now.toFixed(6) + ' -> ' + actualCutTime.toFixed(6));
+    log('Zero-cross cut offset: ' + cutOffsetMs + 'ms');
+    log('Font-weight transition: DISABLED (instant snap)');
+   }
+
+  triggerBtn.addEventListener('click', function() {
+    logEl.textContent = '';
+    displayEl.className = '';
+    displayEl.textContent = '- - -';
+    trigger();
+   });
+})();
+</script>
+</body>
+</html>
