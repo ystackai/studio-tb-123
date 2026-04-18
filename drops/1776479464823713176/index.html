@@ -141,32 +141,32 @@ body {
     vizCtx.stroke();
   }
 
-  /**
-   * Locate the nearest zero-crossing at or after `decaySamples`.
-   * Linear interpolation between adjacent samples for sub-sample accuracy.
-   */
+    /**
+     * Phase-accurate zero-crossing finder for a linearly-ramped sawtooth.
+     * During decay (0→DECAY_MS), freq ramps f0→f1. We compute the exact
+     * accumulated phase at decay end, then project forward from there using
+     * the post-decay constant frequency to find the next zero-crossing.
+     */
   function findZeroCrossingAfter(decaySamples, sampleRate) {
-    var freq = BASE_FREQ;
-    var lastSn = 0;
+    var f0          = BASE_FREQ;
+    var f1          = f0 * MINOR_THIRD_RATIO;    // minor third above f0
+    var decaySec    = DECAY_MS / 1000;
 
-    for (var i = decaySamples; i < decaySamples + sampleRate; i++) {
-      var t      = i / sampleRate;
-      var phase  = (t * freq) % 1;
-      var sn     = 2 * phase - 1;
+      // Accumulated oscillator cycles at the exact end of the ramped window.
+      // With linear frequency sweep: ∫₀ᵀ(f0 + (f1-f0)·t/T) dt = T·(f0+f1)/2
+    var accumulatedCycles = (f0 + f1) / 2.0 * decaySec;
+    var phaseInCycle       = accumulatedCycles % 1.0;        // ∈ [0, 1)
 
-      if (i === decaySamples) { lastSn = sn; continue; }
+      // Our sawtooth (2·phase − 1) crosses zero exactly at phase = 0.5.
+      // After decay the frequency is constant at f1.
+    var targetPhase = 0.5;
+    var toTarget     = ((targetPhase - phaseInCycle) % 1.0 + 1.0) % 1.0;
 
-      if ((lastSn > 0 && sn < 0) || (lastSn < 0 && sn > 0)) {
-        var fraction = lastSn / (lastSn - sn);
-        var exactIdx = i - fraction;
-        return { sampleIndex: Math.round(exactIdx), offsetMs: (exactIdx / sampleRate * 1000).toFixed(4) };
-      }
-      lastSn = sn;
+    return {
+        sampleIndex: decaySamples + Math.round(toTarget / f1 * sampleRate),
+        offsetMs:     (((decaySamples + Math.round(toTarget / f1 * sampleRate)) / sampleRate * 1000)).toFixed(4)
+      };
     }
-
-    // Fallback: hard-cut at decay boundary
-    return { sampleIndex: decaySamples, offsetMs: (decaySamples / sampleRate * 1000).toFixed(4) };
-  }
 
   /* ── Core synthesis trigger ────────────────────────────── */
   function trigger() {
