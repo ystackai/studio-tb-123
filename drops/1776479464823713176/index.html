@@ -118,7 +118,7 @@ let audioCtx                 = null;
  *   φ(t) = 2π · f1 · (r^((t−t0)/T) − 1) / ln(r)
  */
 function phaseAt(t, t0, Tdec, f1, ratio) {
-  return 2 * Math.PI * f1 * (Math.pow(ratio, (t - t0) / Tdec) - 1) / Math.log(ratio);
+  return 2 * Math.PI * f1 * Tdec * (Math.pow(ratio, (t - t0) / Tdec) - 1) / Math.log(ratio);
 }
 
 /**
