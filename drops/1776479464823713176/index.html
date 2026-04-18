@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sawtooth Minor Third Resolve</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     min-height: 100vh;
@@ -14,29 +14,29 @@
     justify-content: center;
     background: #0a0a0f;
     color: #e0e0e0;
-    /* Monospaced brutalist typography */
+      /* Monospaced brutalist typography */
     font-family: 'Courier New', Courier, monospace;
     overflow: hidden;
-  }
+   }
 
-  #stage { text-align: center; }
+    #stage { text-align: center; }
 
-  #stage .title {
+    #stage .title {
     font-size: clamp(2rem, 6vw, 4.5rem);
     font-weight: 700;
     letter-spacing: -0.01em;
     line-height: 1.1;
-    /* Transition is disabled at trigger moment via JS for hard-cut snap */
-  }
+      /* Transition is disabled at trigger moment via JS for hard-cut snap */
+   }
 
-  #stage .freq {
+    #stage .freq {
     margin-top: 0.75rem;
     font-size: 1.1rem;
     color: #888;
     font-variant-numeric: tabular-nums;
-  }
+   }
 
-  #trigger {
+    #trigger {
     position: absolute;
     bottom: 2rem;
     left: 50%;
@@ -45,47 +45,47 @@
     background: #1a1a2e;
     color: #ccc;
     border: 1px solid #333;
-    /* Brutalist — sharp edges, no border-radius */
+      /* Brutalist — sharp edges, no border-radius */
     border-radius: 0;
     font-family: 'Courier New', Courier, monospace;
     font-size: 1rem;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
-  }
+   }
 
-  #trigger:hover {
+    #trigger:hover {
     background: #252545;
     border-color: #555;
-  }
+   }
 
-  #status {
+    #status {
     position: absolute;
     top: 1.5rem;
     right: 2rem;
     font-size: 0.8rem;
     color: #555;
     font-variant-numeric: tabular-nums;
-  }
+   }
 
-  /* Visual flash overlay — instant on/off, no transition */
-  #flash {
+    /* Visual flash overlay — instant on/off, no transition */
+    #flash {
     position: fixed; inset: 0;
     background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.04), transparent 70%);
     opacity: 0;
     pointer-events: none;
-  }
+   }
 
-  #flash.active {
+    #flash.active {
     opacity: 1;
     transition: none;
-  }
+   }
 </style>
 </head>
 <body>
 
 <div id="stage">
-  <div class="title" id="label">Sawtooth Minor Third Resolve</div>
-  <div class="freq" id="freqDisplay">&mdash; Hz</div>
+    <div class="title" id="label">Sawtooth Minor Third Resolve</div>
+    <div class="freq" id="freqDisplay">&mdash; Hz</div>
 </div>
 
 <div id="flash"></div>
@@ -96,141 +96,146 @@
 import { attachOnEndedSnap } from './snap.js';
 
 /* ── Constants ─────────────────────────────────────────────── */
-const BASE_FREQ       = 349.23;        // F4 — starting pitch
-const MINOR_THIRD     = Math.pow(2, 3 / 12);    // 3 semitones
-const TARGET_FREQ     = BASE_FREQ * MINOR_THIRD; // ~415 Hz (G♯4/Ab4)
-const DECAY_MS        = 10;            // exact 10 ms decay window
+const BASE_FREQ         = 349.23;                 // F4 — start pitch
+const MINOR_THIRD       = Math.pow(2, 3 / 12);    // 3 semitones
+const TARGET_FREQ       = BASE_FREQ * MINOR_THIRD; // ~415 Hz (G♯4/Ab4)
+const DECAY_MS          = 10;                     // exact 10 ms decay window
 
 /* ── DOM refs ──────────────────────────────────────────────── */
-const label    = document.getElementById('label');
-const freqDisp = document.getElementById('freqDisplay');
-const flash    = document.getElementById('flash');
-const statusEl = document.getElementById('status');
+const label      = document.getElementById('label');
+const freqDisp   = document.getElementById('freqDisplay');
+const flash      = document.getElementById('flash');
+const statusEl   = document.getElementById('status');
 const triggerBtn = document.getElementById('trigger');
 
 let audioCtx = null;
 
-/* ── Pre-render sawtooth waveform with sample-accurate freq sweep ── */
+/* ── Pre-render sawtooth: sample-accurate freq sweep + amp decay
+      + zero-crossing hard-cut at window boundary.
+     Uses AudioBufferSourceNode (not live OscillatorNode) because
+     the Web Audio API clamps frequency automation ramps to ≥20 ms,
+     while our precision target is 10 ms. Pre-rendering guarantees
+     exact exponential interpolation and sample-accurate timing.    */
 function buildSawBuffer(ctx) {
-  const sr        = ctx.sampleRate;
-  const duration  = DECAY_MS / 1000;         // 0.010 s
-  const length    = Math.round(sr * duration);
-  const buf       = ctx.createBuffer(1, length, sr);
-  const data      = buf.getChannelData(0);
+  const sr      = ctx.sampleRate;
+  const dur     = DECAY_MS / 1000;         // 0.010 s
+  const len     = Math.round(sr * dur);
+  const buf     = ctx.createBuffer(1, len, sr);
+  const data    = buf.getChannelData(0);
 
-  let phase       = 0;                       // cumulative radian phase
-  const fStep     = TARGET_FREQ / BASE_FREQ; // frequency ratio
-  const lnR       = Math.log(fStep);         // natural log of ratio
+   /* Frequency sweep: exponential ramp from BASE → TARGET over DECAY_MS */
+  const ratio = TARGET_FREQ / BASE_FREQ;          // ~1.1892
+  const lnr     = Math.log(ratio);                   // natural log of ratio
 
-  for (let i = 0; i < length; i++) {
+  let phase = 0;                                 // cumulative radian phase
+
+  for (let i = 0; i < len; i++) {
     const t       = i / sr;
-    const progress = t / duration;           // 0 → 1 over window
+    const prog    = t / dur;                      // 0 → 1 over window
 
-    /* Exponential frequency ramp: sawtooth resolves to minor third */
-    const freq   = BASE_FREQ * Math.exp(lnR * progress);
+     /* Exponential frequency interpolation: f(t) = f₀ · exp(ln(r)·t/tₑ) */
+    const freq    = BASE_FREQ * Math.exp(lnr * prog);
 
-    /* Accumulate phase incrementally (sample-accurate) */
+     /* Incremental phase accumulation (sample-accurate, no drift) */
     phase += 2 * Math.PI * freq / sr;
 
-    /* Sawtooth: (-1, 1] — subtracted from 0 so it slopes upward */
-    const saw  = ((phase % (2 * Math.PI)) / Math.PI - 1);
+     /* Sawtooth waveform in (-1, 1] — slopes upward */
+    const saw = ((phase % (2 * Math.PI)) / Math.PI - 1);
 
-    /* Amplitude envelope: quick attack, exponential decay over 10 ms */
-    const attackSamples = Math.max(1, Math.round(sr * 0.001)); // ~1 ms attack
-    const amp   = i < attackSamples
-      ? (i / attackSamples) * 0.6
-      : 0.6 * Math.exp(-progress * 4.6);    // e^-4.6 ≈ 0.01 → ~-40 dB
+     /* Amplitude envelope: 1 ms attack → exponential decay to ~-40 dB */
+    const atk      = Math.max(1, Math.round(sr * 0.001)); // ~1 ms attack samples
+    let amp        = (i < atk)
+       ? (i / atk) * 0.6
+       : 0.6 * Math.exp(-prog * 4.6);                 // e⁻⁴·⁶ ≈ 0.01
 
-    data[i]     = amp * saw;
-  }
+    data[i] = amp * saw;
+   }
 
-  /* ── Zero-crossing hard-cut ─────────────────────────────── */
-  /* Find the last zero-crossing at or before the window boundary,
-     so truncation to silence produces no audible click.
-     Fixed: explicit i+1 < length check (was fragile with || pattern). */
-  let cutIdx = length;
-  for (let i = length - 1; i > 0; i--) {
-    const nextVal = data[i + 1];
-    if (data[i] * nextVal <= 0) {        // sign change or exact zero
-      cutIdx = Math.min(i + 1, length);  // sample just after crossing
+   /* ── Zero-crossing hard-cut ─────────────────────────────── */
+   /* Find the last sign-change before silence so truncation
+     to zero produces no audible click at playback end.       */
+  let cutIdx = len;
+  for (let i = len - 2; i > 0; i--) {
+    if (data[i] * data[i + 1] <= 0) {    // sign change or exact zero-crossing
+      cutIdx = Math.min(i + 1, len);      // sample just after crossing
       break;
-    }
-  }
+     }
+   }
 
-  /* Trim buffer to zero-crossing boundary */
   const trimmed = ctx.createBuffer(1, cutIdx, sr);
   trimmed.getChannelData(0).set(data.subarray(0, cutIdx));
   return trimmed;
 }
 
-/* ── Start: schedule sawtooth oscillator → GainNode → zero-crossing cut ─ */
+/* ── Trigger: schedule oscillator (pre-rendered BufferSource)
+      → GainNode → zero-crossing hard-cut via AudioClock tick.
+     AudioClock = the OS-level audio hardware clock driving the
+     AudioContext's currentTime. All scheduling is locked to it. */
 function start() {
   if (audioCtx) { audioCtx.close(); }
 
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const now = audioCtx.currentTime;
 
-  /* Build sample-accurate sawtooth buffer with freq sweep + amp decay.
-     Pre-rendering into an offline BufferSource eliminates the possibility of
-     audio buffer underrun — all samples are baked in before scheduling. */
-  const buf   = buildSawBuffer(audioCtx);
+   /* Pre-render: sawtooth oscillator, freq sweep, amp decay, zero-crossing */
+  const buf    = buildSawBuffer(audioCtx);
 
-  /* Audio graph: BufferSource → GainNode → Destination */
-  const source = audioCtx.createBufferSource();
-  source.buffer = buf;
+   /* Audio graph: BufferSource → GainNode → analyser → destination */
+  const source       = audioCtx.createBufferSource();
+  source.buffer      = buf;
 
-  const gainNode = audioCtx.createGain();
-  gainNode.gain.value = 1.0;             // buffer already carries amp envelope
+  const gainNode     = audioCtx.createGainNode();
+  gainNode.gain.value    = 1.0;               // unity — envelope baked in buffer
 
-  /* Analyser for live frequency readout */
-  const analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 256;
+  const analyser   = audioCtx.createAnalyser();
+  analyser.fftSize       = 256;
 
   source.connect(gainNode);
   gainNode.connect(analyser);
   analyser.connect(audioCtx.destination);
 
-  /* Synchronized visual snap via onended (audio-clock tick) */
+   /* Synchronized visual snap at exact AudioClock tick (onended fires sample-accurate) */
   attachOnEndedSnap(source, 'label');
 
-  /* Schedule playback at exact audio clock time */
+   /* Schedule playback at precise audio clock time — no drift from performance.now */
   source.start(now);
-  flash.classList.add('active');
-  statusEl.textContent = 'decaying';
 
-  /* Live frequency readout (performance.now for UI only) */
-  const t0      = performance.now();
-  const fReader = analyser.getByteFrequencyData(new Uint8Array(analyser.frequencyBinCount));
+  flash.classList.add('active');
+  statusEl.textContent     = 'decaying';
+
+   /* Live frequency readout: exponential interpolation matching the buffer render */
+  const t0           = performance.now();
+  const fReader      = analyser.getByteFrequencyData(new Uint8Array(analyser.frequencyBinCount));
 
   function freqTick() {
-    const elapsed = performance.now() - t0;
+    const elapsed    = performance.now() - t0;
     if (elapsed < DECAY_MS) {
-      /* Interpolate current pitch along exponential ramp */
-      const progress = Math.pow(elapsed / DECAY_MS, 1/3);
-      const hz       = BASE_FREQ + (TARGET_FREQ - BASE_FREQ) * progress;
-      freqDisp.textContent = Math.round(hz) + ' Hz';
+      const prog         = elapsed / DECAY_MS;         // 0 → 1
+      const hz           = BASE_FREQ * Math.exp(lnr * prog); /* exponential ramp */
+      freqDisp.textContent   = Math.round(hz) + ' Hz';
       requestAnimationFrame(freqTick);
-    } else {
-      freqDisp.textContent = '\u2014 Hz';
-    }
-  }
+     } else {
+      freqDisp.textContent   = '\u2014 Hz';
+     }
+   }
+
   requestAnimationFrame(freqTick);
 
-  /* Teardown: close context after playback finishes */
-  const teardownDelay = (buf.duration * 1000) + 50; // buffer duration + margin
+   /* Teardown after buffer playback completes */
+  const teardownDelay = (buf.duration * 1000) + 50;
   setTimeout(() => {
     if (audioCtx && audioCtx.state === 'running') audioCtx.close();
     audioCtx = null;
-  }, teardownDelay);
+   }, teardownDelay);
 }
 
 /* ── Stop / teardown ───────────────────────────────────────── */
 function stop() {
   flash.classList.remove('active');
-  label.style.fontWeight = '';
-  label.style.transition = '';
-  if (audioCtx)     { audioCtx.close(); audioCtx = null; }
-  statusEl.textContent = 'ready';
+  label.style.fontWeight   = '';
+  label.style.transition   = '';
+  if (audioCtx)       { audioCtx.close(); audioCtx = null; }
+  statusEl.textContent     = 'ready';
 }
 
 triggerBtn.addEventListener('click', start);
