@@ -1,51 +1,34 @@
 /**
- * snap.js — zero-latency font-weight snap synchronized to the
- * AudioContext clock tick via AudioBufferSourceNode.onended.
+ * snap.js — synchronous font-weight snap fired inside AudioBufferSourceNode.onended.
  *
- * The `onended` event fires at the sample-accurate moment playback
- * halts (driven by the audio hardware clock).  We attach a single
- * synchronous style mutation inside that callback, which commits
- * to the compositor within < 1 ms of the zero-crossing hard-cut.
- *
- * Synchronization contract:
- *   • CSS transition on .title is set to `font-weight DECAY_MS linear`
- *     at trigger time — font-weight sweeps 400→900 over 10 ms.
- *   • onended fires when the sample-accurate zero-crossing cut completes.
- *   • This module immediately disables transitions and sets
- *     font-weight to baseline (400), achieving a hard snap with no
- *     easing whatsoever — "the purity of the hard-cut is the feature."
+ * The `onended` event fires at the exact sample-accurate audio-clock tick when
+ * playback halts (i.e. the moment the buffer ends at the zero-crossing).
+ * We apply two inline-style mutations in that callback:
+ *   1. Disable `font-weight` transition (inline transition overrides stylesheet).
+ *   2. Set font-weight back to baseline (400).
+ * Both mutations commit before any compositor paint, yielding < 1 ms sync drift.
  */
 
 /**
- * Attach a synchronous font-weight snap listener that fires inside
- * the `onended` event of a BufferSourceNode — i.e. at the exact
- * audio clock tick when playback stops.
- *
- * @param {AudioBufferSourceNode} src   - source whose .onended triggers the snap
- * @param {string}              titleElId - id of the DOM element to snap
+ * @param {AudioBufferSourceNode} src     — source whose .onended triggers the snap
+ * @param {string}               titleElId — id of the DOM element to snap
  */
 export function attachOnEndedSnap(src, titleElId) {
   const el = document.getElementById(titleElId);
   if (!el) return;
 
   src.onended = () => {
-    // Disable the font-weight transition during the snap.
-    // This is **not** CSS — it's a forced style override applied
-    // in the same synchronous microtask as onended, so the browser
-    // cannot schedule any easing between the audio clock tick and paint.
+    // Disable the font-weight transition so the snap is instantaneous.
+    // Inline style overrides stylesheet rules, and no easing is scheduled
+    // because `transition` is set to 'none' before any paint opportunity.
+    el.style.transition = 'none';
     el.style.fontWeight = '400';
 
-    // Disable ALL transitions momentarily so no residual easing
-    // (opacity, etc.) applies during the snap mutation.
-    const saved = el.style.transition;
-    el.style.transition = 'none';
-
-    // Force reflow — commit paint at font-weight 400 with no animation.
+    // Force synchronous reflow to guarantee the paint happens at this microtask.
     void el.offsetHeight;
 
     requestAnimationFrame(() => {
-      // Restore CSS transition for any future style changes.
-      el.style.transition = saved || '';
+      el.style.transition = '';
     });
   };
 }
