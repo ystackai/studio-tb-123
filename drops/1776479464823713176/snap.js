@@ -16,26 +16,28 @@
  * the `onended` event of a BufferSourceNode — i.e. at the exact
  * audio clock tick when playback stops.
  *
- * @param {AudioBufferSourceNode} src  — source that will be stopped
- * @param {string} titleElId           — id of the <h1> element
+ * @param {AudioBufferSourceNode} src   — source that will be stopped
+ * @param {string} titleElId            — id of the <h1> element
  */
 export function attachOnEndedSnap(src, titleElId) {
-  const el = document.getElementById(titleElId);
-  if (!el) return;
+    const el = document.getElementById(titleElId);
+    if (!el) return;
 
-  src.onended = () => {
-    // ── synchronous mutation inside onended: < 1 ms from audio clock tick
-    el.style.transition = "none";        // disable CSS easing (brutalist snap)
-    el.style.fontWeight = "900";         // brute-force to boldest weight
-    el.textContent   = "Saw → Minor Third\nCUT — zero crossing hard-stop";
+    src.onended = () => {
+          /* Synchronous mutation inside onended: < 1 ms from audio clock tick.
+           * CSS `transition: none !important` (from stylesheet) prevents
+           * any easing — font-weight jumps instantaneously. */
+        el.style.fontWeight = "900";            // brute-force to boldest weight
+        el.textContent    = "Saw → Minor Third\nCUT — zero crossing hard-stop";
 
-    // Force reflow so paint is committed before transition restoration.
-    void el.offsetHeight;
+          /* Force reflow so paint is committed before transition restoration. */
+        void el.offsetHeight;
 
-    requestAnimationFrame(() => {
-      // Restore CSS transition for any future style changes.
-      el.style.transition = "";          // remove inline override
-      el.style.fontWeight = "300";       // animate back via CSS transition
-    });
-  };
+        requestAnimationFrame(() => {
+              /* Restore CSS transition for any future style changes.
+               * Removing inline override lets the stylesheet's `transition` rules apply again. */
+            el.style.transition = "";           // remove inline override — CSS takes over
+            el.style.fontWeight = "300";        // animate back via CSS transition
+          });
+      };
 }
