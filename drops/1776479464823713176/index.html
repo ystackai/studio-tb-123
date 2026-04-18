@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sawtooth → Minor Third — TB-123</title>
 <style>
-   * { font-family: 'Courier New', Courier, 'Lucida Sans Typewriter', monospace; }
+    * { font-family: 'Courier New', Courier, 'Lucida Sans Typewriter', monospace; }
 
   body {
     display: flex;
@@ -17,14 +17,14 @@
     color: #e0e0e0;
   }
 
-   #title {
+    #title {
     font-size: 2.4rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     transition: font-weight 0.05s linear;
   }
 
-   #trigger {
+    #trigger {
     display: block;
     margin-top: 2rem;
     padding: 1rem 2.4rem;
@@ -39,10 +39,10 @@
     outline: none;
   }
 
-   #trigger:active { background: #e94560; color: #0d0d0d; }
+    #trigger:active { background: #e94560; color: #0d0d0d; }
 
-   .snap-active *,
-   .snap-active #title {
+    .snap-active *,
+    .snap-active #title {
     transition: none !important;
   }
 </style>
@@ -55,57 +55,113 @@
 <script type="module">
 import { attachOnEndedSnap } from './snap.js';
 
-const BASE_FREQ = 220;                  // A3
-const SEMITONES = 3;                    // minor third
-const FREQ_RATIO = Math.pow(2, SEMITONES / 12);  // ~1.1892
+const BASE_FREQ = 220;                   // A3
+const SEMITONES = 3;                     // minor third
+const FREQ_RATIO = Math.pow(2, SEMITONES / 12);   // ~1.1892
 const DECAY_MS  = 10;
 
-/** Pre-compute exact sawtooth buffer with logarithmic freq sweep. */
-function buildSawBuffer(sr) {
-  const N = Math.round(DECAY_MS / 1000 * sr);
-  const data = new Float32Array(N);
-  const logRatio = Math.log(FREQ_RATIO) / N;
+/** Offline-render sawtooth oscillators + crossfade → combined AudioBuffer.
 
-  for (let i = 0; i < N; i++) {
-    const freq = BASE_FREQ * Math.exp(logRatio * i);
-    data[i] = ((freq / sr) * i) % 1.0;
-  }
+    Architecture:
+      oscA (saw) ─→ GainNode(A) ──┐
+                                    ├──── GainNode(mix) ─→ destination
+      oscB (saw × freqRatio) ─→ GainNode(B) ─┘
 
-  const buf = new AudioBuffer({ length: N, sampleRate: sr, channelCount: 1 });
-  buf.getChannelData(0).set(data);
-  return buf;
-}
+    oscA sweeps BASE_FREQ → BASE_FREQ×FREQ_RATIO via exponentialRampToValueAtTime.
+    Gain nodes apply linear crossfade envelopes at the transition point.
+*/
+function renderSawOscillators(sr, decayFrames) {
+  const N = Math.min(320, decayFrames);              // cap to offline-context limit
 
-/** Find next zero-crossing to trim for hard-cut silence. */
-function trimToZeroCrossing(buf) {
-  const d = buf.getChannelData(0);
-  for (let i = 2; i < d.length; i++) {
-    if ((d[i-1] >= 0 && d[i] <= 0) || (d[i-1] <= 0 && d[i] >= 0)) {
-      return Math.min(i, d.length);
+  // Offline context: one-shot renderer, sample-accurate clock
+  const offline = new OfflineAudioContext(1, N + 80, sr);
+  const t0    = offline.currentTime;                  // graph start (seconds)
+  const sweepDur = DECAY_MS / 1000;                   // 10 ms as seconds
+  const crossFrames = Math.min(Math.max(Math.round(N * 0.2), 5), N - 6);
+
+  // ── Oscillator A ────────────────────────────────────────────────
+  const oscA     = offline.createOscillator();
+  const gainA    = offline.createGain();
+  oscA.type      = 'sawtooth';
+  oscA.frequency.setValueAtTime(BASE_FREQ,        t0);
+  oscA.frequency.exponentialRampToValueAtTime(
+    BASE_FREQ * FREQ_RATIO, t0 + sweepDur);       // A3 → minor-third
+
+  gainA.gain.setValueAtTime(1,   t0);
+  gainA.gain.linearRampToValueAtTime(1, t0 + (N - crossFrames) / sr);
+  gainA.gain.linearRampToValueAtTime(0, t0 + N / sr);
+
+  oscA.connect(gainA).connect(offline.destination);
+  oscA.start(t0);
+  oscA.stop(t0 + sweepDur + 0.001);                // hold past decay end
+
+  // ── Oscillator B (minor-third frequency) ────────────────────────
+  const oscB     = offline.createOscillator();
+  const gainB    = offline.createGain();
+  oscB.type      = 'sawtooth';
+  oscB.frequency.setValueAtTime(BASE_FREQ * FREQ_RATIO, t0);
+
+  // B fades in starting at the transition point
+  gainB.gain.setValueAtTime(0,        t0 + (N - crossFrames) / sr);
+  gainB.gain.linearRampToValueAtTime(1, t0 + N / sr);
+
+  oscB.connect(gainB).connect(offline.destination);
+  oscB.start(t0);
+  oscB.stop(t0 + sweepDur + 0.001);                // hold past decay end
+
+  return offline.startRendering().then(buf => {
+    const d = buf.getChannelData(0);
+
+    // ── Zero-crossing hard-cut point ──────────────────────────────
+    let trimAt = d.length;
+    for (let i = N - crossFrames; i < d.length; i++) {
+      if ((d[i] >= 0 && d[i + 1] <= 0) || (d[i] <= 0 && d[i + 1] >= 0)) {
+        trimAt = Math.min(i, d.length);
+        break;
+      }
     }
-  }
-  return d.length;
+
+    // ── Fade out from cross-frame to hard-cut ─────────────────────
+    const fadeStart = Math.min(trimAt - crossFrames, N - crossFrames);
+    const fadeLen   = trimAt - fadeStart;
+    for (let i = 0; i < fadeLen && (fadeStart + i) < d.length; i++) {
+      d[fadeStart + i] *= (1 - i / fadeLen);             // linear fade-out
+    }
+
+    const trimmed = new AudioBuffer({
+      length: trimAt, sampleRate: sr, channelCount: 1,
+    });
+    trimmed.getChannelData(0).set(d.subarray(0, trimAt));
+    return trimmed;
+  });
 }
 
-/** Trigger audio + visual snap. */
-function play() {
+/** Trigger synth + visual snap. */
+async function play() {
   const ctx = new AudioContext();
-  const now = ctx.currentTime;
-
-  const buf = buildSawBuffer(ctx.sampleRate);
-  const trimAt = trimToZeroCrossing(buf);
-
-  // Trim to zero-crossing for sample-accurate hard-cut silence
-  const trimmed = new AudioBuffer({ length: trimAt, sampleRate: ctx.sampleRate, channelCount: 1 });
-  trimmed.getChannelData(0).set(buf.getChannelData(0), 0);
-
-  const srcNode = ctx.createBufferSource();
-  srcNode.buffer = trimmed;
-  srcNode.connect(ctx.destination);
-  srcNode.start(now + 0);
+  const sr  = ctx.sampleRate;
 
   document.body.classList.add('snap-active');
-  attachOnEndedSnap(srcNode, 'title');
+
+  try {
+    const decayFrames = Math.round(DECAY_MS / 1000 * sr);
+    const buf = await renderSawOscillators(sr, decayFrames);
+
+    const srcNode = ctx.createBufferSource();
+    srcNode.buffer = buf;
+
+    // Main-context gain node for additional audio-clock-synced automation
+    const finalGain = ctx.createGain();
+    finalGain.gain.setValueAtTime(1, ctx.currentTime);
+
+    srcNode.connect(finalGain).connect(ctx.destination);
+
+    srcNode.start(ctx.currentTime + 0);
+    attachOnEndedSnap(srcNode, 'title');
+  } catch (err) {
+    console.error('Render failed:', err);
+    document.body.classList.remove('snap-active');
+  }
 }
 
 document.getElementById('trigger').addEventListener('click', play);
