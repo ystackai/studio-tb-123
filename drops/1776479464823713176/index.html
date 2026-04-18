@@ -3,212 +3,57 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sawtooth Minor Third Resolve</title>
+<title>Sawtooth → Minor Third</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #0a0a0f;
-    color: #e0e0e0;
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo, monospace;
-    overflow: hidden;
-}
-
-#stage { text-align: center; }
-
-/* Font-weight transition set imperatively at trigger time (matches decay window).
-   Disabled on the exact hard-cut tick via inline style in snap.js. */
-#stage .title {
-    font-size: clamp(2rem, 6vw, 4.5rem);
-    font-weight: 400;
-    letter-spacing: -0.01em;
-    line-height: 1.1;
-}
-
-#stage .freq {
-    margin-top: 0.75rem;
-    font-size: 1.1rem;
-    color: #888;
-    font-variant-numeric: tabular-nums;
-    transition: opacity 0.08s;
-}
-
-#trigger {
-    position: absolute;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.75rem 2rem;
-    background: #1a1a2e;
-    color: #ccc;
-    border: 1px solid #333;
-    border-radius: 0;
-    font-family: 'IBM Plex Mono', 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-}
-
-#trigger:hover {
-    background: #252545;
-    border-color: #555;
-}
-
-#status {
-    position: absolute;
-    top: 1.5rem;
-    right: 2rem;
-    font-size: 0.8rem;
-    color: #555;
-    font-variant-numeric: tabular-nums;
-}
-
-/* Hard-cut flash — visual confirmation, not the focus */
-#flash {
-    position: fixed; inset: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.04), transparent 70%);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.03s;
-}
-
-#flash.active {
-    opacity: 1;
-}
+  body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #1a1a2e; font-family: system-ui, sans-serif; color: #eee; }
+  button { padding: 1rem 2rem; font-size: 1.2rem; cursor: pointer; border: none; border-radius: 8px; background: #e94560; color: #fff; transition: background .2s; }
+  button:hover { background: #c73650; }
 </style>
 </head>
 <body>
+<button id="trigger">▶ Trigger</button>
+<script>
+/**
+ * Web Audio API saw-tooth oscillator with minor-third resolution over
+ * exactly 10 ms, followed by an instant hard-cut to silence.
+ *
+ * Signal chain:
+ *   Oscillator (sawtooth) → GainNode (envelope gate) → Destination
+ *
+ * Timing (sample-accurate via AudioContext.currentTime):
+ *   t = now        : osc starts at BASE_FREQ, gain = 1.0
+ *   t = now + 10ms : freq reaches minor third (BASE × 2^(3/12)),
+ *                    gain jumps to 0.0 → instant hard-cut
+ */
 
-<div id="stage">
-    <div class="title" id="label">Sawtooth Minor Third Resolve</div>
-    <div class="freq" id="freqDisplay">&mdash; Hz</div>
-</div>
+const BASE_FREQ    = 220;                 // A3
+const SEMITONES    = 3;                   // minor third interval
+const FREQ_RATIO   = Math.pow(2, SEMITONES / 12);  // ≈ 1.1892
+const DECAY_MS     = 10;                  // precise decay window in ms
 
-<div id="flash"></div>
-<div id="status">ready</div>
-<button id="trigger">&#9654; Trigger</button>
+document.getElementById('trigger').addEventListener('click', () => {
+  const ctx  = new AudioContext();
+  const now  = ctx.currentTime;
+  const end  = now + DECAY_MS / 1000;      // exact 10 ms mark
 
-<script type="module">
-import { attachOnEndedSnap } from './snap.js';
+  /* --- Oscillator: linear frequency sweep to minor third --- */
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(BASE_FREQ,          now);
+  osc.frequency.linearRampToValueAtTime(
+    BASE_FREQ * FREQ_RATIO,                       // resolves to minor third
+    end                                           // at exactly 10 ms
+  );
 
-/* ── Constants ─────────────────────────────────────────────── */
-const BASE_FREQ       = 349.23;                          // F4 — start pitch
-const MINOR_THIRD     = Math.pow(2, 3 / 12);             // 3 semitones → ~1.189207
-const TARGET_FREQ     = BASE_FREQ * MINOR_THIRD;         // ~415.30 Hz (Gb4)
-const DECAY_MS        = 10;                              // exact decay-window duration
+  /* --- GainNode envelope: instant hard-cut to silence at t=end --- */
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(1.0, now);
+  gain.gain.setValueAtTime(0.0, end);              // instantaneous drop
 
-/* ── Offline render: pre-mix sawtooth + freq-sweep into an AudioBuffer,
- *    then locate the first sample-accurate zero-crossing scanning
- *    backwards from the tail.  The buffer is truncated there — this
- *    IS the instant hard-cut. */
-async function buildBuffer() {
-  const sr       = 48000;                                // common sample rate
-  const dur      = DECAY_MS / 1000 + 0.005;              // sweep + small tail for zc detection
-  const frames   = Math.ceil(sr * dur);
-
-  const offline = new OfflineAudioContext(1, frames, sr);
-  const osc     = offline.createOscillator();
-  const gain    = offline.createGain();
-
-  osc.type               = 'sawtooth';
-  osc.frequency.value    = BASE_FREQ;
-   /* Exponential frequency ramp: F4 → minor-third above in exactly DECAY_MS ms */
-  osc.frequency.exponentialRampToValueAtTime(
-      TARGET_FREQ, offline.currentTime + DECAY_MS / 1000);
-
-   /* Gain ramps to zero during the tail so the zc window is in silence */
-  gain.gain.setValueAtTime(1.0, offline.currentTime);
-  gain.gain.linearRampToValueAtTime(
-      0.0, offline.currentTime + dur);
-
-  osc.connect(gain).connect(offline.destination);
-  osc.start();
-
-  const rendered = await offline.startRendering();
-  const data     = rendered.getChannelData(0);             // Float32Array
-
-   /* Scan backwards from the end for a zero-crossing in the tail.
-      This ensures the cut point is right after ~10 ms of tonal content. */
-  let cutSample = frames;                                  // fallback: entire buffer
-  for (let i = data.length - 1; i > 0; i--) {
-    if (data[i] * data[i - 1] <= 0) {
-      cutSample = i;
-      break;
-     }
-   }
-
-   /* Truncate: buffer ends exactly at the zero-crossing — no post-cut energy,
-      no gain ramp on playback, just an instant hard-cut to silence. */
-  const truncated    = offline.createBuffer(1, cutSample, sr);
-  const outChannel = truncated.getChannelData(0);
-  outChannel.set(data.subarray(0, cutSample));
-
-  return { buffer: truncated, cutTime: cutSample / sr };
-}
-
-/* ── Playback via AudioBufferSourceNode — onended fires at the exact
- *    sample-accurate audio-clock tick when playback halts (hard-cut). */
-async function start() {
-  if (audioCtx) audioCtx.close();
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  const { buffer, cutTime } = await buildBuffer();       // synchronous zc analysis
-  const now        = audioCtx.currentTime;
-  const src        = audioCtx.createBufferSource();
-  src.buffer       = buffer;
-
-   /* Chain: source → analyser (live readout) → destination */
-  const analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 256;
-  src.connect(analyser).connect(audioCtx.destination);
-
-   /* Synchronise font-weight sweep to the decay window.
-      Will be disabled imperatively inside attachOnEndedSnap at hard-cut. */
-  label.style.transition    = `font-weight ${DECAY_MS}ms linear`;
-  label.style.fontWeight    = '900';
-
-  flash.classList.add('active');
-  freqDisp.textContent      = Math.round(BASE_FREQ) + ' Hz → ~' + Math.round(TARGET_FREQ) + ' Hz';
-  statusEl.textContent      = 'decaying';
-
-   /* Live frequency readout (rAF-based, best-effort visualisation). */
-  const lnr      = Math.log(TARGET_FREQ / BASE_FREQ);
-  const t0       = performance.now();
-   (function freqTick() {
-    const elapsed = performance.now() - t0;
-    if (elapsed < DECAY_MS) {
-      const prog     = elapsed / DECAY_MS;
-      const hz       = BASE_FREQ * Math.exp(lnr * prog);
-      freqDisp.textContent = Math.round(hz) + ' Hz';
-      requestAnimationFrame(freqTick);
-     } else {
-      freqDisp.textContent = '\u2014 Hz';
-     }
-   })();
-
-   /* Start playback. BufferSourceNode self-terminates at buffer end —
-      the zero-crossing hard-cut point we truncated to above. */
-  src.start(now);
-
-   /* Attach synchronous font-weight snap inside onended (snap.js). */
-  attachOnEndedSnap(src, 'label');
-
-   /* No manual .stop() call needed; onended fires when the buffer drains. */
-}
-
-/* ── State ─────────────────────────────────────────────────── */
-let audioCtx = null;
-const label      = document.getElementById('label');
-const freqDisp   = document.getElementById('freqDisplay');
-const flash      = document.getElementById('flash');
-const statusEl   = document.getElementById('status');
-const triggerBtn = document.getElementById('trigger');
-
-triggerBtn.addEventListener('click', start);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(end);                                   // safety kill at 10 ms
+});
 </script>
 </body>
 </html>
