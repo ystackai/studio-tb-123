@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sawtooth → Minor Third — TB-123</title>
 <style>
- * { font-family: 'Courier New', Courier, 'Lucida Sans Typewriter', monospace; }
+ /* ── Brutalist monospace stack ─────────────────────────────── */
+ * {
+   font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code',
+                'IBM Plex Mono', 'Source Code Pro', 'Consolas',
+                'Liberation Mono', 'Courier New', monospace;
+ }
 
  body {
    display: flex;
@@ -15,16 +20,16 @@
    margin: 0;
    background: #0d0d0d;
    color: #e0e0e0;
-   }
+ }
 
-   #title {
+ #title {
    font-size: 2.4rem;
    font-weight: 700;
    letter-spacing: 0.08em;
    transition: font-weight 0.05s linear;
-   }
+ }
 
-   #trigger {
+ #trigger {
    display: block;
    margin-top: 2rem;
    padding: 1rem 2.4rem;
@@ -37,14 +42,14 @@
    background: transparent;
    color: #e94560;
    outline: none;
-   }
+ }
 
-   #trigger:active { background: #e94560; color: #0d0d0d; }
+ #trigger:active { background: #e94560; color: #0d0d0d; }
 
-   .snap-active *,
-   .snap-active #title {
-   transition: none !important;
-   }
+ /* Disable all transitions on body while snap is active */
+.snap-active * {
+  transition: none !important;
+}
 </style>
 </head>
 <body>
@@ -55,32 +60,36 @@
 <script type="module">
 import { attachOnEndedSnap } from './snap.js';
 
-const BASE_FREQ   = 220;                 // A3
-const SEMITONES   = 3;                   // minor third interval
-const FREQ_RATIO = Math.pow(2, SEMITONES / 12);   // ≈1.1892 → ~261.6 Hz
-const DECAY_MS    = 10;                  // 10 ms decay window
+const BASE_FREQ    = 220;                    // A3
+const SEMITONES    = 3;                      // minor third interval
+const FREQ_RATIO   = Math.pow(2, SEMITONES / 12);  // ≈ 1.1892 → ~261.6 Hz
+const DECAY_MS     = 10;                     // 10 ms linear decay window
 
-/** Render a saw-tooth note: pitch sweeps base→minor third over 10ms,
-    amplitude decays linearly, then hard-cut at next zero-crossing.
+/**
+ * Render a saw-tooth note on an OfflineAudioContext.
+ * Pitch sweeps BASE_FREQ → BASE_FREQ × minor-third over DECAY_MS.
+ * Amplitude decays from 1→0 in the same window.
+ * Buffer is trimmed to the next zero-crossing after decay for a hard-cut.
  */
 function renderSawOscillator(sr) {
   const decayFrames = Math.round(DECAY_MS / 1000 * sr);
-  const margin       = Math.max(2, Math.ceil(sr / 1000)); // extra ms for safe stop
+  const margin      = Math.max(2, Math.ceil(sr / 1000)); // +1 ms tail for safe stop
 
   const offline = new OfflineAudioContext(1, decayFrames + margin, sr);
-  const t0       = offline.currentTime;
+  const t0      = offline.currentTime;
 
-   // ── Sawtooth oscillator (single source) ────────────────────────
-  const osc = offline.createOscillator();
-  const gain = offline.createGain();
+  // ── Sawtooth oscillator with pitch & amplitude ramps ────────
+  const osc   = offline.createOscillator();
+  const gain  = offline.createGain();
 
-  osc.type         = 'sawtooth';
-  osc.frequency.setValueAtTime(BASE_FREQ,         t0);
+  osc.type     = 'sawtooth';
+  osc.frequency.setValueAtTime(BASE_FREQ,          t0);
   osc.frequency.exponentialRampToValueAtTime(
-    BASE_FREQ * FREQ_RATIO, t0 + DECAY_MS / 1000); // A3 → ~261.6 Hz
+    BASE_FREQ * FREQ_RATIO, t0 + DECAY_MS / 1000   // A3 → minor third ~261.6 Hz
+  );
 
   gain.gain.setValueAtTime(1,            t0);
-  gain.gain.linearRampToValueAtTime(0,   t0 + DECAY_MS / 1000); // 10 ms linear decay
+  gain.gain.linearRampToValueAtTime(0,   t0 + DECAY_MS / 1000);  // 10 ms decay
 
   osc.connect(gain).connect(offline.destination);
   osc.start(t0);
@@ -88,28 +97,27 @@ function renderSawOscillator(sr) {
 
   return offline.startRendering().then(buf => {
     const d = buf.getChannelData(0);
-    const tailLen = Math.min(margin, d.length - decayFrames);
 
-     // ── Find next zero-crossing in the tail buffer ──────────────
+    // ── Find next zero-crossing after decay tail ─────────────
     let cutAt = d.length;
     for (let i = decayFrames; i < d.length - 1; i++) {
       if ((d[i] >= 0 && d[i + 1] <= 0) || (d[i] <= 0 && d[i + 1] >= 0)) {
         cutAt = i;
         break;
-       }
-     }
+      }
+    }
 
-     // Zero-crossing hard-cut: silence everything after the crossing
+    // Hard-cut: silence everything past the zero-crossing
     for (let i = cutAt; i < d.length; i++) d[i] = 0;
 
-     // Trim buffer to zero-crossing boundary
+    // Trim buffer to the exact crossing boundary
     const trimmed = new AudioBuffer({ length: cutAt, sampleRate: sr, channelCount: 1 });
     trimmed.getChannelData(0).set(d.subarray(0, cutAt));
     return trimmed;
-   });
+  });
 }
 
-/** Trigger synth + visual snap. */
+/** Trigger synth + visual snap */
 async function play() {
   const ctx = new AudioContext();
   document.body.classList.add('snap-active');
@@ -120,16 +128,17 @@ async function play() {
     const srcNode = ctx.createBufferSource();
     srcNode.buffer = buf;
 
+    // Final master gain — no reverb, no delay, no effects.
     const finalGain = ctx.createGain();
     finalGain.gain.setValueAtTime(1, ctx.currentTime);
 
     srcNode.connect(finalGain).connect(ctx.destination);
-    srcNode.start(ctx.currentTime + 0);
-    attachOnEndedSnap(srcNode, 'title');
-   } catch (err) {
+    srcNode.start(ctx.currentTime + 0);          // sample-accurate trigger
+    attachOnEndedSnap(srcNode, 'title');         // visual snap on audio cut
+  } catch (err) {
     console.error('Render failed:', err);
     document.body.classList.remove('snap-active');
-   }
+  }
 }
 
 document.getElementById('trigger').addEventListener('click', play);
