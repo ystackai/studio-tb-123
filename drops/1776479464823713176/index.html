@@ -8,16 +8,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-   --bg: #0a0a0a;
-   --fg: #e8e8e8;
-   --accent: #ff3c3c;
+    --bg: #0a0a0a;
+    --fg: #e8e8e8;
+    --accent: #ff3c3c;
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
   font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas',
-                        'Menlo', monospace;
+                         'Menlo', monospace;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,15 +26,15 @@ body {
   padding: 2rem;
 }
 
-/* Monospaced brutalist font stack. */
+/* Monospaced brutalist font stack. Stressed initial weight (700). */
 h1.snap-target {
   font-size: clamp(1.4rem, 4vw, 2.4rem);
-  font-weight: 300;                     /* starting weight */
+  font-weight: 700;                      /* stressed — bold start */
   letter-spacing: -0.03em;
   line-height: 1.15;
   margin-bottom: 1rem;
   text-transform: uppercase;
-  transition: none !important;           /* snap — CSS easing disabled on font-weight */
+  transition: none !important;            /* snap — CSS easing disabled on font-weight */
 }
 
 p.status {
@@ -94,21 +94,21 @@ canvas#scope {
 import { attachOnEndedSnap } from './snap.js';
 
 /* ── synthesis constants ─────────────────────────────────────── */
-const DECAY_MS              = 10;                     // 10 ms decay window
-const BASE_FREQ             = 220;                    // A3 — root note (saw-tooth carrier)
-const MINOR_THIRD_SEMITONES = 3;                      // minor third = 3 semitones
-const MINOR_THIRD_RATIO     = Math.pow(2, MINOR_THIRD_SEMITONES / 12); // ≈1.1892 (A3→C4)
-const END_FREQ              = BASE_FREQ * MINOR_THIRD_RATIO;    // ~261.63 Hz (C4)
+const DECAY_MS               = 10;                      // 10 ms decay window
+const BASE_FREQ              = 220;                     // A3 — root note (saw-tooth carrier)
+const MINOR_THIRD_SEMITONES = 3;                       // minor third = 3 semitones
+const MINOR_THIRD_RATIO      = Math.pow(2, MINOR_THIRD_SEMITONES / 12); // ≈1.1892 (A3→C4)
+const END_FREQ               = BASE_FREQ * MINOR_THIRD_RATIO;     // ~261.63 Hz (C4)
 
 /* ── DOM refs ─────────────────────────────────────────────────── */
-const btn                   = document.getElementById("btn");
-const statusEl              = document.getElementById("status");
-const scope                 = document.getElementById("scope");
-const tickLabel             = document.getElementById("tickLabel");
-const snapTitle             = document.getElementById("snapTitle");
-const ctx2d                 = scope.getContext("2d");
+const btn                    = document.getElementById("btn");
+const statusEl               = document.getElementById("status");
+const scope                  = document.getElementById("scope");
+const tickLabel              = document.getElementById("tickLabel");
+const snapTitle              = document.getElementById("snapTitle");
+const ctx2d                  = scope.getContext("2d");
 
-let audioCtx                = null;
+let audioCtx                 = null;
 
 /* ── helpers ──────────────────────────────────────────────────── */
 
@@ -135,7 +135,7 @@ function drawWaveform(buffer, decaySamples, cutSample) {
   const w = scope.width, h = scope.height;
   ctx2d.clearRect(0, 0, w, h);
 
-  // zero reference line
+   // zero reference line
   ctx2d.strokeStyle = "#1a1a1a";
   ctx2d.lineWidth = 1;
   ctx2d.beginPath();
@@ -145,7 +145,7 @@ function drawWaveform(buffer, decaySamples, cutSample) {
 
   const len = Math.min(buffer.length, w);
 
-  // active waveform (red) — up to cut point
+   // active waveform (red) — up to cut point
   ctx2d.strokeStyle = "#ff3c3c";
   ctx2d.lineWidth = 1.5;
   ctx2d.beginPath();
@@ -154,10 +154,10 @@ function drawWaveform(buffer, decaySamples, cutSample) {
     const xi = Math.min(Math.floor(x), buffer.length - 1);
     const y = h / 2 - buffer[xi] * h / 2;
     i === 0 ? ctx2d.moveTo(i, y) : ctx2d.lineTo(i, y);
-  }
+   }
   ctx2d.stroke();
 
-  // post-cut silence (flat zero, dimmed)
+   // post-cut silence (flat zero, dimmed)
   if (cutSample < len) {
     ctx2d.strokeStyle = "#2a2a2a";
     ctx2d.lineWidth = 0.5;
@@ -167,9 +167,9 @@ function drawWaveform(buffer, decaySamples, cutSample) {
     ctx2d.lineTo(len, h / 2);
     ctx2d.stroke();
     ctx2d.setLineDash([]);
-  }
+   }
 
-  // zero-cross cut marker (white dashed vertical)
+   // zero-cross cut marker (white dashed vertical)
   const zxX = cutSample;
   if (zxX < w) {
     ctx2d.strokeStyle = "#ffffff";
@@ -184,91 +184,91 @@ function drawWaveform(buffer, decaySamples, cutSample) {
     ctx2d.fillStyle = "#ffffff";
     ctx2d.font = "11px monospace";
     ctx2d.fillText(`CUT @ ${cutSample} samples`, zxX + 6, 14);
-  }
+   }
 
-  // phase tick label
+   // phase tick label
   const sr = audioCtx ? audioCtx.sampleRate : "?";
   const phaseDeg = Math.round((phaseAt(cutSample / sr, 0, DECAY_MS / 1000, BASE_FREQ, MINOR_THIRD_RATIO) / (2 * Math.PI)) * 360) % 360;
-  tickLabel.textContent = `sr: ${sr} Hz    |  decay: ${DECAY_MS} ms    |  cut sample: ${cutSample}    |  phase @ cut: ~${phaseDeg}° (zero-cross)`;
+  tickLabel.textContent = `sr: ${sr} Hz     |  decay: ${DECAY_MS} ms     |  cut sample: ${cutSample}     |  phase @ cut: ~${phaseDeg}° (zero-cross)`;
 }
 
 /* ── core synthesis: offline render for exact zero-crossing ───── */
 function trigger() {
-  // Disable CSS transition on font-weight before scheduling (atomic snap guard).
+   // Disable CSS transition on font-weight before scheduling (atomic snap guard).
   snapTitle.style.transition = "none";
 
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
   if (audioCtx.state === "suspended") audioCtx.resume();
 
-  const now                   = audioCtx.currentTime;    // reference time via AudioContext.currentTime
-  const sr                    = audioCtx.sampleRate;
-  const Tdec                  = DECAY_MS / 1000;         // 0.010 s
-  const ratio                 = MINOR_THIRD_RATIO;
-  const f1                    = BASE_FREQ;
+  const now                    = audioCtx.currentTime;     // reference time via AudioContext.currentTime
+  const sr                     = audioCtx.sampleRate;
+  const Tdec                   = DECAY_MS / 1000;          // 0.010 s
+  const ratio                  = MINOR_THIRD_RATIO;
+  const f1                     = BASE_FREQ;
 
-  // Compute total phase accumulated during the full decay window.
-  const phiDec                = phaseAt(Tdec, 0, Tdec, f1, ratio);
+   // Compute total phase accumulated during the full decay window.
+  const phiDec                 = phaseAt(Tdec, 0, Tdec, f1, ratio);
 
-  // Snap to next zero-crossing (phase must be a multiple of 2π).
-  const nZeroCrossings        = Math.ceil(phiDec / (2 * Math.PI));
-  const targetPhi                 = nZeroCrossings * 2 * Math.PI;
+   // Snap to next zero-crossing (phase must be a multiple of 2π).
+  const nZeroCrossings         = Math.ceil(phiDec / (2 * Math.PI));
+  const targetPhi                  = nZeroCrossings * 2 * Math.PI;
 
-  // Exact time of that zero-crossing (analytic inverse).
-  const cutTimeLocal          = timeForPhase(targetPhi, 0, Tdec, f1, ratio);
-  const cutSample                 = Math.round(cutTimeLocal * sr);
+   // Exact time of that zero-crossing (analytic inverse).
+  const cutTimeLocal           = timeForPhase(targetPhi, 0, Tdec, f1, ratio);
+  const cutSample                  = Math.round(cutTimeLocal * sr);
 
-  // Enforce: stop no earlier than decay window end.
+   // Enforce: stop no earlier than decay window end.
   if (cutTimeLocal < Tdec) {
     throw new Error("zero-cross computed before decay — impossible");
-  }
+   }
 
   statusEl.textContent = `Cut at sample ${cutSample} (${(cutTimeLocal * 1000).toFixed(3)} ms rel) — saw-to-minor-third → hard-cut`;
 
-  /* ── OfflineAudioContext: render exactly the audio we'll cut ── */
-  const totalSamples            = Math.max(cutSample + sr, 480); // ~1 s after cut for silence canvas
-  const offlineCtx              = new OfflineAudioContext(1, totalSamples, sr);
+   /* ── OfflineAudioContext: render exactly the audio we'll cut ── */
+  const totalSamples             = Math.max(cutSample + sr, 480); // ~1 s after cut for silence canvas
+  const offlineCtx               = new OfflineAudioContext(1, totalSamples, sr);
 
-  // OscillatorNode: sawtooth, frequency sweep root → minor third.
-  const osc                     = offlineCtx.createOscillator();
-  osc.type                      = "sawtooth";
+   // OscillatorNode: sawtooth, frequency sweep root → minor third.
+  const osc                      = offlineCtx.createOscillator();
+  osc.type                       = "sawtooth";
   osc.frequency.setValueAtTime(f1, 0);
   osc.frequency.exponentialRampToValueAtTime(
-    Math.max(END_FREQ, 1),       // never hit zero frequency
-    Tdec                         // ramp completes at exactly 10 ms
-  );
+    Math.max(END_FREQ, 1),        // never hit zero frequency
+    Tdec                          // ramp completes at exactly 10 ms
+   );
 
-  // GainNode: decays from unity → near-silence over decay window.
-  const gain                    = offlineCtx.createGain();
+   // GainNode: decays from unity → near-silence over decay window.
+  const gain                     = offlineCtx.createGain();
   gain.gain.setValueAtTime(1, 0);
   gain.gain.exponentialRampToValueAtTime(1e-8, Tdec);
 
   osc.connect(gain);
   gain.connect(offlineCtx.destination);
 
-  // Schedule the exact cut — sample-accurate stop at computed zero-crossing.
+   // Schedule the exact cut — sample-accurate stop at computed zero-crossing.
   osc.stop(cutTimeLocal);
 
-  /* ── render → draw ── */
+   /* ── render → draw ── */
   offlineCtx.startRendering().then(buffer => {
     const channel = buffer.getChannelData(0);
 
-    // Play through real AudioContext using currentTime for precise start.
-    const realGain                  = audioCtx.createGain();
-    const realSrc                   = audioCtx.createBufferSource();
-    realSrc.buffer                  = buffer;
+     // Play through real AudioContext using currentTime for precise start.
+    const realGain                   = audioCtx.createGain();
+    const realSrc                    = audioCtx.createBufferSource();
+    realSrc.buffer                   = buffer;
     realSrc.connect(realGain);
     realGain.gain.setValueAtTime(1, 0);
-    realSrc.start(now);            // start at AudioContext.currentTime
+    realSrc.start(now);             // start at AudioContext.currentTime
 
     drawWaveform(channel, DECAY_MS / 1000 * sr, cutSample);
 
-    // ── UI font-weight snap synced to audio clock tick via onended ─
-    // realSrc.onended fires inside the AudioContext's processing thread
-    // at the exact sample position where playback stops.  This is the
-    // monotonic wall-clock moment driven by the audio hardware timer,
-    // guaranteeing < 1 ms discrepancy vs. the zero-crossing hard-cut.
+     // ── UI font-weight snap synced to audio clock tick via onended ─
+     // realSrc.onended fires inside the AudioContext's processing thread
+     // at the exact sample position where playback stops.  This is the
+     // monotonic wall-clock moment driven by the audio hardware timer,
+     // guaranteeing < 1 ms discrepancy vs. the zero-crossing hard-cut.
     attachOnEndedSnap(realSrc, "snapTitle");
-  });
+   });
 }
 
 /* ── boot ─────────────────────────────────────────────────────── */
