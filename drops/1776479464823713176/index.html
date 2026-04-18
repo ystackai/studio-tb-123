@@ -14,46 +14,106 @@
 <button id="trigger">▶ Trigger</button>
 <script>
 /**
- * Web Audio API saw-tooth oscillator with minor-third resolution over
- * exactly 10 ms, followed by an instant hard-cut to silence.
+ * Web Audio API saw-tooth oscillator with 10 ms decay to minor third
+ * and zero-crossing hard-cut.
  *
- * Signal chain:
- *   Oscillator (sawtooth) → GainNode (envelope gate) → Destination
+ * Signal chain (sample-accurate):
+ *   OscillatorNode (sawtooth) → GainNode (envelope gate) → ScriptProcessorNode
+ *     → find next zero-crossing after t+10ms → AudioBufferSourceNode → Destination
  *
- * Timing (sample-accurate via AudioContext.currentTime):
- *   t = now        : osc starts at BASE_FREQ, gain = 1.0
- *   t = now + 10ms : freq reaches minor third (BASE × 2^(3/12)),
- *                    gain jumps to 0.0 → instant hard-cut
+ * Timeline:
+ *   t = now        : osc @ BASE_FREQ, gain = 1.0
+ *   t = now + 10ms : freq resolves to minor-third (BASE × 2^(3/12))
+ *   t ≈ end + δ    : zero-crossing hard-cut → absolute silence after
  */
 
-const BASE_FREQ    = 220;                 // A3
-const SEMITONES    = 3;                   // minor third interval
-const FREQ_RATIO   = Math.pow(2, SEMITONES / 12);  // ≈ 1.1892
-const DECAY_MS     = 10;                  // precise decay window in ms
+const BASE_FREQ     = 220;                  // A3
+const SEMITONES     = 3;                    // minor third interval
+const FREQ_RATIO    = Math.pow(2, SEMITONES / 12);   // ≈ 1.1892
+const DECAY_MS      = 10;                   // precise decay window in ms
 
 document.getElementById('trigger').addEventListener('click', () => {
-  const ctx  = new AudioContext();
-  const now  = ctx.currentTime;
-  const end  = now + DECAY_MS / 1000;      // exact 10 ms mark
+  const ctx       = new AudioContext();
+  const now       = ctx.currentTime;
+  const decayEnd  = now + DECAY_MS / 1000;    // exact 10 ms mark
 
   /* --- Oscillator: linear frequency sweep to minor third --- */
   const osc = ctx.createOscillator();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(BASE_FREQ,          now);
+  osc.type  = 'sawtooth';
+  osc.frequency.setValueAtTime(BASE_FREQ,              now);
   osc.frequency.linearRampToValueAtTime(
-    BASE_FREQ * FREQ_RATIO,                       // resolves to minor third
-    end                                           // at exactly 10 ms
+    BASE_FREQ * FREQ_RATIO,                            // resolves to minor third
+    decayEnd                                             // at exactly 10 ms
   );
 
-  /* --- GainNode envelope: instant hard-cut to silence at t=end --- */
+  /* --- GainNode envelope: full amplitude during decay --- */
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(1.0, now);
-  gain.gain.setValueAtTime(0.0, end);              // instantaneous drop
 
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(now);
-  osc.stop(end);                                   // safety kill at 10 ms
+  /* --- ScriptProcessorNode: capture audio into a buffer, then zero-crossing cut --- */
+  // Use small buffer for low latency (power-of-2 samples).
+  const BUFFER_SAMPLES = 4096;
+  let   writtenOffset  = 0;
+  // Pre-allocate capture buffer with generous margin beyond decay end.
+  const CAPTURE_MS     = DECAY_MS + 32;                  // extra headroom for ZC
+  const captureBuffer  = ctx.createBuffer(1, Math.ceil(CAPTURE_MS / 1000 * ctx.sampleRate) | 0, ctx.sampleRate);
+
+  const processor = ctx.createScriptProcessor(BUFFER_SAMPLES, 1, 1);
+  const channelData = captureBuffer.getChannelData(0);
+
+  processor.onaudioprocess = (e) => {
+    const src = e.inputBuffer.getChannelData(0);
+    const dst = channelData;
+    for (let i = 0; i < src.length && writtenOffset < dst.length; i++, writtenOffset++) {
+      dst[writtenOffset] = src[i];
+    }
+  };
+
+  // Gate: cut gain at decay end so no extra audio bleeds past.
+  gain.gain.setValueAtTime(1.0, now);
+  gain.gain.setValueAtTime(1.0, decayEnd - 1 / ctx.sampleRate);
+  gain.gain.setValueAtTime(0.0, decayEnd);
+
+  osc.connect(gain).connect(processor);
+
+  /* --- Find next zero-crossing after the 10 ms decay window --- */
+  const zcSampleIndex = findNextZeroCrossing(channelData, writtenOffset);
+  const zcSeconds     = (zcSampleIndex / ctx.sampleRate) + now;
+
+  // Trim capture buffer to exactly the zero-crossing sample.
+  const trimmedBuffer = ctx.createBuffer(1, zcSampleIndex, ctx.sampleRate);
+  trimmedBuffer.getChannelData(0).set(channelData.subarray(0, zcSampleIndex));
+
+  /* --- Schedule: play captured audio through decay-end → ZC, then silence --- */
+  const srcNode = ctx.createBufferSource();
+  srcNode.buffer = trimmedBuffer;
+  srcNode.connect(ctx.destination);
+  srcNode.start(now + 0);   // zero offset — starts right at t=now
+
+  // Disconnect processor so it stops collecting.
+  processor.onaudioprocess = null;
+  gain.disconnect();          // disconnect source from gate after capture
+
+  // Explicit stop for safety (should already be silent by then).
+  osc.stop(decayEnd);
 });
+
+/**
+ * Walk forward from `start` in the buffer to find the next zero-crossing.
+ * A zero-crossing occurs when a sample and its predecessor have opposite signs
+ * or one of them is exactly zero.  Returns the sample index where the cut
+ * should land — the first such point after `start`.
+ */
+function findNextZeroCrossing(buffer, start) {
+  for (let i = start; i < buffer.length - 1; i++) {
+    if ((buffer[i] >= 0 && buffer[i + 1] <= 0) ||
+        (buffer[i] <= 0 && buffer[i + 1] >= 0)) {
+      return Math.min(i + 1, buffer.length);
+    }
+  }
+  // Fallback: hard limit at end of capture window (silence enforced).
+  return buffer.length;
+}
 </script>
 </body>
 </html>
