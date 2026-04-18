@@ -131,7 +131,7 @@ function timeForPhase(targetPhi, t0, Tdec, f1, ratio) {
 }
 
 /* ── draw a captured waveform from an OfflineAudioContext render ─*/
-function drawWaveform(buffer, decaySamples, cutSample) {
+function drawWaveform(buffer, decaySamples, cutSample, totalDisplayLen = buffer.length) {
   const w = scope.width, h = scope.height;
   ctx2d.clearRect(0, 0, w, h);
 
@@ -252,23 +252,31 @@ function trigger() {
   offlineCtx.startRendering().then(buffer => {
     const channel = buffer.getChannelData(0);
 
-     // Play through real AudioContext using currentTime for precise start.
-    const realGain                   = audioCtx.createGain();
-    const realSrc                    = audioCtx.createBufferSource();
-    realSrc.buffer                   = buffer;
-    realSrc.connect(realGain);
-    realGain.gain.setValueAtTime(1, 0);
-    realSrc.start(now);             // start at AudioContext.currentTime
 
-    drawWaveform(channel, DECAY_MS / 1000 * sr, cutSample);
+      // Split: short buffer for accurate onended playback, full buffer for display.
+      // If we played the full long buffer through a real AudioBufferSourceNode,
+      // onended would fire ~1 s after the zero-crossing (after the silence tail).
+      // By playing only up to the cut sample, onended fires exactly at the hard-cut
+      // — audio-clock-synchronized to < 1 ms vs. the zero-crossing point.
+      const playSamples = cutSample;
+      const shortBuf = offlineCtx.createBuffer(1, playSamples, sr);
+      const shortData = shortBuf.getChannelData(0);
+      for (let i = 0; i < playSamples; i++) shortData[i] = channel[i];
 
-     // ── UI font-weight snap synced to audio clock tick via onended ─
-     // realSrc.onended fires inside the AudioContext's processing thread
-     // at the exact sample position where playback stops.  This is the
-     // monotonic wall-clock moment driven by the audio hardware timer,
-     // guaranteeing < 1 ms discrepancy vs. the zero-crossing hard-cut.
-    attachOnEndedSnap(realSrc, "snapTitle");
-   });
+      // Draw full waveform (active + post-cut silence) on scope canvas.
+      drawWaveform(channel, DECAY_MS / 1000 * sr, cutSample);
+
+      // ── UI font-weight snap synced to audio clock tick via onended ─
+      // realSrc.playback duration = cutSample / sr — matches the hard-cut exactly.
+      const realGain                    = audioCtx.createGain();
+      const realSrc                     = audioCtx.createBufferSource();
+      realSrc.buffer                    = shortBuf;
+      realSrc.connect(realGain);
+      realGain.gain.setValueAtTime(1, 0);
+      realSrc.start(now);              // start at AudioContext.currentTime
+
+      attachOnEndedSnap(realSrc, "snapTitle");
+    });
 }
 
 /* ── boot ─────────────────────────────────────────────────────── */
