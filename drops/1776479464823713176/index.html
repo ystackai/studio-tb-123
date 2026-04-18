@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sawtooth → Minor Third — TB-123</title>
 <style>
-  /* Monospaced brutalist font stack */
-  *, *::before, *::after { font-family: 'Courier New', Courier, 'Lucida Sans Typewriter', monospace; }
+   * { font-family: 'Courier New', Courier, 'Lucida Sans Typewriter', monospace; }
 
   body {
     display: flex;
@@ -18,14 +17,14 @@
     color: #e0e0e0;
   }
 
-  #title {
+   #title {
     font-size: 2.4rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    transition: font-weight 0.05s linear;        /* fast fallback; snap overrides */
+    transition: font-weight 0.05s linear;
   }
 
-  #trigger {
+   #trigger {
     display: block;
     margin-top: 2rem;
     padding: 1rem 2.4rem;
@@ -40,97 +39,71 @@
     outline: none;
   }
 
-  #trigger:active { background: #e94560; color: #0d0d0d; }
+   #trigger:active { background: #e94560; color: #0d0d0d; }
 
-  /* Disable ALL transitions during snap event (font-weight is the target) */
-  .snap-active *,
-  .snap-active #title {
+   .snap-active *,
+   .snap-active #title {
     transition: none !important;
   }
 </style>
 </head>
 <body>
 
-<h1 id="title">Saw → M3 &nbsp;✦&nbsp; TB-123</h1>
+<h1 id="title">Saw &rarr; M3 &nbsp;&starf;&nbsp; TB-123</h1>
 <button id="trigger">&#9654; Trigger</button>
 
 <script type="module">
 import { attachOnEndedSnap } from './snap.js';
 
-/* ─── constants ──────────────────────────────────────────────── */
-const BASE_FREQ   = 220;               // A3
-const SEMITONES   = 3;                 // minor third interval
-const FREQ_RATIO  = Math.pow(2, SEMITONES / 12);  // ≈ 1.1892
-const DECAY_MS    = 10;
+const BASE_FREQ = 220;                  // A3
+const SEMITONES = 3;                    // minor third
+const FREQ_RATIO = Math.pow(2, SEMITONES / 12);  // ~1.1892
+const DECAY_MS  = 10;
 
-/* ─── zero-crossing finder (sample-accurate) ────────────────── */
-function findNextZeroCrossing(buffer, fromSample) {
-  for (let i = fromSample + 1; i < buffer.length; i++) {
-    if ((buffer[i - 1] >= 0 && buffer[i] <= 0) ||
-        (buffer[i - 1] <= 0 && buffer[i] >= 0)) {
-      return i;
-    }
+/** Pre-compute exact sawtooth buffer with logarithmic freq sweep. */
+function buildSawBuffer(sr) {
+  const N = Math.round(DECAY_MS / 1000 * sr);
+  const data = new Float32Array(N);
+  const logRatio = Math.log(FREQ_RATIO) / N;
+
+  for (let i = 0; i < N; i++) {
+    const freq = BASE_FREQ * Math.exp(logRatio * i);
+    data[i] = ((freq / sr) * i) % 1.0;
   }
-  // fallback: hard-cut at last captured sample boundary
-  return Math.max(fromSample, buffer.length - 1);
+
+  const buf = new AudioBuffer({ length: N, sampleRate: sr, channelCount: 1 });
+  buf.getChannelData(0).set(data);
+  return buf;
 }
 
-/* ─── audio engine (called on each user click) ──────────────── */
+/** Find next zero-crossing to trim for hard-cut silence. */
+function trimToZeroCrossing(buf) {
+  const d = buf.getChannelData(0);
+  for (let i = 2; i < d.length; i++) {
+    if ((d[i-1] >= 0 && d[i] <= 0) || (d[i-1] <= 0 && d[i] >= 0)) {
+      return Math.min(i, d.length);
+    }
+  }
+  return d.length;
+}
+
+/** Trigger audio + visual snap. */
 function play() {
   const ctx = new AudioContext();
   const now = ctx.currentTime;
 
-  /* --- Oscillator: sawtooth, linear sweep to minor-third --- */
-  const osc      = ctx.createOscillator();
-  const gain     = ctx.createGain();
-  osc.type       = 'sawtooth';
-  osc.frequency.setValueAtTime(BASE_FREQ,              now);
-  osc.frequency.linearRampToValueAtTime(
-    BASE_FREQ * FREQ_RATIO,            // resolves to minor third
-    now + DECAY_MS / 1000              // exactly at 10 ms mark
-  );
+  const buf = buildSawBuffer(ctx.sampleRate);
+  const trimAt = trimToZeroCrossing(buf);
 
-  /* --- Envelope gate: full gain → hard cut at decay end --- */
-  const decayEnd = now + DECAY_MS / 1000;
-  gain.gain.setValueAtTime(1.0, now);
-  gain.gain.setValueAtTime(1.0, decayEnd - (1 / ctx.sampleRate));
-  gain.gain.setValueAtTime(0.0, decayEnd);
+  // Trim to zero-crossing for sample-accurate hard-cut silence
+  const trimmed = new AudioBuffer({ length: trimAt, sampleRate: ctx.sampleRate, channelCount: 1 });
+  trimmed.getChannelData(0).set(buf.getChannelData(0), 0);
 
-  /* --- Capture chain: osc → gain → processor ─── destination --- */
-  const headroomSamples = Math.ceil((DECAY_MS + 32) / 1000 * ctx.sampleRate);
-  const captureBuffer   = ctx.createBuffer(1, headroomSamples, ctx.sampleRate);
-  const channelData     = captureBuffer.getChannelData(0);
-
-  let writtenOffset = 0;
-  const processor   = ctx.createScriptProcessor(4096, 0, 1);
-
-  processor.onaudioprocess = (e) => {
-    const src = e.inputBuffer.getChannelData(0);
-    for (let i = 0; i < src.length && writtenOffset < channelData.length; i++, writtenOffset++) {
-      channelData[writtenOffset] = src[i];
-    }
-  };
-
-  osc.connect(gain).connect(processor);
-  gain.connect(ctx.destination);        // audible output
-
-  /* --- Schedule: play captured buffer (trimmed to ZC) from t=now ── */
-  processor.onaudioprocess = null;      // stop recording
-  osc.stop(decayEnd);
-
-  const zcIndex = findNextZeroCrossing(channelData, writtenOffset - 1);
-  const zcTrimmed = Math.min(zcIndex, channelData.length);
-
-  const trimmedBuffer = ctx.createBuffer(1, zcTrimmed, ctx.sampleRate);
-  trimmedBuffer.getChannelData(0).set(channelData.subarray(0, zcTrimmed));
-
-  /* --- Source node → destination. Playback ends at ZC trim point. --- */
   const srcNode = ctx.createBufferSource();
-  srcNode.buffer = trimmedBuffer;
+  srcNode.buffer = trimmed;
   srcNode.connect(ctx.destination);
-  srcNode.start(now + 0);               // sample-accurate start
+  srcNode.start(now + 0);
 
-  /* ─── UI snap: fires at EXACT audio cut (onended) ───────────── */
   document.body.classList.add('snap-active');
   attachOnEndedSnap(srcNode, 'title');
 }
