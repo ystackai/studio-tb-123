@@ -16,26 +16,24 @@
  * the `onended` event of a BufferSourceNode — i.e. at the exact
  * audio clock tick when playback stops.
  *
- * @param {AudioBufferSourceNode} src  — source that will be stopped
- * @param {string} titleElId           — id of the <h1> element
+ * @param {AudioBufferSourceNode} src   — source that will be stopped
+ * @param {string} titleElId            — id of the <h1> element
  */
 export function attachOnEndedSnap(src, titleElId) {
   const el = document.getElementById(titleElId);
   if (!el) return;
 
   src.onended = () => {
-    // ── synchronous mutation inside onended: < 1 ms from audio clock tick
-    el.style.transition = "none";        // disable CSS easing (brutalist snap)
-    el.style.fontWeight = "900";         // brute-force to boldest weight
-    el.textContent   = "Saw → Minor Third\nCUT — zero crossing hard-stop";
+     // ── synchronous mutation inside onended: < 1 ms from audio clock tick
+    el.style.transition = "none";           // disable CSS easing (brutalist snap)
+    el.style.fontWeight = "400";            // snap to canonical weight
 
-    // Force reflow so paint is committed before transition restoration.
+     // Force reflow so paint is committed before transition restoration.
     void el.offsetHeight;
 
     requestAnimationFrame(() => {
-      // Restore CSS transition for any future style changes.
-      el.style.transition = "";          // remove inline override
-      el.style.fontWeight = "300";       // animate back via CSS transition
-    });
-  };
+       // Restore CSS transition for any future style changes.
+      el.style.transition = "";             // remove inline override
+     });
+   };
 }
