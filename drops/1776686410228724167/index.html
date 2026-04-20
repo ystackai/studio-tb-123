@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Earned Silence</title>
+<style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0c; }
+  canvas { display: block; }
+    /* Pulse ring lives behind the main viz */
+  #pulseRing { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
+    #viz { position: fixed; inset: 0; width: 100%; height: 100%; cursor: crosshair; z-index: 5; -webkit-user-select: none; user-select: none; }
+    #overlay {
+    position: fixed; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    background: rgba(10,10,12,0.94); z-index: 10;
+    transition: opacity 0.8s ease; pointer-events: auto; cursor: pointer;
+   }
+   #overlay.hidden { opacity: 0; pointer-events: none; }
+   #overlay .prompt {
+    color: #3a3a44;
+    font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, sans-serif;
+    font-size: clamp(1rem, 3vw, 1.25rem);
+    letter-spacing: 0.15em; text-transform: uppercase;
+    animation: promptBreathe 3s ease-in-out infinite;
+   }
+   @keyframes promptBreathe {
+      0%, 100% { opacity: 0.4; }
+     50%       { opacity: 0.85; }
+    }
+</style>
+</head>
+<body>
+
+<canvas id="pulseRing"></canvas>
+<canvas id="viz"></canvas>
+<div id="overlay"><span class="prompt">click to begin</span></div>
+
+<script>
+/*  EARNED SILENCE — single-file synth + visualizer  */
+(function () { 'use strict';
+
+/* ═══ file-scope declarations (so every IIFE can read/write) ═══ */
+var _ctx, _W, _H;                        // main canvas 2D context + size
+var _colKey = 'sawtooth';                // active waveform colour key
+var _colIdx   = 0;                       // rotation index for colour cycling
+
+/* ── palette ─────────────────────────── */
+var PALETTE  = {
+  sawtooth : { r: 255, g: 140, b: 60 },     // warm amber
+  triangle : { r: 200, g: 180, b: 255 },    // soft violet
+  sine       : { r: 120, g: 220, b: 200 },   // muted teal
+};
+var PALETTE_KEYS = ['sawtooth', 'triangle', 'sine'];
+
+/* ════════════════════════════════════════
+ *  SYNTH ENGINE      (synth/engine.js)
+ * ════════════════════════════════════════ */
+var SynthEngine = (function () {
+  var audioCtx       = null;
+  var voices         = {};
+  var voiceNextId    = 0;
+  var masterGain     = null;
+  var analyserNode   = null;
+
+  function init () {
+    audioCtx = new (AudioContext || webkitAudioContext)({ latencyHint: 'interactive' });
+
+    /* dynamics compressor — warmth + glue */
+    var comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -24;  comp.knee.value    = 30;
+    comp.ratio.value     = 8;    comp.attack.value  = 0.005;
+    comp.release.value   = 0.25;
+
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.65;
+
+    analyserNode = audioCtx.createAnalyser();
+    analyserNode.fftSize               = 2048;
+    analyserNode.smoothingTimeConstant   = 0.82;
+
+    masterGain.connect(comp);
+    comp.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+    masterGain.connect(analyserNode);     // visualizer readout tap
+
+    return { audioCtx: audioCtx, analyser: analyserNode };
+   }
+
+  function noteOn (pitch) {
+    if (!audioCtx || audioCtx.state === 'suspended') return null;
+
+    var baseDecay     = 3.5;
+    var jitter       = 1 + (Math.random() * 0.06 - 0.03);   // ±3 % organic
+    var decayTime     = baseDecay * jitter;
+    var freq          = 130.81 * Math.pow(2, pitch / 12);    // C3→B4
+    var now           = audioCtx.currentTime;
+    var peakGain      = 0.28 + Math.random() * 0.22;         // velocity jitter
+    var attackTime    = 0.02;                                 // 20 ms breath
+
+    /* main oscillator */
+    var osc   = audioCtx.createOscillator();
+    osc.type              = (Math.random() > 0.4) ? 'sawtooth' : 'triangle';
+    osc.frequency.value   = freq;
+    osc.detune.value      = Math.random() * 6 - 3;           // ±3 c warmth
+
+    /* sub-octave */
+    var sub = audioCtx.createOscillator();
+    sub.type              = 'sine';
+    sub.frequency.value   = freq / 2;
+
+    /* low-pass filter */
+    var filt = audioCtx.createBiquadFilter();
+    filt.type                 = 'lowpass';
+    filt.frequency.value      = 2600 + Math.random() * 1400;
+    filt.Q.value              = 1.2 + Math.random() * 0.8;
+
+    /* gain envelope — organic exponential decay */
+    var env = audioCtx.createGain();
+    env.gain.setValueAtTime(0, now);
+    env.gain.linearRampToValueAtTime(peakGain, now + attackTime);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + attackTime + decayTime);
+
+    /* vibrato LFO */
+    var vib     = audioCtx.createOscillator();
+    var vibG    = audioCtx.createGain();
+    vib.frequency.value       = 0.25 + Math.random() * 0.5;
+    vibG.gain.value           = freq * 0.006;
+    vib.connect(vibG); vibG.connect(osc.frequency);
+    vib.start(now);
+    vib.stop(now + attackTime + decayTime + 0.15);
+
+    var svib   = audioCtx.createOscillator();
+    var svibG  = audioCtx.createGain();
+    svib.frequency.value        = 0.15 + Math.random() * 0.3;
+    svibG.gain.value            = freq / 2 * 0.004;
+    svib.connect(svibG); svibG.connect(sub.frequency);
+    svib.start(now);
+    svib.stop(now + attackTime + decayTime + 0.15);
+
+    /* chain: osc → filt → env → master ; sub → env */
+    osc.connect(filt);   filt.connect(env);   env.connect(masterGain);
+    sub.connect(env);
+
+    var id = (++voiceNextId).toString();
+    voices[id] = {
+      osc: osc, env: env, vib: vib, sub: sub, filter: filt,
+      type: osc.type, freq: freq, decayTime: decayTime
+     };
+
+    osc.start(now);   osc.stop(now + attackTime + decayTime + 0.25);
+    sub.start(now);   sub.stop(now + attackTime + decayTime + 0.25);
+
+    return id;
+   }
+
+  function noteOff (vid) {
+    var v = voices[vid];     if (!v) return;
+    var now      = audioCtx.currentTime;
+    var fTime    = 0.10;                                    // 100 ms log fade
+
+    try {
+      v.env.gain.cancelScheduledValues(now);
+      var cur      = Math.max(v.env.gain.value, 0.0001);
+      v.env.gain.setValueAtTime(cur, now);
+      v.env.gain.exponentialRampToValueAtTime(0.0001, now + fTime);
+
+      var stopT    = now + fTime + 0.08;
+      v.osc.stop(stopT);   if (v.sub)     v.sub.stop(stopT);
+      if (v.vib)     v.vib.stop(stopT);
+     } catch (_) { }
+
+    try { v.env.disconnect(); } catch (_) {}
+    try { v.filter.disconnect(); } catch (_) {}
+    try { v.osc.disconnect(); } catch (_) {}
+    delete voices[vid];
+   }
+
+  function allNotesOff () { var k; for (k in voices) noteOff(k); }
+
+  function getActiveGainSum () {
+    var sum = 0, k;
+    for (k in voices) if (voices.hasOwnProperty(k))
+      sum += Math.abs(voices[k].env.gain.value) || 0;
+    return sum;
+   }
+
+  function getWaveformBytes () {
+    if (!analyserNode) return new Uint8Array(1024);
+    var d = new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteTimeDomainData(d);     return d;
+   }
+
+  function getFreqBytes () {
+    if (!analyserNode) return new Uint8Array(512);
+    var h = analyserNode.frequencyBinCount / 2 | 0;
+    var d = new Uint8Array(h);
+    analyserNode.getByteFrequencyData(d);        return d;
+   }
+
+  function getActiveOscType () {
+    var k = Object.keys(voices)[0];
+    return k ? voices[k].type : 'sawtooth';
+   }
+
+  function shutdown () { allNotesOff(); voices = {}; if (audioCtx) audioCtx.close(); }
+
+  return { init: init, noteOn: noteOn, noteOff: noteOff, allNotesOff: allNotesOff,
+           getActiveGainSum: getActiveGainSum, getWaveformBytes: getWaveformBytes,
+           getFreqBytes: getFreqBytes, shutdown: shutdown,
+           getActiveOscType: getActiveOscType };
+})();
+
+
+/* ════════════════════════════════════════
+ *  ENERGY SYSTEM      (core/energy.js)
+ * ════════════════════════════════════════ */
+var EnergySystem = (function () {
+  var ZERO_THRESHOLD     = 0.001;       // noise floor — ~0.1 % max gain
+
+  var energy           = 0;
+  var isLocked         = true;          // locked until first sound, then on→off at threshold
+  var hasBeenActive    = false;
+  var unlockFired      = false;
+  var smoothedEng      = 0;
+  var BREATH_DECAY     = 3.2;           // matches audio envelope time constant
+
+  function update (raw, dt) {
+    energy = raw;
+
+    /* exponential moving average — visual breathing */
+    var dF    = Math.exp(-dt * BREATH_DECAY);
+    smoothedEng *= dF;
+    smoothedEng += (1 - dF) * energy;
+
+    if (hasBeenActive && energy < ZERO_THRESHOLD) isLocked = false;
+    else if (energy > ZERO_THRESHOLD)               isLocked  = true;
+
+    return { energy: energy, smoothed: smoothedEng, isLocked: isLocked };
+   }
+
+  function reset () {
+    energy = 0;  smoothedEng = 0;
+    isLocked = true; hasBeenActive = false; unlockFired = false;
+   }
+
+  function markActive ()       { hasBeenActive = true; }
+  function triggerUnlock ()    { unlockFired = true; }
+
+  function shouldUnlock () {
+    return !hasBeenActive ? false : (isLocked === false && !unlockFired);
+   }
+
+  function getBreathingOpacity (maxOp) {
+    return Math.min(maxOp, smoothedEng * 2.5);
+   }
+
+  function getGlowIntensity () {
+     /* hardwired coupling: glow tracks envelope gain directly */
+    return Math.min(1, smoothedEng / 0.45);
+   }
+
+  return { update: update, reset: reset, markActive: markActive,
+           shouldUnlock: shouldUnlock, triggerUnlock: triggerUnlock,
+           getBreathingOpacity: getBreathingOpacity,
+           getGlowIntensity: getGlowIntensity };
+})();
+
+
+/* ════════════════════════════════════════
+ *  BLOOM SYSTEM      (renderer/bloom.js)
+ * ════════════════════════════════════════ */
+var BloomSystem = (function () {
+  var bloomInt  = 0;
+
+  function update (energy, dt) {
+    if (energy > bloomInt)
+      bloomInt += (energy - bloomInt) * Math.min(0.35, dt * 4);
+    else
+      bloomInt *= (1 - dt * 0.15), bloomInt = Math.max(0, bloomInt);
+    return bloomInt;
+   }
+
+  function shadowRadius (intensity) {
+     /* quadratic feels warmer than linear */
+    var n = intensity * intensity;
+    return 6 + n * 52;
+   }
+
+  function colorTemp (intensity, seed) {
+    var wR = 255, wG = 140 + intensity * 70, wB = 55    + intensity * 90;
+    var cR = 130 + intensity * 50, cG = 175 + intensity * 35, cB = 255;
+    var t   = Math.pow(1 - intensity, 2) * (0.35 + seed * 0.65);
+    return [ (wR*(1-t)+cR*t)|0, (wG*(1-t)+cG*t)|0, (wB*(1-t)+cB*t)|0 ];
+   }
+
+  return { update: update, shadowRadius: shadowRadius, colorTemp: colorTemp };
+})();
+
+
+/* ════════════════════════════════════════
+ *  CANVAS VISUALIZER      (renderer/canvas.js)
+ * ════════════════════════════════════════ */
+var CanvasRenderer = (function () {
+  var cv            = null;
+  var pctx           = null;                       // pulse ring context
+  var pcv            = null;
+
+  function init (el, pulseEl) {
+    cv       = el;
+    _ctx     = el.getContext('2d');
+    resize();
+
+    if (pulseEl) {
+      pcv         = pulseEl;
+      pctx         = pulseEl.getContext('2d');
+      var dr        = devicePixelRatio || 1;
+      pcv.width       = innerWidth   * dr | 0;
+      pcv.height     = innerHeight * dr | 0;
+     }
+
+    window.addEventListener('resize', resize);
+   }
+
+  function resize () {
+    var dpr = devicePixelRatio || 1;
+    _W = innerWidth   * dpr | 0;
+    _H = innerHeight * dpr | 0;
+    cv.width       = _W;
+    cv.height      = _H;
+     /* anti-aliasing: sub-pixel drawing */
+    _ctx.imageSmoothingEnabled = true;
+
+    if (pcv) {
+      var dr         = devicePixelRatio || 1;
+      pcv.width      = innerWidth   * dr | 0;
+      pcv.height     = innerHeight * dr | 0;
+     }
+   }
+
+  function clear ()     { _ctx.fillStyle = '#0a0a0c'; _ctx.fillRect(0, 0, _W, _H); }
+
+    /* ── waveform: anti-aliased + sub-pixel y+0.5 ─ */
+  function drawWaveform (data, energyLevel, colorKey) {
+    var col     = PALETTE[colorKey] || PALETTE.sawtooth;
+    var alpha   = Math.min(1, energyLevel * 2.8);       // hardwired coupling to envelope
+    if (alpha < 0.005) return;                           // fade into void
+
+      /* bloom: shadowBlur on context */
+    _ctx.shadowColor     = 'rgba('+col.r+','+col.g+','+col.b+','+(alpha*0.6).toFixed(3)+')';
+    _ctx.shadowBlur      = 10 + alpha * 32;
+
+    var midY       = _H / 2 + 0.5;                      // +0.5 → sub-pixel centering
+    var maxAmp     = _H * 0.38;
+    var stepW      = _W / (data.length - 1);
+
+    _ctx.beginPath();
+    _ctx.strokeStyle = 'rgba('+col.r+','+col.g+','+col.b+','+alpha.toFixed(4)+')';
+    _ctx.lineWidth       = 1.2 + alpha * 1.5;
+    _ctx.lineJoin        = 'round';
+    _ctx.lineCap         = 'round';
+
+    var i, norm, amp, x, y;
+    for (i = 0; i < data.length; i++) {
+      norm    = (data[i] / 128) - 1;                    // [-1, +1]
+      amp       = Math.abs(norm) * maxAmp * alpha;
+      x         = i * stepW;
+      y         = midY - norm * amp;                     // canvas Y flipped
+      if (i) _ctx.lineTo(x, y); else _ctx.moveTo(x, y);
+     }
+    _ctx.stroke();
+
+      /* wide halo pass — secondary bloom */
+    if (alpha > 0.15) {
+      _ctx.beginPath();
+      _ctx.strokeStyle = 'rgba('+col.r+','+col.g+','+col.b+','+(alpha*0.12).toFixed(4)+')';
+      _ctx.lineWidth       = 6 + alpha * 10;
+      _ctx.shadowColor       = 'rgba('+col.r+','+col.g+','+col.b+','+(alpha*0.35).toFixed(3)+')';
+      _ctx.shadowBlur        = 28 + alpha * 48;
+
+      for (i = 0; i < data.length; i++) {
+        norm    = (data[i] / 128) - 1;
+        amp       = Math.abs(norm) * maxAmp * alpha;
+        x         = i * stepW;
+        y         = midY - norm * amp;
+        if (i) _ctx.lineTo(x, y); else _ctx.moveTo(x, y);
+       }
+      _ctx.stroke();
+     }
+
+    _ctx.shadowBlur = 0;
+   }
+
+    /* ── frequency bars ─────────── */
+  function drawFreqBars (data, energyLevel, colorKey) {
+    var col     = PALETTE[colorKey] || PALETTE.sawtooth;
+    var alpha   = Math.min(1, energyLevel * 2.2);
+    if (alpha < 0.01) return;
+
+    var bars      = 64;
+    var bw        = _W / bars;
+    var step      = Math.max(1, data.length / bars | 0);
+
+    _ctx.shadowColor     = 'rgba('+col.r+','+col.g+','+col.b+','+(alpha*0.25).toFixed(3)+')';
+    _ctx.shadowBlur      = 6 + alpha * 18;
+
+    var i, val, bh;
+    for (i = 0; i < bars; i++) {
+      val   = data[i * step] / 255;
+      bh       = val * _H * 0.28 * alpha;
+      _ctx.fillStyle = 'rgba('+col.r+','+col.g+','+col.b+','+(alpha*val*0.22).toFixed(4)+')';
+      _ctx.fillRect(i * bw + 1, _H - bh, bw - 2, bh);
+     }
+    _ctx.shadowBlur = 0;
+   }
+
+    /* ── void background ───────── */
+  function drawVoid (breathOp, locked) {
+    if (!locked && breathOp < 0.004) return;
+
+    var cx      = _W / 2, cy   = _H / 2;
+    var rad     = Math.min(_W, _H) * 0.55;
+    var g       = _ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+
+    if (locked) {
+      g.addColorStop(0, 'rgba(170,130,70,'+breathOp.toFixed(4)+')');
+      g.addColorStop(0.5, 'rgba(55,38,28,'+(breathOp*0.4).toFixed(4)+')');
+     } else {
+      var ug    = Math.max(breathOp, 0.35) * 0.09;
+      g.addColorStop(0, 'rgba(155,180,240,'+ug.toFixed(4)+')');
+      g.addColorStop(0.5, 'rgba(110,145,200,'+(ug*0.35).toFixed(4)+')');
+     }
+    g.addColorStop(1, 'rgba(10,10,12,0)');
+    _ctx.fillStyle = g;
+    _ctx.fillRect(0, 0, _W, _H);
+   }
+
+    /* ── unlock text ──────────── */
+  function drawUnlock (elapsedSec) {
+    var fi        = Math.min(1, elapsedSec / 0.5);
+    var a         = fi * 0.22;
+    var fsz       = Math.max(14, Math.min(46, _H * 0.028));
+
+    _ctx.shadowColor     = 'rgba(155,180,240,'+(a*0.7).toFixed(3)+')';
+    _ctx.shadowBlur      = 18 + fi * 14;
+
+    var fontSize        = fsz + 'px -apple-system,"SF Pro Display",sans-serif';
+    _ctx.font         = fontSize;
+    _ctx.textAlign      = 'center';
+    _ctx.textBaseline   = 'middle';
+    _ctx.fillStyle      = 'rgba(175,195,235,'+a.toFixed(4)+')';
+    _ctx.fillText('earned silence', _W / 2, _H / 2);
+
+    var subFs     = Math.max(10, fsz * 0.45) + 'px -apple-system,sans-serif';
+    _ctx.shadowBlur   = 0;
+    _ctx.font         = subFs;
+    _ctx.fillStyle      = 'rgba(130,150,195,'+(fi*0.13).toFixed(4)+')';
+    _ctx.fillText('the void breathes with you', _W / 2, _H / 2 + fsz * 0.8);
+   }
+
+  function getContext ()       { return _ctx; }
+  function getSize ()          { return { w: _W, h: _H }; }
+  function getPulseContext ()  { return pctx; }
+  function getCanvasEl ()      { return cv;     }
+  function getPulseCanvas ()   { return pcv;    }
+
+  return { init: init, resize: resize, clear: clear,
+           drawWaveform: drawWaveform, drawFreqBars: drawFreqBars,
+           drawVoid: drawVoid, drawUnlock: drawUnlock,
+           getContext: getContext, getSize: getSize,
+           getPulseContext: getPulseContext, getCanvasEl: getCanvasEl,
+           getPulseCanvas: getPulseCanvas };
+})();
+
+
+/* ════════════════════════════════════════
+ *  INPUT HANDLERS      (input/handlers.js)
+ * ════════════════════════════════════════ */
+var InputHandlers = (function () {
+  var mouseDown       = false;
+  var activeVid       = null;
+  var KEY_LUT          = {};
+  var SEMITONES        = 24;
+
+    /* pentatonic-ish spread for musicality */
+  function pitchForIdx (idx) { return ((idx * 5 + 2) % SEMITONES); }
+  function randomPitch ()     { return Math.random() * SEMITONES | 0; }
+  var KEY_LIST = '1234567890qwertyuiopasdfghjklzxcvbnm'.split('');
+
+  function init () {
+    var cv = CanvasRenderer.getCanvasEl();
+    if (!cv) return;
+
+      /* mouse */
+    cv.addEventListener('mousedown',   onDown);
+    window.addEventListener('mouseup',   onUp);
+    cv.addEventListener('mouseleave',   function () { if (mouseDown) onUp(); });
+
+      /* touch */
+    cv.addEventListener('touchstart', function(e){ e.preventDefault(); tDown(e.touches[0]); }, {passive:false});
+    window.addEventListener('touchend',  function(e){ e.preventDefault(); onUp(); }, {passive:false});
+
+      /* keyboard — 15 notes mapped to pentatonic */
+    document.addEventListener('keydown', function (e) {
+      if (e.repeat || KEY_LUT[e.key]) return;
+      var k   = e.key.toLowerCase();
+      var idx = KEY_LIST.indexOf(k);
+      if (idx === -1) return;
+
+      var p        = pitchForIdx(idx);
+      activeVid    = SynthEngine.noteOn(p);
+      mouseDown    = true;
+      KEY_LUT[e.key]  = { vid: activeVid };
+      EnergySystem.markActive();
+     });
+
+    document.addEventListener('keyup', function (e) {
+      var m   = KEY_LUT[e.key];
+      if (!m) return;
+      SynthEngine.noteOff(m.vid);
+      activeVid  = null;
+      mouseDown  = false;
+      delete KEY_LUT[e.key];
+     });
+
+    cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+   }
+
+  function onDown ()  {
+    if (mouseDown) return;
+    mouseDown    = true;
+    activeVid     = SynthEngine.noteOn(randomPitch());
+    EnergySystem.markActive();
+   }
+
+  function onUp () {
+    if (!mouseDown) return;
+    mouseDown    = false;
+    if (activeVid != null) { SynthEngine.noteOff(activeVid); activeVid = null; }
+   }
+
+  function tDown (touch) {
+    if (mouseDown) return;
+    mouseDown    = true;
+    activeVid     = SynthEngine.noteOn(randomPitch());
+    EnergySystem.markActive();
+   }
+
+  return { init: init };
+})();
+
+
+/* ════════════════════════════════════════
+ *  MAIN APP GLUE      (app.js)
+ *  Wires everything together + render loop
+ * ════════════════════════════════════════ */
+(function () {
+
+  var overlay     = document.getElementById('overlay');
+  var pulseEl     = document.getElementById('pulseRing');
+
+    /* ── initialise all subsystems ─── */
+  CanvasRenderer.init(document.getElementById('viz'), pulseEl);
+
+  var started      = false;
+  var lastT         = 0;
+  var unlockAt     = -1;
+  var _pCtx, _pCv;
+
+    /* ── render loop ─────────────── */
+  function frame (now) {
+    var dt        = Math.min(0.05, (now - lastT) / 1e3);
+    lastT          = now;
+
+      /* engine state */
+    var raw        = SynthEngine.getActiveGainSum();
+    var eng        = EnergySystem.update(raw, dt);
+    var wData       = SynthEngine.getWaveformBytes();
+    var fData       = SynthEngine.getFreqBytes();
+    var oscT        = SynthEngine.getActiveOscType();
+
+      /* bloom */
+    var bi         = BloomSystem.update(eng.smoothed, dt);
+
+      /* colour cycling for visual variety */
+    if (Math.random() < 0.004) {
+      _colIdx      = (_colIdx + 1) % PALETTE_KEYS.length;
+      _colKey       = PALETTE_KEYS[_colIdx];
+     }
+
+      /* clear & draw void */
+    CanvasRenderer.clear();
+    var breathOp   = EnergySystem.getBreathingOpacity(0.12);
+    CanvasRenderer.drawVoid(breathOp, eng.isLocked);
+
+      /* waveform — visible throughout entire decay */
+    if (wData.length > 0 && eng.smoothed > 0.001) {
+      var glow        = EnergySystem.getGlowIntensity();
+      CanvasRenderer.drawWaveform(wData, glow, _colKey);
+      CanvasRenderer.drawFreqBars(fData, glow * 0.65, _colKey);
+     }
+
+      /* ── unlock detection ─────── */
+    if (EnergySystem.shouldUnlock() && unlockAt < 0) {
+      EnergySystem.triggerUnlock();
+      unlockAt        = now;
+       _pCtx         = CanvasRenderer.getPulseContext();
+       _pCv           = CanvasRenderer.getPulseCanvas();
+      startPulse(now);
+     }
+
+    if (unlockAt >= 0) {
+      var elapsed   = (now - unlockAt) / 1e3;
+
+      /* pulse ring on overlay canvas */
+      CanvasRenderer.drawUnlock(elapsed);
+      if (elapsed > 5) {
+        unlockAt    = -1;
+        EnergySystem.reset();
+       }
+     }
+
+    requestAnimationFrame(frame);
+   }
+
+    /* ── expanding pulse ring animation ── */
+  function startPulse (now) {
+    var dur = 3000;
+    var t0  = now;
+    function tick (t) {
+      if (!(_pCtx && _pCv)) return;
+      var e   = (t - t0) / 1e3;
+      _pCtx.clearRect(0, 0, _pCv.width, _pCv.height);
+
+      var cx          = _pCv.width / 2;
+      var cy          = _pCv.height / 2;
+      var baseR       = Math.min(_pCv.width, _pCv.height) * 0.12;
+      var r           = baseR + e * 280;
+
+      var a           = Math.max(0, Math.sin(e * 2.2) * 0.06) * Math.max(0, 1 - e * 0.07);
+
+       _pCtx.beginPath();
+      _pCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      _pCtx.strokeStyle = 'rgba(160,190,255,'+a.toFixed(4)+')';
+      _pCtx.lineWidth       = 2.5;
+      _pCtx.stroke();
+
+      var rg        = _pCtx.createRadialGradient(cx, cy, r*0.8, cx, cy, r*1.3);
+      rg.addColorStop(0,  'rgba(160,190,255,0)');
+      rg.addColorStop(0.5,'rgba(140,170,240,'+(a*0.2).toFixed(4)+')');
+      rg.addColorStop(1,  'rgba(160,190,255,0)');
+      _pCtx.fillStyle   = rg;
+      _pCtx.fill();
+
+      if (e < dur/1e3) requestAnimationFrame(tick);
+     }
+    requestAnimationFrame(tick);
+   }
+
+    /* ── launch on user gesture (required) ─ */
+  function launch () {
+    if (started) return;
+    started     = true;
+
+    var s          = SynthEngine.init();
+    window._synthAnalyser  = s.analyser;
+
+    overlay.classList.add('hidden');
+    InputHandlers.init();
+
+    lastT           = performance.now();
+    requestAnimationFrame(frame);
+   }
+
+  overlay.addEventListener('click',        launch);
+  overlay.addEventListener('touchstart',   launch, { once: true });
+
+})();
+</script>
+</body>
+</html>
