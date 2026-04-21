@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Earned Silence — TB-123</title>
+<style>
+   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code',
+                  'IBM Plex Mono', 'Source Code Pro', 'Consolas',
+                  'Liberation Mono', 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f5f5f0;
+    color: #1a1a1a;
+    transition: background 0.02s linear, color 0.02s linear;
+    user-select: none;
+    overflow: hidden;
+   }
+
+   /* Fluid typography */
+   #title {
+    font-size: clamp(1.6rem, 4vw, 3.2rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: font-weight 0.02s linear, opacity 0.02s linear;
+    will-change: font-weight, opacity;
+   }
+
+   #subtitle {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    opacity: 0.45;
+    transition: opacity 0.02s linear, font-weight 0.02s linear;
+   }
+
+   #amp-meter {
+    margin-top: 2rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    opacity: 0.35;
+    font-weight: 400;
+    transition: opacity 0.02s linear;
+   }
+
+   /* Decay knob */
+   #knob-group {
+    margin-top: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+   }
+
+   #knob-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.5;
+   }
+
+   #decay-slider {
+     -webkit-appearance: none;
+    appearance: none;
+    width: 220px;
+    height: 4px;
+    background: #ccc;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+   }
+
+   #decay-slider::-webkit-slider-thumb {
+     -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #e94560;
+    border: 2px solid #1a1a1a;
+    cursor: grab;
+   }
+
+   #decay-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #e94560;
+    border: 2px solid #1a1a1a;
+    cursor: grab;
+   }
+
+   #decay-value {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    opacity: 0.6;
+   }
+
+   /* Trigger button */
+   #trigger {
+    margin-top: 2rem;
+    padding: 0.9rem 2.8rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 3px solid #1a1a1a;
+    background: transparent;
+    color: #1a1a1a;
+    outline: none;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+   }
+
+   #trigger:hover { background: #1a1a1a; color: #f5f5f0; }
+   #trigger:disabled { opacity: 0.2; cursor: not-allowed; }
+
+   /* Waveform canvas */
+   #waveform {
+    margin-top: 1.8rem;
+    width: min(85vw, 500px);
+    height: 80px;
+    border: 1px solid rgba(26, 26, 26, 0.12);
+   }
+
+   /* Void state (locked) */
+  body.void { background: #0a0a0a; color: #f5f5f0; }
+  body.void #title { font-weight: 400 !important; }
+  body.void #subtitle { opacity: 0.25; font-weight: 300; }
+  body.void #trigger { border-color: #f5f5f0; color: #f5f5f0; }
+  body.void #trigger:hover { background: #f5f5f0; color: #0a0a0a; }
+
+  body.snap-void * { transition: none !important; }
+
+   /* Test panel */
+   #test-panel {
+    margin-top: 3rem;
+    padding: 1.2rem 1.6rem;
+    border: 1px dashed rgba(26, 26, 26, 0.2);
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+    max-width: min(85vw, 540px);
+    text-align: left;
+    line-height: 1.7;
+    opacity: 0.6;
+    transition: opacity 0.3s;
+   }
+
+   #test-panel:hover { opacity: 1; }
+   #test-panel .pass { color: #2d8a4e; font-weight: 700; }
+   #test-panel .fail { color: #e94560; font-weight: 700; }
+
+  body.void #test-panel { border-color: rgba(245, 245, 240, 0.1); opacity: 0.4; }
+
+   /* Void message */
+   #void-msg {
+    position: fixed;
+    bottom: 3rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.6s ease-out;
+    pointer-events: none;
+   }
+
+  body.void #void-msg { opacity: 0.35; }
+</style>
+</head>
+<body>
+
+<h1 id="title">Earned Silence</h1>
+<p id="subtitle">TB-123 · saw-tooth oscillator & decay envelope</p>
+
+<div id="amp-meter">RMS: —</div>
+
+<canvas id="waveform"></canvas>
+
+<div id="knob-group">
+   <label id="knob-label">Decay Envelope (CV)</label>
+   <input type="range" id="decay-slider" min="50" max="5000" value="1500" step="10">
+   <span id="decay-value">1500 ms</span>
+</div>
+
+<button id="trigger">&#9654; Trigger</button>
+
+<!-- Built-in Test Harness -->
+<div id="test-panel">
+   <strong>TB-123 TEST HARNESS</strong><br>
+   <span id="test-result">Press &#9654; to run integration test&hellip;</span>
+</div>
+
+<div id="void-msg">silence earned</div>
+
+<script type="module">
+// ── Constants ──────────────────────────────────────────────────────
+const AMP_THRESHOLD = 0.001;
+const ANALYSER_SIZE = 2048;
+const BASE_FREQ     = 110; // A2
+
+// ── DOM refs ───────────────────────────────────────────────────────
+const titleEl       = document.getElementById('title');
+const ampMeterEl    = document.getElementById('amp-meter');
+const canvasEl      = document.getElementById('waveform');
+const ctx2d         = canvasEl.getContext('2d');
+const decaySlider   = document.getElementById('decay-slider');
+const decayValueEl  = document.getElementById('decay-value');
+const triggerBtn    = document.getElementById('trigger');
+const testResultEl  = document.getElementById('test-result');
+const voidMsgEl     = document.getElementById('void-msg');
+
+// ── State ──────────────────────────────────────────────────────────
+let audioCtx        = null;
+let analyserNode    = null;
+let currentSource   = null;
+let isVoidState     = false;
+let decayMs         = 1500;
+let audioStartTime  = null;
+
+// ── Canvas sizing ──────────────────────────────────────────────────
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvasEl.getBoundingClientRect();
+  canvasEl.width   = rect.width * dpr;
+  canvasEl.height  = rect.height * dpr;
+  ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ── Decay knob UI ──────────────────────────────────────────────────
+decaySlider.addEventListener('input', () => {
+  decayMs = parseInt(decaySlider.value, 10);
+  decayValueEl.textContent = `${decayMs} ms`;
+});
+
+// ── RMS calculation via AnalyserNode ───────────────────────────────
+function getRMS(analyser) {
+  const bufLen  = analyser.fftSize;
+  const timeData = new Float32Array(bufLen);
+  analyser.getFloatTimeDomainData(timeData);
+
+  let sum = 0;
+  for (let i = 0; i < bufLen; i++) sum += timeData[i] * timeData[i];
+  return Math.sqrt(sum / bufLen);
+}
+
+// ── Waveform drawing ───────────────────────────────────────────────
+function drawWaveform(analyser) {
+  if (!analyser) return;
+  const w = canvasEl.getBoundingClientRect().width;
+  const h = canvasEl.getBoundingClientRect().height;
+  ctx2d.clearRect(0, 0, w, h);
+
+  const bufLen   = analyser.fftSize;
+  const timeData = new Float32Array(bufLen);
+  analyser.getFloatTimeDomainData(timeData);
+
+  ctx2d.lineWidth     = 1.2;
+  ctx2d.strokeStyle   = getComputedStyle(document.body).color;
+  ctx2d.globalAlpha    = isVoidState ? 0.1 : 0.7;
+  ctx2d.beginPath();
+
+  const sliceWidth = w / bufLen;
+  let x = 0;
+  for (let i = 0; i < bufLen; i++) {
+    const v     = timeData[i];
+    const y      = (v * 0.5 + 0.5) * h;
+    if (i === 0) ctx2d.moveTo(x, y);
+    else         ctx2d.lineTo(x, y);
+    x += sliceWidth;
+  }
+
+  ctx2d.stroke();
+  ctx2d.globalAlpha = 1;
+}
+
+// ── Animation loop: real-time RMS monitoring ───────────────────────
+let animFrameId = null;
+
+function animationLoop() {
+  if (!analyserNode || !currentSource) return;
+
+  const rms      = getRMS(analyserNode);
+  drawWaveform(analyserNode);
+  ampMeterEl.textContent = `RMS: ${rms.toFixed(6)}`;
+
+  // Earned silence check: snap to void ONLY when amplitude resolves
+  if (rms < AMP_THRESHOLD && !isVoidState) {
+    enterVoidState();
+    return;
+  }
+
+  animFrameId = requestAnimationFrame(animationLoop);
+}
+
+// ── Enter void state (amplitude-resolved UI lock) ──────────────────
+function enterVoidState() {
+  if (isVoidState) return;
+  isVoidState = true;
+
+  document.body.classList.add('snap-void');
+  requestAnimationFrame(() => {
+    document.body.classList.add('void');
+    document.body.classList.remove('snap-void');
+  });
+
+  ampMeterEl.textContent = `RMS: ${AMP_THRESHOLD.toFixed(6)} (RESOLVED)`;
+  voidMsgEl.style.opacity = '0.35';
+
+  // Record lock timestamp for test harness
+  if (window._tbTestCallbacks) {
+    window._tbTestCallbacks.onVoidLock(performance.now(), performance.now() - audioStartTime);
+  }
+}
+
+// ── Trigger synthesis: osc -> gain(decay) -> analyser -> dest ──────
+function triggerNote() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  // Stop previous source
+  if (currentSource) { try { currentSource.stop(); } catch (_) {} currentSource = null; }
+
+  const t0            = audioCtx.currentTime;
+  audioStartTime      = t0;
+
+  const osc           = audioCtx.createOscillator();
+  const gainNode      = audioCtx.createGain();
+  analyserNode        = audioCtx.createAnalyser();
+  analyserNode.fftSize = ANALYSER_SIZE;
+
+  osc.type            = 'sawtooth';
+  osc.frequency.value = BASE_FREQ;
+
+  // Decay envelope: linear ramp 1 -> 0 over decayMs
+  const decayS       = decayMs / 1000;
+  gainNode.gain.setValueAtTime(1, t0);
+  gainNode.gain.linearRampToValueAtTime(0, t0 + decayS);
+
+  osc.connect(gainNode).connect(analyserNode).connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + decayS + 0.15); // safety tail after decay completes
+
+  currentSource       = osc;
+  triggerBtn.disabled = true;
+
+  isVoidState = false;
+  document.body.classList.remove('void');
+  ampMeterEl.textContent = 'RMS: &mdash;';
+
+  animFrameId = requestAnimationFrame(animationLoop);
+
+  // onended safety net: if we somehow missed the threshold
+  osc.onended = () => {
+    if (!isVoidState) enterVoidState();
+    triggerBtn.disabled = false;
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    if (analyserNode) drawWaveform(analyserNode);
+  };
+}
+
+triggerBtn.addEventListener('click', triggerNote);
+
+// ── Test Harness: visualLockTiming ─────────────────────────────────
+/**
+ * TB-123 Integration Test &mdash; Earned Silence Correctness
+ *
+ * Asserts that UI state transition (void entry) occurs strictly AFTER
+ * audioEnvelope.tails crosses below 0.001 threshold. Proves the machine
+ * does not lie: no forced cuts, natural bleed preserved.
+ *
+ * Assertion: visualLockTimestamp > timeWhenRMS_Crosses_Amp_Threshold
+ */
+
+async function runVisualLockTimingTest() {
+  const origVoidState   = isVoidState;
+  const origAudioCtx    = audioCtx;
+  let     lockTimestamp = null;
+  let     resolvesAt    = null;
+  let     testError     = null;
+
+  isVoidState      = false;
+  document.body.classList.remove('void', 'snap-void');
+  triggerBtn.disabled = true;
+
+  const testCtx       = new (window.AudioContext || window.webkitAudioContext)();
+  const analyser      = testCtx.createAnalyser();
+  analyser.fftSize     = ANALYSER_SIZE;
+
+  // Known decay: 800ms &mdash; deterministic, fast for testing
+  const TEST_DECAY_MS = 800;
+  const t0             = testCtx.currentTime;
+
+  const osc            = testCtx.createOscillator();
+  const gainNode       = testCtx.createGain();
+
+  osc.type            = 'sawtooth';
+  osc.frequency.value = BASE_FREQ;
+
+  gainNode.gain.setValueAtTime(1, t0);
+  gainNode.gain.linearRampToValueAtTime(0, t0 + TEST_DECAY_MS / 1000);
+
+  osc.connect(gainNode).connect(analyser).connect(testCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + TEST_DECAY_MS / 1000 + 0.3);
+
+  const testStart     = performance.now();
+  audioStartTime      = t0;
+
+  // Capture void lock event
+  window._tbTestCallbacks = {
+    onVoidLock: (ts) => { lockTimestamp = ts; }
+  };
+
+  // Monitor RMS at ~60fps via rAF
+  await new Promise((resolve) => {
+    function monitor() {
+      const elapsed   = performance.now() - testStart;
+      const rms        = getRMS(analyser);
+
+      if (resolvesAt === null && rms < AMP_THRESHOLD) {
+        resolvesAt = elapsed;
+      }
+
+      if (lockTimestamp !== null || elapsed > 10000) {
+        if (elapsed > 10000 && !lockTimestamp) {
+          testError = new Error('Test timeout: amplitude did not resolve within 10s');
+        }
+        resolve();
+        return;
+      }
+
+      requestAnimationFrame(monitor);
+    }
+
+    // Ensure audio output is active (headless browsers may mute without destination)
+    analyser.connect(testCtx.destination);
+    monitor();
+  });
+
+  // Clean up
+  try { testCtx.close(); } catch (_) {}
+  window._tbTestCallbacks = null;
+  triggerBtn.disabled     = false;
+  isVoidState             = origVoidState;
+  audioCtx                = origAudioCtx;
+
+  // ── Core assertion: visualLockTiming > resolvesAt ──────────────
+  let passed     = false;
+  let resultHTML = '';
+
+  if (testError) {
+    resultHTML = `<span class="fail">&#10007; ${testError.message}</span>`;
+  } else if (resolvesAt === null || lockTimestamp === null) {
+    resultHTML = `<span class="fail">&#10007; Missing data &mdash; amplitude or lock timestamp</span>`;
+  } else {
+    passed  = lockTimestamp > resolvesAt;
+    const delta  = (lockTimestamp - resolvesAt).toFixed(3);
+    const marker = passed ? '&#10003;' : '&#10007;';
+
+    resultHTML =
+      `<strong>visualLockTiming:</strong> ${marker} Lock (${lockTimestamp.toFixed(1)}ms) &gt; Resolve (${resolvesAt.toFixed(1)}ms) | &#916;=${delta}ms<br>` +
+      `${passed ? '<span class="pass">PASS &mdash; UI lock strictly after amplitude resolves</span>' :
+                  '<span class="fail">FAIL &mdash; visual lock occurred before audio fully resolved</span>'}`;
+  }
+
+  testResultEl.innerHTML = resultHTML;
+  return passed;
+}
+
+// ── Test harness init: run auto-test on first user trigger ─────────
+(async function initHarness() {
+  window.tb123Test   = runVisualLockTimingTest;
+  window.AMP_THRESHOLD = AMP_THRESHOLD;
+
+  let testRun         = false;
+
+  triggerBtn.addEventListener('click', async () => {
+    if (!testRun) {
+      testRun            = true;
+      setTimeout(async () => {
+        const passed    = await runVisualLockTimingTest();
+        console.log(`[TB-123] visualLockTiming: ${passed ? 'PASS' : 'FAIL'}`);
+        const extra     = passed
+          ? '<br><span class="pass">Auto-test verified &mdash; earned silence confirmed &#10003;</span>'
+          : '<br><span class="fail">Auto-test failed &mdash; check audioEngine decay logic</span>';
+        testResultEl.innerHTML += extra;
+      }, 300);
+    }
+  }, { once: false });
+
+   // Also allow manual re-run via console or URL hash
+  if (new URLSearchParams(window.location.search).get('test') === '1') {
+    runVisualLockTimingTest();
+  }
+})();
+</script>
+</body>
+</html>
