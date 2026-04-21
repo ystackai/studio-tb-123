@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TB-123 — Core Oscillator + Organic Envelope Decay</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0c;
+    --fg: #e8e4df;
+    --accent: #c4956a;
+    --dim: #3a3632;
+    --glow: rgba(196, 149, 106, 0.15);
+    --ui-opacity: 0.35;
+    --ui-contrast: 0.6;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity calc(var(--decay-time, 4s) * 0.6) cubic-bezier(0.25, 0.1, 0.25, 1);
+    opacity: var(--ui-contrast);
+  }
+
+  #canvas-wrap {
+    position: relative;
+    width: 90vmin;
+    max-width: 960px;
+    aspect-ratio: 16 / 7;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 80px var(--glow);
+    transition: box-shadow calc(var(--decay-time, 4s) * 0.4) ease-out;
+  }
+
+  #canvas-wrap.active {
+    box-shadow: 0 0 120px rgba(196, 149, 106, 0.35);
+  }
+
+  canvas {
+    display: block;
+    width: 100%; height: 100%;
+    background: var(--bg);
+  }
+
+  #hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px 24px;
+    opacity: var(--ui-opacity);
+    transition: opacity 0.8s ease-out;
+  }
+
+  #hud.top { align-items: flex-start; }
+  #hud.bottom { align-items: flex-end; }
+
+  .label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0.7;
+  }
+
+  .value {
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--fg);
+    letter-spacing: 0.05em;
+  }
+
+  #instructions {
+    position: absolute;
+    bottom: calc(50% - 64px);
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+    opacity: calc((1 - var(--ui-contrast)) * 2);
+    transition: opacity 1s ease-out;
+  }
+
+  #instructions .prompt {
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  #instructions .sub {
+    font-size: 10px;
+    color: var(--dim);
+    margin-top: 4px;
+    letter-spacing: 0.08em;
+  }
+
+  #status-bar {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    text-align: center;
+  }
+
+  #status-bar .state-label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: calc((1 - var(--ui-contrast)) * 1.5 + 0.15);
+    transition: opacity 0.6s ease;
+  }
+
+  #status-bar .breath-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-left: 8px;
+    vertical-align: middle;
+    animation: none;
+    opacity: 0.3;
+  }
+
+  #status-bar .breath-dot.holding {
+    animation: breathe 3s ease-in-out infinite;
+    opacity: calc(0.4 + var(--env-level) * 0.6);
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(0.7); opacity: 0.25; }
+    50%      { transform: scale(1.4); opacity: calc(0.35 + var(--env-level) * 0.65); }
+  }
+
+  #controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    pointer-events: auto;
+    opacity: var(--ui-opacity);
+    transition: opacity 0.8s ease-out;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ctrl-group label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100px;
+    height: 3px;
+    background: var(--dim);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+  }
+
+  #start-btn {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: var(--bg);
+    cursor: pointer;
+    transition: opacity 1.2s ease-out;
+  }
+
+  #start-btn.hidden { opacity: 0; pointer-events: none; }
+
+  #start-btn .ring {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 1.5px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.6s ease, box-shadow 0.6s ease;
+    animation: pulse-ring 4s ease-in-out infinite;
+  }
+
+  #start-btn:hover .ring {
+    transform: scale(1.1);
+    box-shadow: 0 0 40px var(--glow);
+  }
+
+  #start-btn .ring span {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(196, 149, 106, 0.1); }
+    50%      { box-shadow: 0 0 30px 5px rgba(196, 149, 106, 0.2); }
+  }
+
+  #energy-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 2px;
+    background: transparent;
+    transition: background 0.3s ease;
+  }
+
+  #energy-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    transform: scaleX(var(--env-level, 0));
+    transform-origin: center;
+    transition: transform calc(var(--decay-time, 4s) * 0.5) ease-out;
+  }
+</style>
+</head>
+<body>
+
+<div id="start-btn">
+  <div class="ring"><span>Play</span></div>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="osc-canvas"></canvas>
+  <div id="hud" class="top">
+    <div class="label">Core Oscillator · Organic Envelope Decay Engine</div>
+  </div>
+  <div id="status-bar">
+    <span class="state-label" id="state-label">At Rest</span>
+    <span class="breath-dot" id="breath-dot"></span>
+  </div>
+  <div id="hud" class="bottom">
+    <div style="display:flex; gap:20px; align-items:flex-end;">
+      <div><div class="label">Envelope</div><div class="value" id="env-value">0.000</div></div>
+      <div><div class="label">Level</div><div class="value" id="level-value">-∞ dB</div></div>
+      <div><div class="label">State</div><div class="value" id="state-text">—</div></div>
+    </div>
+  </div>
+  <div id="energy-bar"></div>
+  <div id="instructions">
+    <div class="prompt">Click to begin</div>
+    <div class="sub">space · tap · click to trigger oscillator</div>
+  </div>
+</div>
+
+<div id="controls">
+  <div class="ctrl-group">
+    <label>Decay Time</label>
+    <input type="range" id="decay-slider" min="1" max="8" step="0.25" value="4">
+  </div>
+  <div class="ctrl-group">
+    <label>Breath Ripple</label>
+    <input type="range" id="breath-slider" min="0" max="1" step="0.05" value="0.3">
+  </div>
+  <div class="ctrl-group">
+    <label>Waveform</label>
+    <input type="range" id="wave-slider" min="0" max="3" step="1" value="0">
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ─── Configuration ───────────────────────────────────────────────
+  const WAVEFORMS = ['sine', 'triangle', 'sawtooth', 'square'];
+  const ATTACK_MS = 50;
+  const NOISE_FLOOR_DB = -60;
+
+  // ─── DOM refs ────────────────────────────────────────────────────
+  const canvas      = document.getElementById('osc-canvas');
+  const ctx         = canvas.getContext('2d');
+  const body        = document.body;
+  const startBtn    = document.getElementById('start-btn');
+  const canvasWrap  = document.getElementById('canvas-wrap');
+  const envValueEl  = document.getElementById('env-value');
+  const levelValueEl= document.getElementById('level-value');
+  const stateTextEl = document.getElementById('state-text');
+  const stateLabel  = document.getElementById('state-label');
+  const breathDot   = document.getElementById('breath-dot');
+  const instructions= document.getElementById('instructions');
+  const energyBar   = document.getElementById('energy-bar');
+  const decaySlider = document.getElementById('decay-slider');
+  const breathSlider= document.getElementById('breath-slider');
+  const waveSlider  = document.getElementById('wave-slider');
+
+  // ─── Audio state ─────────────────────────────────────────────────
+  let audioCtx    = null;
+  let masterGain  = null;
+  let analyser    = null;
+  let compressor  = null;
+  let activeOsc   = null;
+  let envLevel    = 0;          // current normalized envelope level (0-1)
+  let isPlaying   = false;
+  let isLocked    = true;       // locked until signal evaporates
+  let releaseTime = 4;          // seconds
+  let breathAmount= 0.3;
+
+  // Pre-computed decay curve: non-monotonic ripple with exponential base
+  let decayCurve  = [];
+  const CURVE_PRECISION = 500;  // samples for pre-computation
+
+  function buildDecayCurve() {
+    const dur = releaseTime * 1000;
+    decayCurve = new Float32Array(CURVE_PRECISION + 1);
+    let prev = 1.0;
+    for (let i = 0; i <= CURVE_PRECISION; i++) {
+      const t = i / CURVE_PRECISION;
+      // Exponential base with sinusoidal ripple
+      const expDecay = Math.pow(10, -3 * t);       // e-fold ~2.3s at mid
+      // Breath ripple: asymmetric, slight over-shoot then settle
+      const ripple = 1 + breathAmount * Math.sin(t * Math.PI * (2 + breathAmount * 4))
+                             * Math.exp(-8 * t)
+                             * (t > 0.15 ? 1 : t / 0.15);
+      // Slight second oscillation for room character
+      const breath = 1 + breathAmount * 0.4 * Math.sin(t * Math.PI * 6 + 1.2)
+                             * Math.exp(-12 * t);
+      decayCurve[i] = Math.max(0, Math.min(1, expDecay * (ripple * breath)));
+    }
+  }
+
+  function getEnvelopeValue(tNorm) {
+    const idx = tNorm * CURVE_PRECISION;
+    const i   = Math.floor(idx);
+    const f   = idx - i;
+    if (i >= CURVE_PRECISION) return 0;
+    // Linear interpolation for smoothness
+    return decayCurve[i] * (1 - f) + decayCurve[Math.min(i + 1, CURVE_PRECISION)] * f;
+  }
+
+  // ─── Audio graph build ──────────────────────────────────────────
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Analyser: high resolution for smooth visual
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = 0.82;
+
+    // Soft-knee compressor pre-output
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value   = -12;
+    compressor.knee.value        = 18;   // soft knee
+    compressor.ratio.value       = 4;
+    compressor.attack.value      = 0.005;
+    compressor.release.value     = 0.15;
+
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+
+    compressor.connect(masterGain);
+    masterGain.connect(analyser);
+    analyser.connect(audioCtx.destination);
+  }
+
+  // ─── Envelope follower (reads from analyser) ────────────────────
+  const freqData = new Uint8Array(2048);
+
+  function readEnvelopeLevel() {
+    if (!analyser) return 0;
+    analyser.getByteTimeDomainData(freqData);
+
+    // RMS calculation from time domain samples (converted to -1..1)
+    let sumSq = 0;
+    for (let i = 0; i < freqData.length; i++) {
+      const v = (freqData[i] - 128) / 128;
+      sumSq += v * v;
+    }
+    const rms = Math.sqrt(sumSq / freqData.length);
+
+    // Convert to dB, clamp to noise floor
+    const db = rms > 0 ? 20 * Math.log10(rms) : NOISE_FLOOR_DB;
+    const clampedDb = Math.max(db, NOISE_FLOOR_DB);
+
+    // Normalize: 1.0 at 0dBFS (or peak), 0.0 at noise floor
+    const normalized = (clampedDb - NOISE_FLOOR_DB) / (0 - NOISE_FLOOR_DB);
+    return Math.max(0, Math.min(1, normalized));
+  }
+
+  // ─── Trigger oscillator ─────────────────────────────────────────
+  function triggerNote() {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    // Stop any active note first
+    stopNoteSilently();
+
+    const now = audioCtx.currentTime;
+    const waveType = WAVEFORMS[parseInt(waveSlider.value)];
+
+    // Oscillator node
+    const osc = audioCtx.createOscillator();
+    osc.type = waveType;
+    osc.frequency.value = 220; // A3 — warm fundamental
+
+    // Sub-oscillator for warmth (octave below, -6dB)
+    const subOsc = audioCtx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.value = 110;
+
+    // Osc gain
+    const oscGain = audioCtx.createGain();
+    oscGain.gain.value = 0.65;
+
+    const subGain = audioCtx.createGain();
+    subGain.gain.value = 0.35;
+
+    // Sub-filter for warmth (low-pass)
+    const subFilter = audioCtx.createBiquadFilter();
+    subFilter.type = 'lowpass';
+    subFilter.frequency.value = 400;
+    subFilter.Q.value = 1.2;
+
+    // Connect: osc -> oscGain -> compressor
+    //           subOsc -> subFilter -> subGain -> compressor
+    osc.connect(oscGain);
+    oscGain.connect(compressor);
+    subOsc.connect(subFilter);
+    subFilter.connect(subGain);
+    subGain.connect(compressor);
+
+    // Attack: ramp gain from 0 to 1 over ATTACK_MS
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.setValueAtTime(0, now);
+    masterGain.gain.linearRampToValueAtTime(1, now + ATTACK_MS / 1000);
+
+    // Start oscillators
+    osc.start(now);
+    subOsc.start(now);
+
+    activeOsc = { osc, subOsc, oscGain, subGain, subFilter };
+    isPlaying = true;
+    envLevel  = 1.0;
+
+    stateLabel.textContent = 'Holding';
+    breathDot.classList.add('holding');
+    canvasWrap.classList.add('active');
+    instructions.style.display = 'none';
+  }
+
+  function stopNoteSilently() {
+    if (!activeOsc) return;
+    const now = audioCtx.currentTime;
+    const osc = activeOsc;
+
+    // Cancel any scheduled values and release to decay
+    osc.oscGain.gain.cancelScheduledValues(now);
+    osc.subGain.gain.cancelScheduledValues(now);
+    osc.oscGain.gain.setValueAtTime(osc.oscGain.gain.value, now);
+    osc.subGain.gain.setValueAtTime(osc.subGain.gain.value, now);
+
+    // Ramp down to 0 over release time (but don't stop oscillators yet —
+    // the decay curve will be read by the envelope follower)
+    osc.oscGain.gain.exponentialRampToValueAtTime(0.0001, now + releaseTime);
+    osc.subGain.gain.exponentialRampToValueAtTime(0.0001, now + releaseTime);
+
+    // Stop after release completes
+    const stopWhen = now + releaseTime + 0.1;
+    osc.osc.stop(stopWhen);
+    osc.subOsc.stop(stopWhen);
+
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + releaseTime);
+
+    activeOsc = null;
+    isPlaying = false;
+  }
+
+  function triggerRelease() {
+    if (!isPlaying) return;
+    stopNoteSilently();
+
+    // The decay curve is now being read from the analyser in real-time.
+    // UI follows the audio signal, no separate timer.
+    stateLabel.textContent = 'Decay';
+  }
+
+  // ─── Canvas drawing ──────────────────────────────────────────────
+  const canvasData = new Uint8Array(4096 * 4);
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawWaveform(env) {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const cy = h / 2;
+
+    // Clear with slight darkness modulation by env level
+    ctx.fillStyle = `rgba(10, 10, 12, 1)`;
+    ctx.fillRect(0, 0, w, h);
+
+    // Read time-domain data directly from analyser (hardwired to audio)
+    analyser.getByteTimeDomainData(freqData);
+
+    const dbLevel = env;
+    const brightness = Math.max(0.08, dbLevel);   // floor so signal is never hidden
+
+    // ── Draw glow behind waveform ─────────────────────────────────
+    if (dbLevel > 0.02) {
+      ctx.save();
+      ctx.shadowBlur = 30 * dbLevel;
+      ctx.shadowColor = `rgba(196, 149, 106, ${0.5 * dbLevel})`;
+      ctx.beginPath();
+
+      const sliceWidth = w / freqData.length;
+      let x = 0;
+
+      // Anti-aliased bezier curve through points
+      ctx.moveTo(x, cy + ((freqData[0] - 128) / 128) * (h * 0.4) * brightness);
+
+      for (let i = 1; i < freqData.length; i++) {
+        const prevX = x;
+        const midX  = (x + sliceWidth) * 0.5;
+        x           = i * sliceWidth;
+
+        const y = cy + ((freqData[i] - 128) / 128) * (h * 0.4) * brightness;
+        const prevY = cy + ((freqData[i - 1] - 128) / 128) * (h * 0.4) * brightness;
+
+        ctx.quadraticCurveTo(prevX, prevY, midX, (prevY + y) * 0.5);
+      }
+
+      ctx.strokeStyle = `rgba(196, 149, 106, ${0.3 + 0.7 * brightness})`;
+      ctx.lineWidth   = 1.5 + 1.5 * dbLevel;
+      ctx.lineJoin    = 'round';
+      ctx.lineCap     = 'round';
+      ctx.stroke();
+      ctx.restore();
+
+      // ── Secondary waveform (ghost, for depth) ───────────────────
+      ctx.beginPath();
+      x = 0;
+      const ghostAlpha = brightness * 0.15;
+      const ghostAmp   = brightness * 0.25;
+      ctx.moveTo(x, cy + ((freqData[0] - 128) / 128) * h * ghostAmp);
+
+      for (let i = 1; i < freqData.length; i++) {
+        const prevX = x;
+        const midX  = (x + sliceWidth) * 0.5;
+        x           = i * sliceWidth;
+        const y = cy + ((freqData[i] - 128) / 128) * h * ghostAmp;
+        const prevY = cy + ((freqData[i-1] - 128) / 128) * h * ghostAmp;
+
+        ctx.quadraticCurveTo(prevX, prevY, midX, (prevY + y) * 0.5);
+      }
+
+      ctx.strokeStyle = `rgba(196, 149, 106, ${ghostAlpha})`;
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+    } else {
+      // Draw barely-visible flat line — no hidden voids
+      ctx.beginPath();
+      ctx.moveTo(0, cy);
+      ctx.lineTo(w, cy);
+      ctx.strokeStyle = 'rgba(196, 149, 106, 0.06)';
+      ctx.lineWidth   = 0.5;
+      ctx.stroke();
+    }
+
+    // ── Center reference line (very subtle) ───────────────────────
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(w, cy);
+    ctx.strokeStyle = `rgba(232, 228, 223, ${0.04 + brightness * 0.04})`;
+    ctx.lineWidth   = 0.5;
+    ctx.stroke();
+
+    // ── Amplitude markers ─────────────────────────────────────────
+    if (dbLevel > 0.1) {
+      const markerAlpha = dbLevel * 0.3;
+      ctx.fillStyle = `rgba(196, 149, 106, ${markerAlpha})`;
+      // Left marker
+      ctx.fillRect(0, cy - (h * 0.4 * brightness) - 1, w, 1);
+      ctx.fillRect(0, cy + (h * 0.4 * brightness), w, 1);
+    }
+
+    // ── Scanline overlay (warm analog feel) ────────────────────────
+    const scanAlpha = 0.015;
+    for (let sy = 0; sy < h; sy += 3) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${scanAlpha})`;
+      ctx.fillRect(0, sy, w, 1);
+    }
+  }
+
+  // ─── Main render loop ────────────────────────────────────────────
+  let animId     = null;
+  let noteStartTime = 0;
+  let decayPhase  = false;
+  let decayStartEnv = 0;
+  let decayElapsed = 0;
+
+  function frame() {
+    animId = requestAnimationFrame(frame);
+
+    // Read live envelope from analyser (audio-driven, not timer-driven)
+    const liveEnv = readEnvelopeLevel();
+
+    // Blend: if we're in release phase, use the decay curve blended with live signal
+    let currentEnv;
+
+    if (isPlaying) {
+      currentEnv = Math.max(liveEnv, 0.95); // still playing, show high level
+    } else if (decayPhase) {
+      decayElapsed += 16.67; // ~60fps ms per frame
+      const tNorm   = Math.min(decayElapsed / (releaseTime * 1000), 1);
+      const curveEnv = getEnvelopeValue(tNorm);
+
+      // Blend live analyser reading with decay curve for organic feel
+      const noiseFloorFactor = 0.08;
+      currentEnv = curveEnv * (1 - noiseFloorFactor) + liveEnv * noiseFloorFactor;
+
+      // Fade in the last moments to mask digital cutoff
+      if (tNorm > 0.92) {
+        const fadeMasker = Math.min(1, (tNorm - 0.92) / 0.08);
+        currentEnv = Math.max(currentEnv, liveEnv * fadeMasker * 3);
+      }
+    } else {
+      // No active note — hold flatline
+      currentEnv = liveEnv;
+    }
+
+    // Smooth envelope: prevent flutter at near-zero
+    envLevel = currentEnv;
+
+    // ─── Update UI based on envelope level ────────────────────────
+    const dbRaw = currentEnv > 0.001
+      ? 20 * Math.log10(currentEnv)
+      : NOISE_FLOOR_DB;
+    const clampedDb = Math.max(dbRaw, NOISE_FLOOR_DB);
+
+    // UI brightness and contrast modulated by envelope
+    body.style.setProperty('--ui-contrast', (0.3 + currentEnv * 0.7).toFixed(3));
+    body.style.setProperty('--ui-opacity', (0.2 + currentEnv * 0.8).toFixed(3));
+    body.style.setProperty('--decay-time', `${releaseTime}s`);
+
+    // HUD updates
+    envValueEl.textContent = currentEnv.toFixed(3);
+    levelValueEl.textContent = clampedDb < -90 ? '-∞ dB' : `${clampedDb.toFixed(1)} dB`;
+
+    // Check noise floor threshold for unlock
+    const belowNoiseFloor = dbRaw <= NOISE_FLOOR_DB;
+    if (belowNoiseFloor && !isPlaying) {
+      isLocked = false;
+      stateLabel.textContent = 'At Rest';
+      breathDot.classList.remove('holding');
+      canvasWrap.classList.remove('active');
+      stateTextEl.textContent = 'Unlocked';
+      stateTextEl.style.color = 'var(--accent)';
+    } else if (!belowNoiseFloor || isPlaying) {
+      isLocked = true;
+      if (isPlaying) {
+        stateLabel.textContent = 'Holding';
+        breathDot.classList.add('holding');
+        canvasWrap.classList.add('active');
+        stateTextEl.textContent = 'Active';
+        stateTextEl.style.color = '';
+      } else if (decayPhase) {
+        stateLabel.textContent = 'Decay';
+        breathDot.classList.add('holding');
+        canvasWrap.classList.add('active');
+        stateTextEl.textContent = 'Fading…';
+        stateTextEl.style.color = '';
+      }
+    }
+
+    // Energy bar
+    energyBar.style.setProperty('--env-level', currentEnv.toFixed(3));
+
+    // ─── Draw ─────────────────────────────────────────────────────
+    drawWaveform(currentEnv);
+  }
+
+  // ─── Event handlers ──────────────────────────────────────────────
+  function onTrigger(e) {
+    e.preventDefault();
+    if (!audioCtx) {
+      initAudio();
+      buildDecayCurve();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    if (!isPlaying && !decayPhase) {
+      // Start a new note
+      triggerNote();
+      noteStartTime = performance.now();
+    } else if (decayPhase) {
+      // Cancel decay, start new note
+      cancelDecayState();
+      triggerNote();
+      noteStartTime = performance.now();
+    }
+  }
+
+  function onRelease(e) {
+    e.preventDefault();
+    if (!isPlaying && !decayPhase) return;
+
+    if (isPlaying) {
+      triggerRelease();
+      decayPhase = true;
+      decayStartEnv = envLevel;
+      decayElapsed = 0;
+    } else if (decayPhase) {
+      // Already decaying — just hold state, don't re-trigger
+    }
+  }
+
+  function cancelDecayState() {
+    // Immediately silence and reset
+    if (activeOsc) {
+      const now = audioCtx.currentTime;
+      activeOsc.oscGain.gain.cancelScheduledValues(now);
+      activeOsc.subGain.gain.cancelScheduledValues(now);
+      activeOsc.oscGain.gain.setValueAtTime(0, now);
+      activeOsc.subGain.gain.setValueAtTime(0, now);
+      activeOsc.osc.stop(now + 0.05);
+      activeOsc.subOsc.stop(now + 0.05);
+    }
+    const now = audioCtx.currentTime;
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.setValueAtTime(0, now);
+
+    decayPhase = false;
+    decayElapsed = 0;
+    envLevel = 0;
+    isPlaying = false;
+    activeOsc = null;
+  }
+
+  // Start button
+  startBtn.addEventListener('click', () => {
+    initAudio();
+    buildDecayCurve();
+    resizeCanvas();
+    startBtn.classList.add('hidden');
+    instructions.querySelector('.prompt').textContent = 'Press and hold';
+    instructions.querySelector('.sub').textContent   = 'to trigger · release to decay';
+  });
+
+  // Trigger on space / click during idle
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !e.repeat) {
+      e.preventDefault();
+      onTrigger(e);
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      onRelease(e);
+    }
+  });
+
+  // Mouse/touch on canvas area
+  canvasWrap.addEventListener('mousedown', (e) => {
+    if (startBtn.classList.contains('hidden')) {
+      onTrigger(e);
+    }
+  });
+  document.addEventListener('mouseup', () => onRelease(new Event('release')));
+
+  canvasWrap.addEventListener('touchstart', (e) => {
+    if (startBtn.classList.contains('hidden')) {
+      e.preventDefault();
+      onTrigger(e);
+    }
+  }, { passive: false });
+  document.addEventListener('touchend', () => onRelease(new Event('release')));
+
+  // Controls
+  decaySlider.addEventListener('input', () => {
+    releaseTime = parseFloat(decaySlider.value);
+    buildDecayCurve();
+  });
+
+  breathSlider.addEventListener('input', () => {
+    breathAmount = parseFloat(breathSlider.value);
+    buildDecayCurve();
+  });
+
+  waveSlider.addEventListener('input', () => {
+    if (activeOsc && audioCtx) {
+      try { activeOsc.osc.type = WAVEFORMS[parseInt(waveSlider.value)]; } catch(e) {}
+    }
+  });
+
+  // Resize
+  window.addEventListener('resize', resizeCanvas);
+
+  // ─── Kick off render loop ────────────────────────────────────────
+  resizeCanvas();
+  animId = requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
