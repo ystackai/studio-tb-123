@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quantized Filter Toy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <div id="grid-container">
+      <svg id="steps-grid" width="512" height="64" viewBox="0 0 512 64"></svg>
+    </div>
+    <div id="knobs">
+      <div class="knob-group" id="cutoff-group">
+        <svg id="cutoff-knob" width="160" height="160" viewBox="0 0 160 160"></svg>
+        <label>CUTOFF</label>
+      </div>
+      <div class="knob-group" id="resonance-group">
+        <svg id="resonance-knob" width="160" height="160" viewBox="0 0 160 160"></svg>
+        <label>RESONANCE</label>
+      </div>
+      <div class="knob-group" id="bpm-group">
+        <svg id="bpm-knob" width="160" height="160" viewBox="0 0 160 160"></svg>
+        <label id="bpm-label">BPM 120</label>
+      </div>
+    </div>
+    <div id="transport">
+      <button id="play-btn">START</button>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
