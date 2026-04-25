@@ -1,303 +1,399 @@
-// ─── Quantized Filter Toy ────────────────────────────────────────────
+// ─── Quantized Filter Toy – grid-locked audio engine ────
 
-// ── Cutoff Frequency Lookup Table (8 discrete steps, musical-ish Hz map) ──
-const CUTOFF_STEPS = [
-  60,   120,  180,  260,  380,  530,  750,  1100,  1600, 2400,
-  3200, 4200, 5400, 6600, 7800, 9600
-]; // 16 quantized positions
+// ── Stepped Lookup Tables ──
+const CUTOFF_LUT = [
+  60, 120, 180, 260, 380, 530, 750, 1100,
+  1600, 2400, 3200, 4200, 5400, 6600, 7800, 9600
+];
+const RES_LUT = [0.1, 0.4, 0.8, 1.4, 2.2, 3.2, 4.5, 6.0, 7.5, 9.0];
 
-const RESONANCE_STEPS = [0.1, 0.4, 0.8, 1.4, 2.2, 3.2, 4.5, 6.0, 7.5, 9.0];
+// ── Click-prevention constant ──
+const RAMP_MS = 0.004; // 4 ms gain ramp per step transition
 
-// ── State ──
-let audioCtx = null;
-let droneNode = null;
-let filterNode = null;
-let gainNode = null;
-let isPlaying = false;
-let currentCutoffIdx = 4;
-let currentResIdx = 3;
-let bpm = 120;
-let clockInterval = null;
-let currentStep = 0;
-
-// ── Knob state ──
+// ── Knob display state ──
 const knobs = {
-  cutoff: { value: 4, min: 0, max: CUTOFF_STEPS.length - 1, totalSteps: CUTOFF_STEPS.length },
-  resonance: { value: 3, min: 0, max: RESONANCE_STEPS.length - 1, totalSteps: RESONANCE_STEPS.length },
-  bpm: { value: 120, min: 60, max: 200, totalSteps: 141 },
+  cutoff:    { value: 4, max: CUTOFF_LUT.length - 1 },
+  resonance: { value: 3, max: RES_LUT.length - 1 },
+  bpm:       { value: 120, min: 60, max: 200 },
 };
 
+// ── Audio graph refs ──
+let actx = null;
+let droneA = null, droneB = null;
+let biquad = null;
+let rampGain   = null; // pre-filter gain – ramps at step boundaries
+let stepGate   = null; // post-filter gain – gates rhythm per step
+let master = null;
+
+// ── Scheduler refs ──
+let playing = false;
+let bpm    = 120;
+let schedTimer = null;    // the 25ms scheduler ping
+let nextStepT  = 0;       // AudioContext time of the next clock step
+let clockStep  = 0;       // 0..15 internal position
+const LOOKAHEAD  = 0.10;  // schedule 100 ms ahead
+const SCHED_MS   = 25;    // ping every 25 ms
+
 // ── DOM refs ──
-const cutoffSvg = document.getElementById('cutoff-knob');
-const resSvg = document.getElementById('resonance-knob');
-const bpmSvg = document.getElementById('bpm-knob');
-const gridSvg = document.getElementById('steps-grid');
-const playBtn = document.getElementById('play-btn');
+const svgCutoff = document.getElementById('cutoff-knob');
+const svgRes    = document.getElementById('resonance-knob');
+const svgBpm    = document.getElementById('bpm-knob');
+const svgGrid   = document.getElementById('steps-grid');
+const playBtn  = document.getElementById('play-btn');
 const bpmLabel = document.getElementById('bpm-label');
 
-// ─── Audio init ───
+// ═══════════════════════════════════════════════════════════
+//  AUDIO INIT  – build the DSP graph once
+// ═══════════════════════════════════════════════════════════
 function initAudio() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx) { actx.resume(); return; }
+  actx = new (window.AudioContext || window.webkitAudioContext)();
 
-  // Drone oscillator
-  droneNode = audioCtx.createOscillator();
-  droneNode.type = 'sawtooth';
-  droneNode.frequency.setValueAtTime(110, audioCtx.currentTime); // A2
+  // Sources
+  droneA = actx.createOscillator();
+  droneA.type = 'sawtooth';
+  droneA.frequency.setValueAtTime(110, actx.currentTime);
 
-  // Second oscillator for warmth
-  const drone2 = audioCtx.createOscillator();
-  drone2.type = 'triangle';
-  drone2.frequency.setValueAtTime(55, audioCtx.currentTime); // A1
+  droneB = actx.createOscillator();
+  droneB.type = 'triangle';
+  droneB.frequency.setValueAtTime(55, actx.currentTime);
 
-  // Filter
-  filterNode = audioCtx.createBiquadFilter();
-  filterNode.type = 'lowpass';
-  filterNode.Q.value = RESONANCE_STEPS[knobs.resonance.value];
-  filterNode.frequency.value = CUTOFF_STEPS[knobs.cutoff.value];
+  // Click-prevention ramp gain (pre-filter)
+  rampGain = actx.createGain();
+  rampGain.gain.setValueAtTime(1, actx.currentTime);
 
-  // Envelope gain for click prevention
-  gainNode = audioCtx.createGain();
-  gainNode.gain.value = 0;
+  // Low-pass filter
+  biquad = actx.createBiquadFilter();
+  biquad.type = 'lowpass';
+  biquad.frequency.value = CUTOFF_LUT[knobs.cutoff.value];
+  biquad.Q.value         = RES_LUT[knobs.resonance.value];
 
-  const master = audioCtx.createGain();
-  master.gain.value = 0.35;
+  // Step gate (post-filter) – controls rhythmic pulsing
+  stepGate = actx.createGain();
+  stepGate.gain.setValueAtTime(1, actx.currentTime);
 
-  droneNode.connect(filterNode);
-  drone2.connect(filterNode);
-  filterNode.connect(gainNode);
-  gainNode.connect(master);
-  master.connect(audioCtx.destination);
+  master = actx.createGain();
+  master.gain.setValueAtTime(0.30, actx.currentTime);
 
-  droneNode.start();
-  drone2.start();
+  droneA.connect(rampGain);
+  droneB.connect(rampGain);
+  rampGain.connect(biquad);
+  biquad.connect(stepGate);
+  stepGate.connect(master);
+  master.connect(actx.destination);
 
-  // Fade in
-  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-  gainNode.gain.linearRampToValueAtTime(0.6, audioCtx.currentTime + 0.3);
+  droneA.start();
+  droneB.start();
+
+  // Fade in to avoid startup pop
+  rampGain.gain.setValueAtTime(0, actx.currentTime);
+  rampGain.gain.linearRampToValueAtTime(1, actx.currentTime + 0.25);
 }
 
-// ─── Quantized filter change with click prevention ───
-function setFilterCutoff(index) {
-  if (!filterNode || !audioCtx) return;
-  currentCutoffIdx = index;
-  const targetFreq = CUTOFF_STEPS[index];
-  const now = audioCtx.currentTime;
-  // Gentle crossfade to avoid clicks
-  filterNode.frequency.setTargetAtTime(targetFreq, now, 0.015);
+// ═══════════════════════════════════════════════════════════
+//  GRID-LOCKED SCHEDULER  – lookahead, setValueAtTime only
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Schedule a single clock step at the given AudioContext time.
+ * All parameter changes use setValueAtTime – no smoothing.
+ * Click prevention is handled by a symmetric dip-and-restore
+ * gain ramp on rampGain that spans exactly one step window.
+ */
+function scheduleStep(step, time) {
+  // ── Cutoff: stepped LUT, instantaneous setValueAtTime ──
+  const baseIdx = knobs.cutoff.value;
+  let cutoffIdx = baseIdx;
+
+  // Rhythmic bump: steps 0,4,8,12 open slightly wider
+  if (step % 4 === 0) {
+    cutoffIdx = Math.min(baseIdx + 2, CUTOFF_LUT.length - 1);
+  }
+  if (step % 4 === 1) {
+    cutoffIdx = baseIdx; // return to base on the following step
+  }
+
+  const targetFreq = CUTOFF_LUT[cutoffIdx];
+
+  // Click prevention: dip gain to 0.95 then restore in 4 ms window
+  // (only when frequency actually changes)
+  const prevFreq = biquad.frequency.value; // current scheduled value snapshot
+  if (Math.abs(targetFreq - prevFreq) > 0.5) {
+    rampGain.gain.setValueAtTime(0.97, time);
+    rampGain.gain.setValueAtTime(1.00, time + RAMP_MS);
+  }
+
+  // Hard, instant frequency change on the grid
+  biquad.frequency.setValueAtTime(targetFreq, time);
+
+  // Resonance also snaps on step-0 (quarter note boundary)
+  if (step === 0) {
+    biquad.Q.setValueAtTime(RES_LUT[knobs.resonance.value], time);
+  }
+
+  // Step gate: subtle rhythmic volume shaping
+  // Steps 0 and 8 get slight volume emphasis
+  const gateVal = (step === 0 || step === 8) ? 1.0 : 0.94;
+  stepGate.gain.setValueAtTime(gateVal, time);
+  stepGate.gain.setValueAtTime(1.0, time + (getStepDuration() * 0.6));
 }
 
-function setResonance(index) {
-  if (!filterNode || !audioCtx) return;
-  currentResIdx = index;
-  const targetQ = RESONANCE_STEPS[index];
-  const now = audioCtx.currentTime;
-  filterNode.Q.setTargetAtTime(targetQ, now, 0.015);
+function getStepDuration() {
+  return (60 / bpm) / 4; // 16th note duration in seconds at current BPM
 }
 
-// ─── Clock system ───
-function tickClock() {
-  currentStep = (currentStep + 1) % 16;
+function schedulerTick() {
+  // While steps are due, schedule them
+  while (nextStepT < actx.currentTime + LOOKAHEAD) {
+    scheduleStep(clockStep, nextStepT);
 
-  // Pulse filter on certain steps for rhythmic effect
-  if (isPlaying && filterNode) {
-    const baseIdx = knobs.cutoff.value;
-    // Subtle rhythmic modulation: on steps 0 and 8, bump cutoff up briefly
-    if (currentStep === 0 || currentStep === 8) {
-      const now = audioCtx.currentTime;
-      const boostedIdx = Math.min(baseIdx + 2, CUTOFF_STEPS.length - 1);
-      filterNode.frequency.setValueAtTime(CUTOFF_STEPS[boostedIdx], now);
-      const releaseStep = currentStep === 0 ? 1 : 9;
-      // Will return on next tick
-    } else if (currentStep === 1 || currentStep === 9) {
-      const now = audioCtx.currentTime;
-      filterNode.frequency.setTargetAtTime(CUTOFF_STEPS[baseIdx], now, 0.04);
+    // Schedule UI update via setTimeout synced to the step
+    const delayMs = (nextStepT - actx.currentTime) * 1000;
+    const stepForUI = clockStep;
+    setTimeout(() => {
+      clockStepVis = stepForUI;
+      drawStepsGrid();
+    }, Math.max(0, delayMs));
+
+    const dur = getStepDuration();
+    nextStepT += dur;
+    clockStep = (clockStep + 1) % 16;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRANSPORT
+// ═══════════════════════════════════════════════════════════
+let clockStepVis = 0; // UI-visible step position
+
+function startPlayback() {
+  if (playing) return;
+  playing = true;
+  playBtn.textContent = 'STOP';
+  playBtn.classList.add('active');
+  nextStepT = actx.currentTime + 0.05;
+  clockStep = 0;
+  schedTimer = setInterval(schedulerTick, SCHED_MS);
+}
+
+function stopPlayback() {
+  playing = false;
+  playBtn.textContent = 'START';
+  playBtn.classList.remove('active');
+  clearInterval(schedTimer);
+  schedTimer = null;
+}
+
+playBtn.addEventListener('click', () => {
+  initAudio();
+  playing ? stopPlayback() : startPlayback();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  BPM UPDATE
+// ═══════════════════════════════════════════════════════════
+function updateBpm(val) {
+  bpm = Math.max(60, Math.min(200, Math.round(val)));
+  knobs.bpm.value = bpm;
+  bpmLabel.textContent = `BPM ${bpm}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KNOB – SCHEDULE IMMEDIATE FILTER CHANGE ON GRID
+// ═══════════════════════════════════════════════════════════
+function applyCutoff(idx) {
+  if (!actx) return;
+  knobs.cutoff.value = idx;
+  // Snap filter NOW using setValueAtTime with click-prevention ramp
+  const now = actx.currentTime;
+  rampGain.gain.setValueAtTime(0.97, now);
+  biquad.frequency.setValueAtTime(CUTOFF_LUT[idx], now);
+  rampGain.gain.setValueAtTime(1.00, now + RAMP_MS);
+}
+
+function applyResonance(idx) {
+  if (!actx) return;
+  knobs.resonance.value = idx;
+  const now = actx.currentTime;
+  biquad.Q.setValueAtTime(RES_LUT[idx], now);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SVG KNOB RENDERER  – discrete tick marks, snap indicator
+// ═══════════════════════════════════════════════════════════
+function arcD(cx, cy, r, a0, a1) {
+  const x1 = cx + r * Math.cos(a0), y1 = cy + r * Math.sin(a0);
+  const x2 = cx + r * Math.cos(a1), y2 = cy + r * Math.sin(a1);
+  const large = (a1 - a0) > Math.PI ? 1 : 0;
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+}
+
+function drawKnob(svg, value, maxIdx, opts) {
+  const cx = 80, cy = 80, r = 55;
+  const sA = 0.75 * Math.PI;
+  const eA = 2.25 * Math.PI;
+  const span = eA - sA;
+  const norm = maxIdx > 0 ? value / maxIdx : 0;
+  const vA = sA + Math.max(0, Math.min(1, norm)) * span;
+
+  let s = '';
+
+  // Background ring
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1a1a22" stroke-width="5"/>`;
+
+  // Active arc
+  if (norm > 0.01) {
+    s += `<path d="${arcD(cx, cy, r, sA, vA)}" fill="none" stroke="${opts.arcColor || '#3a6030'}" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>`;
+  }
+
+  // SVG tick marks – one per quantization step
+  const n = maxIdx + 1;
+  for (let i = 0; i < n; i++) {
+    const tA = sA + (i / (n - 1)) * span;
+    const rIn  = r - 12;
+    const rOut = r - 1;
+    const x1 = cx + rIn  * Math.cos(tA);
+    const y1 = cy + rIn  * Math.sin(tA);
+    const x2 = cx + rOut * Math.cos(tA);
+    const y2 = cy + rOut * Math.sin(tA);
+    const on  = (i === value);
+    s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${on ? '#a0e060' : '#2d2d36'}" stroke-width="${on ? 2.2 : 1}" stroke-linecap="round"/>`;
+  }
+
+  // Value pointer line
+  const px = cx + (r - 6) * Math.cos(vA);
+  const py = cy + (r - 6) * Math.sin(vA);
+  s += `<line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#d0d0d8" stroke-width="2" stroke-linecap="round"/>`;
+
+  // Center hub
+  s += `<circle cx="${cx}" cy="${cy}" r="5" fill="#303038"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="2.5" fill="#d0d0d8"/>`;
+
+  // Outer border
+  s += `<circle cx="${cx}" cy="${cy}" r="${r + 5}" fill="none" stroke="#222228" stroke-width="1"/>`;
+
+  // Active index label
+  if (opts.label !== false) {
+    const text = opts.labelFn ? opts.labelFn(value) : `${CUTOFF_LUT[value] || value} Hz`;
+    s += `<text x="${cx}" y="${cy + 28}" text-anchor="middle" fill="#6a6a78" font-family="monospace" font-size="11">${text}</text>`;
+  }
+
+  svg.innerHTML = s;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  16-STEP GRID VISUALIZATION
+// ═══════════════════════════════════════════════════════════
+function drawStepsGrid() {
+  const W = 512, H = 64;
+  const sw = W / 16;
+  let s = '';
+
+  // Background
+  s += `<rect width="${W}" height="${H}" fill="#101014" rx="2"/>`;
+
+  // Step cells with active highlight
+  for (let i = 0; i < 16; i++) {
+    const x = i * sw;
+    const active = (i === clockStepVis);
+    const beat = (i % 4 === 0);
+    const fill  = active ? '#1a3a1a' : (beat ? '#14141a' : '#121218');
+    const strk  = active ? '#60c040' : '#24242c';
+    const w = active ? 2 : 0.5;
+    s += `<rect x="${x + 1}" y="4" width="${sw - 2}" height="${H - 8}" fill="${fill}" stroke="${strk}" stroke-width="${w}" rx="2"/>`;
+
+    // Small dot at top of each beat position
+    if (beat) {
+      const dotColor = (active && i === clockStepVis) ? '#a0e060' : '#4a4a54';
+      s += `<circle cx="${x + sw / 2}" cy="10" r="1.5" fill="${dotColor}"/>`;
     }
   }
 
-  drawStepsGrid();
-}
-
-function startClock() {
-  if (clockInterval) return;
-  const msPerBeat = 60000 / bpm;
-  const msPer16th = msPerBeat / 4;
-  clockInterval = setInterval(tickClock, msPer16th);
-}
-
-function stopClock() {
-  if (clockInterval) {
-    clearInterval(clockInterval);
-    clockInterval = null;
-  }
-}
-
-function updateBpm(newBpm) {
-  bpm = Math.round(newBpm);
-  bpm = Math.max(60, Math.min(200, bpm));
-  knobs.bpm.value = bpm;
-  bpmLabel.textContent = `BPM ${bpm}`;
-  if (isPlaying) {
-    stopClock();
-    startClock();
-  }
-  drawKnob(bpmSvg, knobs.bpm, 60, 200, bpm);
-}
-
-// ─── Knob rendering (SVG) ───
-function drawKnob(svg, knobState, min, max, displayVal) {
-  const cx = 80, cy = 80, r = 56;
-  const numTicks = knobState.totalSteps;
-  const startAngle = 0.75 * Math.PI;
-  const endAngle = 2.25 * Math.PI;
-  const rangeAngle = endAngle - startAngle;
-
-  const normalized = (displayVal - min) / (max - min);
-  const clamped = Math.max(0, Math.min(1, normalized));
-  const valueAngle = startAngle + clamped * rangeAngle;
-
-  let inner = '';
-
-  // Background ring
-  inner += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#222228" stroke-width="6"/>`;
-
-  // Track arc (active portion)
-  const trackSvg = arcPath(cx, cy, r, startAngle, valueAngle);
-  inner += `<path d="${trackSvg}" fill="none" stroke="#3a6030" stroke-width="4" stroke-linecap="round"/>`;
-
-  // Tick marks for each discrete step
-  for (let i = 0; i < numTicks; i++) {
-    const tickAngle = startAngle + (i / (numTicks - 1)) * rangeAngle;
-    const innerR = r - 14;
-    const outerR = r - 2;
-    const x1 = cx + innerR * Math.cos(tickAngle);
-    const y1 = cy + innerR * Math.sin(tickAngle);
-    const x2 = cx + outerR * Math.cos(tickAngle);
-    const y2 = cy + outerR * Math.sin(tickAngle);
-    const isActive = (i === displayVal);
-    const color = isActive ? '#a0e060' : '#3a3a44';
-    const sw = isActive ? 2.5 : 1;
-    inner += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${sw}"/>`;
-  }
-
-  // Value pointer
-  const px = cx + (r - 4) * Math.cos(valueAngle);
-  const py = cy + (r - 4) * Math.sin(valueAngle);
-  inner += `<line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="#e0e0e8" stroke-width="2" stroke-linecap="round"/>`;
-
-  // Center dot
-  inner += `<circle cx="${cx}" cy="${cy}" r="4" fill="#e0e0e8"/>`;
-
-  // Outer ring
-  inner += `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="none" stroke="#222228" stroke-width="1"/>`;
-
-  svg.innerHTML = inner;
-}
-
-function arcPath(cx, cy, r, start, end) {
-  const x1 = cx + r * Math.cos(start);
-  const y1 = cy + r * Math.sin(start);
-  const x2 = cx + r * Math.cos(end);
-  const y2 = cy + r * Math.sin(end);
-  const largeArc = (end - start) > Math.PI ? 1 : 0;
-  return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
-}
-
-// ─── 16-step grid visualization ───
-function drawStepsGrid() {
-  const w = 512, h = 64;
-  const stepW = w / 16;
-  let inner = '';
-
-  // Grid lines
+  // Grid dividers
   for (let i = 0; i <= 16; i++) {
-    const x = i * stepW;
-    const color = i % 4 === 0 ? '#3a3a44' : '#1e1e24';
-    inner += `<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${color}" stroke-width="1"/>`;
+    const x = i * sw;
+    const major = (i % 4 === 0);
+    s += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="${major ? '#333340' : '#1e1e26'}" stroke-width="${major ? 1 : 0.5}"/>`;
   }
 
-  // Step cells
-  for (let i = 0; i < 16; i++) {
-    const x = i * stepW;
-    const isActive = i === currentStep;
-    const color = isActive ? '#a0e060' : '#1c1c24';
-    const sw = isActive ? 2 : 0.5;
-    inner += `<rect x="${x + 1}" y="4" width="${stepW - 2}" height="${h - 8}" fill="${color}" stroke="${isActive ? '#60c040' : '#2a2a32'}" stroke-width="${sw}" rx="1"/>`;
-  }
-
-  // Bottom line
-  inner += `<line x1="0" y1="${h - 1}" x2="${w}" y2="${h - 1}" stroke="#3a3a44" stroke-width="1"/>`;
-
-  gridSvg.innerHTML = inner;
+  svgGrid.innerHTML = s;
 }
 
-// ─── Knob interaction ───
-function setupKnobInteraction(groupEl, knobId) {
-  const svgMap = {
-    cutoff: { el: cutoffSvg, state: knobs.cutoff, dataMin: 0, dataMax: CUTOFF_STEPS.length - 1, dataSteps: CUTOFF_STEPS.length, apply: (v) => { setFilterCutoff(v); drawKnob(cutoffSvg, knobs.cutoff, 0, CUTOFF_STEPS.length - 1, v); } },
-    resonance: { el: resSvg, state: knobs.resonance, dataMin: 0, dataMax: RESONANCE_STEPS.length - 1, dataSteps: RESONANCE_STEPS.length, apply: (v) => { setResonance(v); drawKnob(resSvg, knobs.resonance, 0, RESONANCE_STEPS.length - 1, v); } },
-    bpm: { el: bpmSvg, state: knobs.bpm, dataMin: 60, dataMax: 200, dataSteps: 141, apply: (v) => updateBpm(v) },
-  }[knobId];
-
-  let startY = 0;
-  let startVal = 0;
+// ═══════════════════════════════════════════════════════════
+//  KNOB INTERACTION  – snap-to-grid on drag/click
+// ═══════════════════════════════════════════════════════════
+function setupKnob(groupEl, cfg) {
+  let startY = 0, startV = 0;
 
   groupEl.addEventListener('mousedown', (e) => {
+    e.preventDefault();
     startY = e.clientY;
-    startVal = svgMap.state.value;
+    startV = cfg.state.value;
+
     const onMove = (ev) => {
-      const dy = startY - ev.clientY;
-      const sensitivity = 1 / (svgMap.dataSteps - 1) * 120;
-      let raw = startVal + dy * sensitivity;
-      // Snap to nearest step
-      const clampedVal = Math.round(raw);
-      const finalVal = Math.max(svgMap.dataMin, Math.min(svgMap.dataMax, clampedVal));
-      svgMap.state.value = finalVal;
-      svgMap.apply(finalVal);
+      const dy = ev.clientY - startY;
+      const stepSize = dy / -120;
+      let raw = startV + stepSize;
+      raw = Math.round(raw);                       // snap to integer step
+      raw = Math.max(cfg.min, Math.min(cfg.max, raw));
+      cfg.state.value = raw;
+      cfg.apply(raw);
+      cfg.render(raw);
     };
+
     const onUp = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
     };
+
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   });
-
-  // Click to set directly
-  svgMap.el.addEventListener('click', (e) => {
-    const rect = svgMap.el.getBoundingClientRect();
-    const relY = (e.clientY - rect.top) / rect.height;
-    const clampedY = Math.max(0.15, Math.min(0.85, relY));
-    let raw = svgMap.dataMax - (clampedY - 0.15) / 0.7 * (svgMap.dataMax - svgMap.dataMin);
-    const snapped = Math.round(raw);
-    const finalVal = Math.max(svgMap.dataMin, Math.min(svgMap.dataMax, snapped));
-    svgMap.state.value = finalVal;
-    svgMap.apply(finalVal);
-  });
 }
 
-// ─── Transport ───
-playBtn.addEventListener('click', () => {
-  initAudio();
-  if (!isPlaying) {
-    isPlaying = true;
-    playBtn.textContent = 'STOP';
-    playBtn.classList.add('active');
-    startClock();
-  } else {
-    isPlaying = false;
-    playBtn.textContent = 'START';
-    playBtn.classList.remove('active');
-    stopClock();
-  }
+// Cutoff
+setupKnob(document.getElementById('cutoff-group'), {
+  min: 0, max: CUTOFF_LUT.length - 1, state: knobs.cutoff,
+  apply: applyCutoff,
+  render: (v) => drawKnob(svgCutoff, v, CUTOFF_LUT.length - 1, {
+    labelFn: (i) => CUTOFF_LUT[i] + ' Hz',
+    arcColor: '#3a6030',
+  }),
 });
 
-// ─── Init ───
-setupKnobInteraction(document.getElementById('cutoff-group'), 'cutoff');
-setupKnobInteraction(document.getElementById('resonance-group'), 'resonance');
-setupKnobInteraction(document.getElementById('bpm-group'), 'bpm');
+// Resonance
+setupKnob(document.getElementById('resonance-group'), {
+  min: 0, max: RES_LUT.length - 1, state: knobs.resonance,
+  apply: applyResonance,
+  render: (v) => drawKnob(svgRes, v, RES_LUT.length - 1, {
+    labelFn: (i) => 'Q ' + RES_LUT[i].toFixed(1),
+    arcColor: '#405070',
+  }),
+});
 
-drawKnob(cutoffSvg, knobs.cutoff, 0, CUTOFF_STEPS.length - 1, knobs.cutoff.value);
-drawKnob(resSvg, knobs.resonance, 0, RESONANCE_STEPS.length - 1, knobs.resonance.value);
-drawKnob(bpmSvg, knobs.bpm, 60, 200, knobs.bpm.value);
+// BPM
+setupKnob(document.getElementById('bpm-group'), {
+  min: 60, max: 200, state: knobs.bpm,
+  apply: updateBpm,
+  render: (v) => {
+    updateBpm(v);
+    drawKnob(svgBpm, v - 60, 200 - 60, {
+      labelFn: () => 'BPM ' + bpm,
+      arcColor: '#504060',
+    });
+  },
+});
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+drawKnob(svgCutoff, knobs.cutoff.value, CUTOFF_LUT.length - 1, {
+  labelFn: (i) => CUTOFF_LUT[i] + ' Hz', arcColor: '#3a6030',
+});
+drawKnob(svgRes, knobs.resonance.value, RES_LUT.length - 1, {
+  labelFn: (i) => 'Q ' + RES_LUT[i].toFixed(1), arcColor: '#405070',
+});
+drawKnob(svgBpm, knobs.bpm.value - 60, 200 - 60, {
+  labelFn: () => 'BPM ' + bpm, arcColor: '#504060',
+});
 drawStepsGrid();
