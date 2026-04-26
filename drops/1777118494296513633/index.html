@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TB-123 — Static Stage / Pentatonic Breath</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="stage">
+    <header id="header">
+      <h1 id="title">TB-123</h1>
+      <p id="subtitle">Alive is a byproduct of precision.</p>
+    </header>
+
+    <div id="controls">
+      <button id="playBtn" class="ctrl-btn">PLAY</button>
+      <button id="stopBtn" class="ctrl-btn">STOP</button>
+      <div class="param-group">
+        <label for="swingSlider">SWING</label>
+        <input type="range" id="swingSlider" min="0" max="100" value="30" step="1" />
+        <span id="swingValue">30%</span>
+      </div>
+      <div class="param-group">
+        <label for="filterSlider">FILTER</label>
+        <input type="range" id="filterSlider" min="0" max="100" value="50" step="1" />
+        <span id="filterValue">50%</span>
+      </div>
+      <div class="param-group">
+        <label for="tempoSlider">TEMPO</label>
+        <input type="range" id="tempoSlider" min="60" max="200" value="140" step="1" />
+        <span id="tempoValue">140</span>
+      </div>
+    </div>
+
+    <div id="grid">
+      <div id="gridHeader" class="grid-row"></div>
+      <div id="gridBody"></div>
+    </div>
+
+    <footer id="footer">
+      <span id="cursorPos">Step: --</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
