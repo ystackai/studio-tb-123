@@ -37,7 +37,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.voiceStartSample = new Float32Array(6); // samples since trigger or release-start
     this.prevGridRows   = new Set();              // rows active in previous step
 
-    // -- Filter state: single-channel biquad lowpass --
+     // -- Filter state: single-channel biquad lowpass --
     this.filter_b0 = 0;
     this.filter_b1 = 0;
     this.filter_b2 = 0;
@@ -49,6 +49,10 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.filter_y2 = 0;
     this.currentCutoff = 2000;
     this.targetCutoff = 2000;
+
+     // -- LFO state for continuous breath --
+    this.lfoPhase = 0;
+    this.lfoSpeed = 0.125; // ~2-second cycle at 140 BPM
 
     // -- Cursor messaging --
     this.cursorSentStep = -1;
@@ -200,7 +204,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
       // else: unchanged (still active, or still idle) — do nothing
     }
 
-    this.prevGridRows = currentRows;
+    this.prevGridRows = new Set(currentRows);
   }
 
   // ---- Main process loop ----
@@ -211,8 +215,8 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     const blockLen = left.length;
     const sr = this.sampleRate;
 
-    // Step duration in samples (1 step = 1/16 bar = 1/4 note)
-    const stepDur = (60.0 / this.bpm) * sr;
+    // Step duration in samples (1 step = 1/16 bar = 16th note)
+    const stepDur = (60.0 / this.bpm) / 4 * sr;
 
     // Cursor step change tracking (avoids spam inside sample loop)
     let stepJustChanged = false;
@@ -235,9 +239,15 @@ class PentatonicWorklet extends AudioWorkletProcessor {
       this.targetCutoff = swingResult.cutoff;
       const targetQ = swingResult.q;
 
-      // Per-sample smoothing for cutoff (fast enough to track rhythm, slow enough to be smooth)
+       // Continuous LFO breathing modulation
+      this.lfoPhase += this.lfoSpeed / sr;
+      if (this.lfoPhase >= 1.0) this.lfoPhase -= 1.0;
+      const lfoValue = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.lfoPhase);
+
+       // Per-sample smoothing for cutoff (fast enough to track rhythm, slow enough to be smooth)
       const cutoffSmoothing = 0.06;
-      this.currentCutoff += (this.targetCutoff - this.currentCutoff) * cutoffSmoothing;
+      const breathMod = lfoValue * (1 - lfoValue) * 0.5;
+      this.currentCutoff += (this.targetCutoff * (1 + breathMod) - this.currentCutoff) * cutoffSmoothing;
 
       // Interpolate Q (stored transiently in coefficient calc)
       this.updateFilterCoefficients(this.currentCutoff, targetQ, sr);
@@ -286,10 +296,11 @@ class PentatonicWorklet extends AudioWorkletProcessor {
       this.filter_y2 = this.filter_y1;
       this.filter_y1 = filtered;
 
-      // ---- Soft saturation to prevent hard clipping ----
+       // ---- Soft saturation to prevent hard clipping ----
       let out = filtered;
-      if (out > 1.0) out = 1.0;
-      if (out < -1.0) out = -1.0;
+      if (Math.abs(out) > 1.0) {
+        out = (out >= 0 ? 1 : -1) * (1 - Math.exp(1 - Math.abs(out)));
+      }
 
       left[i]  = out;
       right[i] = out;
