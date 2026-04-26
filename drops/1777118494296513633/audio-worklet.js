@@ -9,10 +9,15 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.stepPhase = 0;
     this.samplesSinceStepStart = 0;
 
-    // -- DSP parameters --
-    this.swingAmount = 0.30;
-    this.baseFilterCutoff = 2000;
-    this.filterQ = 4;
+     // -- DSP parameters --
+     this.swingAmount = 0.30;
+     this.baseFilterCutoff = 2000;
+     this.filterQ = 4;
+     this.waveform = 'triangle';
+     this.lfoMeasureCycle = 4;
+     this.deepLfoMeasureCycle = 8;
+     this.lfoAmplitude = 0.3;
+     this.deepLfoAmplitude = 0.15;
 
     // -- Grid: 16 steps, each a Set of active row indices --
     this.grid = new Array(16).fill(null).map(() => new Set());
@@ -57,8 +62,11 @@ class PentatonicWorklet extends AudioWorkletProcessor {
       // Secondary deep-swell LFO: 8-measure loop for slow undulation
     this.deepLfoPhase = 0;
 
-    // -- Cursor --
-    this.cursorSentStep = -1;
+      // -- Cursor --
+     this.cursorSentStep = -1;
+      // -- LFO position feedback --
+     this.lfoSentSample = 0;
+     this.lastLfoPost = -1;
 
     // -- Coefficient dirty flag --
     this.filterDirty = true;
@@ -77,6 +85,16 @@ class PentatonicWorklet extends AudioWorkletProcessor {
         case 'SET_FILTER':
           this.baseFilterCutoff = m.value;
           this.filterDirty = true;
+          break;
+        case 'SET_RESONANCE':
+          this.filterQ = m.value;
+          this.filterDirty = true;
+          break;
+        case 'SET_WAVEFORM':
+          this.waveform = m.value;
+          break;
+        case 'SET_LFO_RATE':
+          this.lfoMeasureCycle = m.value;
           break;
         case 'SET_GRID': {
           for (let s = 0; s < 16; s++) {
