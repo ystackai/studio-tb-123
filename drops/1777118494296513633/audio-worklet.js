@@ -83,7 +83,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
         case 'PLAY': {
           this.isPlaying = true;
           this.currentStep = 0;
-          this.samplesSinceStepStart = 0;
+          this.stepPhase = 0;
           this.prevGridRows.clear();
           this.voiceActive.fill(0);
           this.voiceReleasing.fill(0);
@@ -92,7 +92,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
           // Trigger step-0 notes immediately so there's no dead step at startup
           this.processStep(0);
           break;
-        }
+         }
         case 'STOP': {
           this.isPlaying = false;
           this.voiceActive.fill(0);
@@ -128,7 +128,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     const cw = Math.cos(w);
     const alpha = sw / (2 * q);
 
-    const b0 = (1 - cw) / 2;
+     const b0 = (1 - cw) / 2;
     const b1 = 1 - cw;
     const b2 = (1 - cw) / 2;
     const a0 = 1 + alpha;
@@ -224,27 +224,22 @@ class PentatonicWorklet extends AudioWorkletProcessor {
 
     // LFO: 1 cycle per 4 measures (4 * 16 = 64 steps)
     const lfoSteps = 64;
-    const lfoPerSample = (lfoSteps * stepDur / sr) / sr;
+     const lfoPerSample = 1 / (lfoSteps * stepDur);
 
     let stepChanged = false;
 
-    for (let i = 0; i < N; i++) {
-      // -- Advance step (sample-accurate, drift-compensating) --
+     for (let i = 0; i < N; i++) {
+       // -- Sample-accurate step advance via float accumulator --
       if (this.isPlaying) {
-        this.samplesSinceStepStart++;
+        this.stepPhase += 1;
 
-        if (this.samplesSinceStepStart >= stepDur) {
-          this.samplesSinceStepStart -= Math.floor(stepDur);
-          // Compensate fractional drift
-          const frac = stepDur - Math.floor(stepDur);
-          if (this.samplesSinceStepStart < frac) {
-            this.samplesSinceStepStart += 1;
-          }
+        if (this.stepPhase >= stepDur) {
+          this.stepPhase -= stepDur;
           this.currentStep = (this.currentStep + 1) % 16;
           this.processStep(this.currentStep);
           stepChanged = true;
-        }
-      }
+         }
+       }
 
       // -- Crossfade target: step-dependent swing --
       // Even steps lean toward filter A (darker), odd toward filter B (brighter)
