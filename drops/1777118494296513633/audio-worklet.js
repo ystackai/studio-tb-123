@@ -1,8 +1,6 @@
 // ============================================================
 // TB-123 — Pure DSP AudioWorklet Processor
-// All audio (oscillator, filter, scheduling, swing) runs
-// entirely inside process() with zero dependency on AudioContext
-// or Web Audio nodes. Sub-frame precision guaranteed.
+// Sub-frame precision sequencer with filter-based swing.
 // ============================================================
 
 class PentatonicWorklet extends AudioWorkletProcessor {
@@ -10,35 +8,34 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     super();
 
     // -- Timing state --
-     this.bpm = 140;
+    this.bpm = 140;
     this.currentStep = 0;
     this.isPlaying = false;
-    this.samplesSinceLastStep = 0;
-    this.stepJustAdvanced = false;
+    this.samplesSinceStepStart = 0;
 
     // -- DSP parameters --
-    this.swingAmount = 0.30;     // 0..1
-    this.baseFilterCutoff = 2000; // Hz
+    this.swingAmount = 0.30;
+    this.baseFilterCutoff = 2000;
 
-    // -- Grid: 16 steps, each a Set of row indices --
+    // -- Grid: 16 steps, each a Set of active row indices --
     this.grid = new Array(16).fill(null).map(() => new Set());
 
-     // -- Pentatonic scale (rows 0-5: C5→C4 descending, matches app.js) --
+    // -- Pentatonic scale (rows 0-5: C5→C4 descending) --
     this.scale = [
-       523.25, // C5
-       440.00, // A4
-       392.00, // G4
-       329.63, // E4
-       293.66, // D4
-       261.63, // C4
-     ];
+      523.25, // C5
+      440.00, // A4
+      392.00, // G4
+      329.63, // E4
+      293.66, // D4
+      261.63, // C4
+    ];
 
-    // -- Oscillator state: one voice per active note --
-    // We process up to 6 concurrent notes (one per row).
-    this.phases = new Float32Array(6);       // phase 0..1
-    this.volumes = new Float32Array(6);       // current gain
-    this.activeFlags = new Int8Array(6);      // 1 = note playing this sample
-    this.noteStartTimes = new Float32Array(6); // sample offset for envelope
+    // -- Voice state: one voice per row (6 total) --
+    this.phases         = new Float32Array(6);
+    this.voiceActive    = new Int8Array(6);      // 1 = note triggered and held
+    this.voiceReleasing = new Int8Array(6);      // 1 = note in release phase
+    this.voiceStartSample = new Float32Array(6); // samples since trigger or release-start
+    this.prevGridRows   = new Set();              // rows active in previous step
 
     // -- Filter state: single-channel biquad lowpass --
     this.filter_b0 = 0;
@@ -46,10 +43,10 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.filter_b2 = 0;
     this.filter_a1 = 0;
     this.filter_a2 = 0;
-    this.filter_x1 = 0; // delayed input 1
-    this.filter_x2 = 0; // delayed input 2
-    this.filter_y1 = 0; // delayed output 1
-    this.filter_y2 = 0; // delayed output 2
+    this.filter_x1 = 0;
+    this.filter_x2 = 0;
+    this.filter_y1 = 0;
+    this.filter_y2 = 0;
     this.currentCutoff = 2000;
     this.targetCutoff = 2000;
 
@@ -70,7 +67,6 @@ class PentatonicWorklet extends AudioWorkletProcessor {
           this.baseFilterCutoff = msg.value;
           break;
         case 'SET_GRID': {
-          // msg.grid is an array of arrays (serialised from Sets)
           for (let s = 0; s < 16; s++) {
             this.grid[s] = new Set(msg.grid[s] || []);
           }
@@ -78,16 +74,21 @@ class PentatonicWorklet extends AudioWorkletProcessor {
         }
         case 'PLAY': {
           this.isPlaying = true;
-          this.samplesSinceStart = 0;
           this.currentStep = 0;
-          this.volumes.fill(0);
-          this.activeFlags.fill(0);
+          this.samplesSinceStepStart = 0;
+          this.prevGridRows.clear();
+          this.voiceActive.fill(0);
+          this.voiceReleasing.fill(0);
+          this.voiceStartSample.fill(0);
+          this.phases.fill(0);
           break;
         }
         case 'STOP': {
           this.isPlaying = false;
-          this.volumes.fill(0);
-          this.activeFlags.fill(0);
+          this.voiceActive.fill(0);
+          this.voiceReleasing.fill(0);
+          this.voiceStartSample.fill(0);
+          this.prevGridRows.clear();
           this.cursorSentStep = -1;
           break;
         }
@@ -95,7 +96,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     };
 
     // Compute initial filter coefficients
-     this.updateFilterCoefficients(2000, 4);
+    this.updateFilterCoefficients(2000, 4);
   }
 
   // ---- Biquad lowpass coefficient update ----
@@ -106,12 +107,12 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     const cosW = Math.cos(w);
     const alpha = sinW / (2 * q);
 
-    const b0 =  (1 - cosW) / 2;
-    const b1 =  1 - cosW;
-    const b2 =  (1 - cosW) / 2;
-    const a0 =  1 + alpha;
+    const b0 = (1 - cosW) / 2;
+    const b1 = 1 - cosW;
+    const b2 = (1 - cosW) / 2;
+    const a0 = 1 + alpha;
     const a1 = -2 * cosW;
-    const a2 =  1 - alpha;
+    const a2 = 1 - alpha;
 
     this.filter_b0 = b0 / a0;
     this.filter_b1 = b1 / a0;
@@ -120,21 +121,29 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.filter_a2 = a2 / a0;
   }
 
-  // ---- Triangle wave: zero-phase (starts at zero slope) ----
+  // ---- Triangle wave: zero-crossing at phase 0 ----
   triangleWave(phase) {
-    // phase in [0, 1)
     return 4 * Math.abs(phase - 0.5) - 1;
   }
 
-  // ---- ADSR Envelope (compute gain for a note given samples since trigger) ----
-  computeEnvelope(samplesSinceTrigger, stepSamples) {
-    const attackTime  = 0.01;   // 10ms attack
-    const decayTime   = 0.08;   // 80ms decay
-    const sustainLevel = 0.12;   // sustain level
-    const releaseTime = 0.15;    // 150ms release (if note stops)
-    const stepDur = stepSamples / this.sampleRate; // seconds per step
+  // ---- ADSR Envelope ----
+  // samplesSinceTrigger: samples since note triggered (if !releasing)
+  //                      or samples since release started (if releasing)
+  computeEnvelope(samplesSinceTrigger, isReleasing) {
+    const attackTime   = 0.01;   // 10 ms
+    const decayTime    = 0.08;   // 80 ms
+    const sustainLevel = 0.12;
+    const releaseTime  = 0.15;   // 150 ms
 
     const t = samplesSinceTrigger / this.sampleRate;
+
+    if (isReleasing) {
+      // Release phase
+      if (t < releaseTime) {
+        return sustainLevel * (1 - t / releaseTime);
+      }
+      return 0;
+    }
 
     // Attack
     if (t < attackTime) {
@@ -145,140 +154,151 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     if (dt < decayTime) {
       return 0.2 - (0.2 - sustainLevel) * (dt / decayTime);
     }
-    // Sustain (holds for 3 steps, then release)
-    if (t < stepDur * 3) {
-      return sustainLevel;
-    }
-    // Release
-    const rt = t - stepDur * 3;
-    if (rt < releaseTime) {
-      return sustainLevel * (1 - rt / releaseTime);
-    }
-    return 0;
+    // Sustain
+    return sustainLevel;
   }
 
-  // ---- Filter swing: compute cutoff from step index and swingAmount ----
+  // ---- Filter swing: rhythmic cutoff modulation ----
+  // Swing modulates filter cutoff/resonance, NOT step timing.
+  // Creates a "breathing" wah feel without grid drift.
   computeSwingCutoff(stepIndex) {
-    // Even steps: filter closes (darker), odd steps: filter opens (brighter)
-    // Swing controls the swing between them
-    const evenFactor  = 1.0 - this.swingAmount * 0.7;
-    const oddFactor   = 1.0 + this.swingAmount * 1.0;
+    const evenFactor = 1.0 - this.swingAmount * 0.7;
+    const oddFactor  = 1.0 + this.swingAmount * 1.0;
+
+    // Odd steps open brighter, even steps close darker
     const factor = (stepIndex % 2 === 0) ? evenFactor : oddFactor;
-    return this.baseFilterCutoff * factor;
+
+    // Also modulate resonance: higher swing = higher Q on odd steps
+    const q = 1.0 + this.swingAmount * 3.0 * ((stepIndex % 2 === 0) ? 0 : 1);
+
+    return {
+      cutoff: this.baseFilterCutoff * factor,
+      q: q,
+    };
   }
 
-  // ---- Note triggering per step ----
+  // ---- Per-step voice scheduling ----
   processStep(stepIndex) {
-    const activeNotes = this.grid[stepIndex];
-    if (!activeNotes || activeNotes.size === 0) {
-      // No notes this step — mark all voices inactive (they'll release)
-      return;
-    }
+    const currentRows = this.grid[stepIndex];
 
     for (let row = 0; row < 6; row++) {
-      if (activeNotes.has(row)) {
-        this.activeFlags[row] = 1;
-        this.noteStartTimes[row] = 0;
+      const wasActive   = this.prevGridRows.has(row);
+      const nowActive   = currentRows.has(row);
+
+      if (nowActive && !wasActive) {
+        // Trigger: new note starts this step
+        this.voiceActive[row] = 1;
+        this.voiceReleasing[row] = 0;
+        this.voiceStartSample[row] = 0;
         this.phases[row] = 0;
-      } else {
-        this.activeFlags[row] = 0;
+      } else if (!nowActive && wasActive) {
+        // Release: note was playing, no longer in grid
+        this.voiceActive[row] = 0;
+        this.voiceReleasing[row] = 1;
+        this.voiceStartSample[row] = 0;
       }
+      // else: unchanged (still active, or still idle) — do nothing
     }
+
+    this.prevGridRows = currentRows;
   }
 
+  // ---- Main process loop ----
   process(inputs, outputs, parameters) {
     const output = outputs[0];
-    const left = output[0];
+    const left  = output[0];
     const right = output[1];
     const blockLen = left.length;
     const sr = this.sampleRate;
 
-    // Recalculate step duration in samples from BPM
-    // 1 step = 1/4 note, BPM = beats per minute (quarter notes)
-    const stepDurationSamples = (60.0 / this.bpm) * sr / 4;
+    // Step duration in samples (1 step = 1/16 bar = 1/4 note)
+    const stepDur = (60.0 / this.bpm) * sr;
+
+    // Cursor step change tracking (avoids spam inside sample loop)
+    let stepJustChanged = false;
 
     for (let i = 0; i < blockLen; i++) {
-      // ---- Step advancement ----
+      // ---- Step advancement (sample-accurate) ----
       if (this.isPlaying) {
-        this.samplesSinceStart++;
+        this.samplesSinceStepStart++;
 
-        if (this.samplesSinceStart >= (this.currentStep + 1) * stepDurationSamples) {
-          // Advance step
+        if (this.samplesSinceStepStart >= stepDur) {
+          this.samplesSinceStepStart -= stepDur;
           this.currentStep = (this.currentStep + 1) % 16;
-          this.samplesSinceStart -= stepDurationSamples;
           this.processStep(this.currentStep);
-
-          // Update filter cutoff for swing
-          this.targetCutoff = this.computeSwingCutoff(this.currentStep);
-        }
-
-        // Send cursor update once per step change
-        if (this.currentStep !== this.cursorSentStep) {
-          this.cursorSentStep = this.currentStep;
-          this.messagePort.postMessage({ type: 'CURSOR', step: this.currentStep });
+          stepJustChanged = true;
         }
       }
 
-      // ---- Smooth cutoff transition (avoid clicks) ----
-      this.currentCutoff += (this.targetCutoff - this.currentCutoff) * 0.08;
-      this.updateFilterCoefficients(this.currentCutoff, 4, sr);
+      // ---- Filter swing: smooth cutoff + Q transition ----
+      const swingResult = this.computeSwingCutoff(this.currentStep);
+      this.targetCutoff = swingResult.cutoff;
+      const targetQ = swingResult.q;
 
-      // ---- Generate and mix all voices ----
-      let sampleL = 0;
-      let sampleR = 0;
+      // Per-sample smoothing for cutoff (fast enough to track rhythm, slow enough to be smooth)
+      const cutoffSmoothing = 0.06;
+      this.currentCutoff += (this.targetCutoff - this.currentCutoff) * cutoffSmoothing;
+
+      // Interpolate Q (stored transiently in coefficient calc)
+      this.updateFilterCoefficients(this.currentCutoff, targetQ, sr);
+
+      // ---- Voice synthesis: mix all 6 voices ----
+      let mix = 0;
 
       for (let v = 0; v < 6; v++) {
-        if (this.activeFlags[v]) {
-          // Advance phase
-          const freq = this.scale[v];
-          this.phases[v] += freq / sr;
-          if (this.phases[v] >= 1.0) this.phases[v] -= 1.0;
+        const alive = this.voiceActive[v] || this.voiceReleasing[v];
 
-          // Envelope: samples since note triggered this step
-          this.noteStartTimes[v]++;
-          const env = this.computeEnvelope(this.noteStartTimes[v], stepDurationSamples);
+        if (!alive) continue;
 
-          // Triangle oscillator
+        // Advance phase
+        this.phases[v] += this.scale[v] / sr;
+        if (this.phases[v] >= 1.0) this.phases[v] -= 1.0;
+
+        // Increment sample counter for envelope
+        this.voiceStartSample[v]++;
+
+        // Compute envelope value
+        const env = this.computeEnvelope(
+          this.voiceStartSample[v],
+          this.voiceReleasing[v]
+        );
+
+        if (env > 0) {
           const raw = this.triangleWave(this.phases[v]);
+          mix += raw * env;
+        }
 
-          sampleL += raw * env;
-          sampleR += raw * env;
-        } else {
-          // Note not active: continue release if volume still nonzero
-          if (this.noteStartTimes[v] > 0) {
-            this.noteStartTimes[v]++;
-            const env = this.computeEnvelope(this.noteStartTimes[v], stepDurationSamples);
-            if (env > 0) {
-              this.phases[v] += this.scale[v] / sr;
-              if (this.phases[v] >= 1.0) this.phases[v] -= 1.0;
-              const raw = this.triangleWave(this.phases[v]);
-              sampleL += raw * env;
-              sampleR += raw * env;
-            }
-          }
+        // Kill voice after release completes
+        if (this.voiceReleasing[v] && env <= 0) {
+          this.voiceReleasing[v] = 0;
         }
       }
 
-      // ---- Apply biquad lowpass filter ----
-      const filterInput = (sampleL + sampleR) * 0.5;
-      const filtered = this.filter_b0 * filterInput
-                     + this.filter_b1 * this.filter_x1
-                     + this.filter_b2 * this.filter_x2
-                     - this.filter_a1 * this.filter_y1
-                     - this.filter_a2 * this.filter_y2;
+      // ---- Apply biquad lowpass ----
+      const filtered = this.filter_b0 * mix
+                       + this.filter_b1 * this.filter_x1
+                       + this.filter_b2 * this.filter_x2
+                       - this.filter_a1 * this.filter_y1
+                       - this.filter_a2 * this.filter_y2;
 
       this.filter_x2 = this.filter_x1;
-      this.filter_x1 = filterInput;
+      this.filter_x1 = mix;
       this.filter_y2 = this.filter_y1;
       this.filter_y1 = filtered;
 
-      // ---- Soft limit to prevent clipping ----
+      // ---- Soft saturation to prevent hard clipping ----
       let out = filtered;
       if (out > 1.0) out = 1.0;
       if (out < -1.0) out = -1.0;
 
-      left[i] = out;
+      left[i]  = out;
       right[i] = out;
+    }
+
+    // ---- Post-block cursor update (batched, not per-sample) ----
+    if (stepJustChanged && this.currentStep !== this.cursorSentStep) {
+      this.cursorSentStep = this.currentStep;
+      this.messagePort.postMessage({ type: 'CURSOR', step: this.currentStep });
     }
 
     return true;
