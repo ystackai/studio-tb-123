@@ -1,8 +1,3 @@
-// ============================================================
-// TB-123 — Pure DSP AudioWorklet Processor
-// Sub-frame precision sequencer with filter-based swing.
-// ============================================================
-
 class PentatonicWorklet extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -16,63 +11,72 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     // -- DSP parameters --
     this.swingAmount = 0.30;
     this.baseFilterCutoff = 2000;
+    this.filterQ = 4;
 
     // -- Grid: 16 steps, each a Set of active row indices --
     this.grid = new Array(16).fill(null).map(() => new Set());
 
-    // -- Pentatonic scale (rows 0-5: C5→C4 descending) --
+    // -- Pentatonic C minor scale (C4 top, C5 bottom) --
     this.scale = [
-      523.25, // C5
-      440.00, // A4
-      392.00, // G4
-      329.63, // E4
-      293.66, // D4
-      261.63, // C4
+      523.25,
+      440.00,
+      392.00,
+      329.63,
+      293.66,
+      261.63,
     ];
 
-    // -- Voice state: one voice per row (6 total) --
-    this.phases         = new Float32Array(6);
-    this.voiceActive    = new Int8Array(6);      // 1 = note triggered and held
-    this.voiceReleasing = new Int8Array(6);      // 1 = note in release phase
-    this.voiceStartSample = new Float32Array(6); // samples since trigger or release-start
-    this.prevGridRows   = new Set();              // rows active in previous step
+    // -- Voice state: one voice per scale degree --
+    this.phases = new Float32Array(6);
+    this.voiceActive = new Int8Array(6);
+    this.voiceReleasing = new Int8Array(6);
+    this.voiceStartSample = new Float32Array(6);
+    this.prevGridRows = new Set();
 
-     // -- Filter state: single-channel biquad lowpass --
-    this.filter_b0 = 0;
-    this.filter_b1 = 0;
-    this.filter_b2 = 0;
-    this.filter_a1 = 0;
-    this.filter_a2 = 0;
-    this.filter_x1 = 0;
-    this.filter_x2 = 0;
-    this.filter_y1 = 0;
-    this.filter_y2 = 0;
-    this.currentCutoff = 2000;
-    this.targetCutoff = 2000;
+    // -- Dual parallel filter state for smooth crossfade --
+    // Filter A (even steps / baseline)
+    this.fA_b0 = 0; this.fA_b1 = 0; this.fA_b2 = 0;
+    this.fA_a1 = 0; this.fA_a2 = 0;
+    this.fA_x1 = 0; this.fA_x2 = 0;
+    this.fA_y1 = 0; this.fA_y2 = 0;
 
-     // -- LFO state for continuous breath --
+    // Filter B (odd steps / swing)
+    this.fB_b0 = 0; this.fB_b1 = 0; this.fB_b2 = 0;
+    this.fB_a1 = 0; this.fB_a2 = 0;
+    this.fB_x1 = 0; this.fB_x2 = 0;
+    this.fB_y1 = 0; this.fB_y2 = 0;
+
+    // Crossfade blend (0 = all A, 1 = all B)
+    this.crossfade = 0;
+    this.targetCrossfade = 0;
+
+    // -- LFO breath --
+    // Cycles over 4 measures so it feels organic, not mechanical
     this.lfoPhase = 0;
-    this.lfoSpeed = 0.125; // ~2-second cycle at 140 BPM
 
-    // -- Cursor messaging --
+    // -- Cursor --
     this.cursorSentStep = -1;
+
+    // -- Coefficient dirty flag --
+    this.filterDirty = true;
 
     // -- Message handling --
     this.messagePort.onmessage = (e) => {
-      const msg = e.data;
-      switch (msg.type) {
+      const m = e.data;
+      switch (m.type) {
         case 'SET_BPM':
-          this.bpm = msg.value;
+          this.bpm = m.value;
           break;
         case 'SET_SWING':
-          this.swingAmount = msg.value / 100;
+          this.swingAmount = m.value / 100;
           break;
         case 'SET_FILTER':
-          this.baseFilterCutoff = msg.value;
+          this.baseFilterCutoff = m.value;
+          this.filterDirty = true;
           break;
         case 'SET_GRID': {
           for (let s = 0; s < 16; s++) {
-            this.grid[s] = new Set(msg.grid[s] || []);
+            this.grid[s] = new Set(m.grid[s] || []);
           }
           break;
         }
@@ -85,6 +89,8 @@ class PentatonicWorklet extends AudioWorkletProcessor {
           this.voiceReleasing.fill(0);
           this.voiceStartSample.fill(0);
           this.phases.fill(0);
+          // Trigger step-0 notes immediately so there's no dead step at startup
+          this.processStep(0);
           break;
         }
         case 'STOP': {
@@ -99,86 +105,84 @@ class PentatonicWorklet extends AudioWorkletProcessor {
       }
     };
 
-    // Compute initial filter coefficients
-    this.updateFilterCoefficients(2000, 4);
+    // Boot initial coefficients
+    this.recalcFilters();
   }
 
-  // ---- Biquad lowpass coefficient update ----
-  updateFilterCoefficients(cutoffHz, q, sampleRate) {
-    sampleRate = sampleRate || this.sampleRate;
-    const w = 2 * Math.PI * cutoffHz / sampleRate;
-    const sinW = Math.sin(w);
-    const cosW = Math.cos(w);
-    const alpha = sinW / (2 * q);
+  // ---- Recompute both filter coefficient sets ----
+  recalcFilters() {
+    const sr = this.sampleRate;
+    const evenCut = this.baseFilterCutoff;
+    // Odd-step cutoff pushes higher by swing amount for wah effect
+    const oddCut  = this.baseFilterCutoff * (1 + this.swingAmount * 0.8);
 
-    const b0 = (1 - cosW) / 2;
-    const b1 = 1 - cosW;
-    const b2 = (1 - cosW) / 2;
+    this.setBiquadCoeffs('fA', evenCut, this.filterQ, sr);
+    this.setBiquadCoeffs('fB', oddCut, this.filterQ, sr);
+    this.filterDirty = false;
+  }
+
+  // ---- Set biquad lowpass coefficients for a named filter pair (fA or fB) ----
+  setBiquadCoeffs(prefix, cutoffHz, q, sr) {
+    const w  = 2 * Math.PI * cutoffHz / sr;
+    const sw = Math.sin(w);
+    const cw = Math.cos(w);
+    const alpha = sw / (2 * q);
+
+    const b0 = (1 - cw) / 2;
+    const b1 = 1 - cw;
+    const b2 = (1 - cw) / 2;
     const a0 = 1 + alpha;
-    const a1 = -2 * cosW;
+    const a1 = -2 * cw;
     const a2 = 1 - alpha;
 
-    this.filter_b0 = b0 / a0;
-    this.filter_b1 = b1 / a0;
-    this.filter_b2 = b2 / a0;
-    this.filter_a1 = a1 / a0;
-    this.filter_a2 = a2 / a0;
+    // Direct Form II Transposed coefficients (divided by a0)
+    this[prefix + '_b0'] = b0 / a0;
+    this[prefix + '_b1'] = b1 / a0;
+    this[prefix + '_b2'] = b2 / a0;
+    this[prefix + '_a1'] = a1 / a0;
+    this[prefix + '_a2'] = a2 / a0;
   }
 
-  // ---- Triangle wave: zero-crossing at phase 0 ----
+  // ---- Run one filter stage, return output sample ----
+  runFilter(prefix, x) {
+    const y = this[prefix + '_b0'] * x
+            +  this[prefix + '_b1'] * this[prefix + '_x1']
+            +  this[prefix + '_b2'] * this[prefix + '_x2']
+            -  this[prefix + '_a1'] * this[prefix + '_y1']
+            -  this[prefix + '_a2'] * this[prefix + '_y2'];
+
+    this[prefix + '_x2'] = this[prefix + '_x1'];
+    this[prefix + '_x1'] = x;
+    this[prefix + '_y2'] = this[prefix + '_y1'];
+    this[prefix + '_y1'] = y;
+
+    return y;
+  }
+
+  // ---- Triangle oscillator ----
   triangleWave(phase) {
     return 4 * Math.abs(phase - 0.5) - 1;
   }
 
-  // ---- ADSR Envelope ----
-  // samplesSinceTrigger: samples since note triggered (if !releasing)
-  //                      or samples since release started (if releasing)
-  computeEnvelope(samplesSinceTrigger, isReleasing) {
-    const attackTime   = 0.01;   // 10 ms
-    const decayTime    = 0.08;   // 80 ms
-    const sustainLevel = 0.12;
-    const releaseTime  = 0.15;   // 150 ms
+  // ---- ADSR envelope ----
+  computeEnvelope(sinceTrigger, releasing) {
+    const atk = 0.008;
+    const dcy = 0.06;
+    const sus = 0.15;
+    const rel = 0.18;
 
-    const t = samplesSinceTrigger / this.sampleRate;
+    const t = sinceTrigger / this.sampleRate;
 
-    if (isReleasing) {
-      // Release phase
-      if (t < releaseTime) {
-        return sustainLevel * (1 - t / releaseTime);
-      }
-      return 0;
+    if (releasing) {
+      return t < rel ? sus * (1 - t / rel) : 0;
     }
 
-    // Attack
-    if (t < attackTime) {
-      return 0.2 * (t / attackTime);
-    }
-    // Decay to sustain
-    const dt = t - attackTime;
-    if (dt < decayTime) {
-      return 0.2 - (0.2 - sustainLevel) * (dt / decayTime);
-    }
-    // Sustain
-    return sustainLevel;
-  }
+    if (t < atk) return 0.25 * (t / atk);
 
-  // ---- Filter swing: rhythmic cutoff modulation ----
-  // Swing modulates filter cutoff/resonance, NOT step timing.
-  // Creates a "breathing" wah feel without grid drift.
-  computeSwingCutoff(stepIndex) {
-    const evenFactor = 1.0 - this.swingAmount * 0.7;
-    const oddFactor  = 1.0 + this.swingAmount * 1.0;
+    const dt = t - atk;
+    if (dt < dcy) return 0.25 - (0.25 - sus) * (dt / dcy);
 
-    // Odd steps open brighter, even steps close darker
-    const factor = (stepIndex % 2 === 0) ? evenFactor : oddFactor;
-
-    // Also modulate resonance: higher swing = higher Q on odd steps
-    const q = 1.0 + this.swingAmount * 3.0 * ((stepIndex % 2 === 0) ? 0 : 1);
-
-    return {
-      cutoff: this.baseFilterCutoff * factor,
-      q: q,
-    };
+    return sus;
   }
 
   // ---- Per-step voice scheduling ----
@@ -186,128 +190,121 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     const currentRows = this.grid[stepIndex];
 
     for (let row = 0; row < 6; row++) {
-      const wasActive   = this.prevGridRows.has(row);
-      const nowActive   = currentRows.has(row);
+      const was = this.prevGridRows.has(row);
+      const now = currentRows.has(row);
 
-      if (nowActive && !wasActive) {
-        // Trigger: new note starts this step
-        this.voiceActive[row] = 1;
-        this.voiceReleasing[row] = 0;
+      if (now && !was) {
+        this.voiceActive[row]     = 1;
+        this.voiceReleasing[row]  = 0;
         this.voiceStartSample[row] = 0;
         this.phases[row] = 0;
-      } else if (!nowActive && wasActive) {
-        // Release: note was playing, no longer in grid
-        this.voiceActive[row] = 0;
-        this.voiceReleasing[row] = 1;
+      } else if (!now && was) {
+        this.voiceActive[row]     = 0;
+        this.voiceReleasing[row]  = 1;
         this.voiceStartSample[row] = 0;
       }
-      // else: unchanged (still active, or still idle) — do nothing
     }
 
     this.prevGridRows = new Set(currentRows);
   }
 
   // ---- Main process loop ----
-  process(inputs, outputs, parameters) {
-    const output = outputs[0];
-    const left  = output[0];
-    const right = output[1];
-    const blockLen = left.length;
-    const sr = this.sampleRate;
+  process(inputs, outputs) {
+    const out  = outputs[0];
+    const left = out[0];
+    const right = out[1];
+    const N    = left.length;
+    const sr   = this.sampleRate;
 
-    // Step duration in samples (1 step = 1/16 bar = 16th note)
-    const stepDur = (60.0 / this.bpm) / 4 * sr;
+    // Recompute filter coefficients only when params change
+    if (this.filterDirty) this.recalcFilters();
 
-    // Cursor step change tracking (avoids spam inside sample loop)
-    let stepJustChanged = false;
+    // Step duration = 16th note
+    const stepDur = (60 / this.bpm) / 4 * sr;
 
-    for (let i = 0; i < blockLen; i++) {
-      // ---- Step advancement (sample-accurate) ----
+    // LFO: 1 cycle per 4 measures (4 * 16 = 64 steps)
+    const lfoSteps = 64;
+    const lfoPerSample = (lfoSteps * stepDur / sr) / sr;
+
+    let stepChanged = false;
+
+    for (let i = 0; i < N; i++) {
+      // -- Advance step (sample-accurate, drift-compensating) --
       if (this.isPlaying) {
         this.samplesSinceStepStart++;
 
         if (this.samplesSinceStepStart >= stepDur) {
-          this.samplesSinceStepStart -= stepDur;
+          this.samplesSinceStepStart -= Math.floor(stepDur);
+          // Compensate fractional drift
+          const frac = stepDur - Math.floor(stepDur);
+          if (this.samplesSinceStepStart < frac) {
+            this.samplesSinceStepStart += 1;
+          }
           this.currentStep = (this.currentStep + 1) % 16;
           this.processStep(this.currentStep);
-          stepJustChanged = true;
+          stepChanged = true;
         }
       }
 
-      // ---- Filter swing: smooth cutoff + Q transition ----
-      const swingResult = this.computeSwingCutoff(this.currentStep);
-      this.targetCutoff = swingResult.cutoff;
-      const targetQ = swingResult.q;
+      // -- Crossfade target: step-dependent swing --
+      // Even steps lean toward filter A (darker), odd toward filter B (brighter)
+      this.targetCrossfade = (this.currentStep % 2 === 0)
+        ? 0
+        : this.swingAmount;
 
-       // Continuous LFO breathing modulation
-      this.lfoPhase += this.lfoSpeed / sr;
-      if (this.lfoPhase >= 1.0) this.lfoPhase -= 1.0;
-      const lfoValue = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.lfoPhase);
+      // Smooth crossfade (exponential approach)
+      const fadeSpeed = 0.12;
+      this.crossfade += (this.targetCrossfade - this.crossfade) * fadeSpeed;
 
-       // Per-sample smoothing for cutoff (fast enough to track rhythm, slow enough to be smooth)
-      const cutoffSmoothing = 0.06;
-      const breathMod = lfoValue * (1 - lfoValue) * 0.5;
-      this.currentCutoff += (this.targetCutoff * (1 + breathMod) - this.currentCutoff) * cutoffSmoothing;
+      // -- LFO breath: adds continuous undulation on top of swing --
+      this.lfoPhase += lfoPerSample;
+      if (this.lfoPhase > 1) this.lfoPhase -= 1;
+      const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.lfoPhase);
 
-      // Interpolate Q (stored transiently in coefficient calc)
-      this.updateFilterCoefficients(this.currentCutoff, targetQ, sr);
+      // LFO modulates both filters' effective output via crossfade shift
+      const lfoShift = (lfo - 0.5) * 0.3 * this.swingAmount;
+      const blend = Math.min(1, Math.max(0, this.crossfade + lfoShift));
 
-      // ---- Voice synthesis: mix all 6 voices ----
+      // -- Voice synthesizer --
       let mix = 0;
 
       for (let v = 0; v < 6; v++) {
-        const alive = this.voiceActive[v] || this.voiceReleasing[v];
+        if (!this.voiceActive[v] && !this.voiceReleasing[v]) continue;
 
-        if (!alive) continue;
-
-        // Advance phase
+        // Phase advance
         this.phases[v] += this.scale[v] / sr;
-        if (this.phases[v] >= 1.0) this.phases[v] -= 1.0;
+        if (this.phases[v] >= 1) this.phases[v] -= 1;
 
-        // Increment sample counter for envelope
         this.voiceStartSample[v]++;
 
-        // Compute envelope value
-        const env = this.computeEnvelope(
-          this.voiceStartSample[v],
-          this.voiceReleasing[v]
-        );
+        const env = this.computeEnvelope(this.voiceStartSample[v], this.voiceReleasing[v]);
 
         if (env > 0) {
-          const raw = this.triangleWave(this.phases[v]);
-          mix += raw * env;
+          mix += this.triangleWave(this.phases[v]) * env;
         }
 
-        // Kill voice after release completes
         if (this.voiceReleasing[v] && env <= 0) {
           this.voiceReleasing[v] = 0;
         }
       }
 
-      // ---- Apply biquad lowpass ----
-      const filtered = this.filter_b0 * mix
-                       + this.filter_b1 * this.filter_x1
-                       + this.filter_b2 * this.filter_x2
-                       - this.filter_a1 * this.filter_y1
-                       - this.filter_a2 * this.filter_y2;
+      // -- Dual parallel filters, crossfaded --
+      const yA = this.runFilter('fA', mix);
+      const yB = this.runFilter('fB', mix);
+      let sample = yA * (1 - blend) + yB * blend;
 
-      this.filter_x2 = this.filter_x1;
-      this.filter_x1 = mix;
-      this.filter_y2 = this.filter_y1;
-      this.filter_y1 = filtered;
-
-       // ---- Soft saturation to prevent hard clipping ----
-      let out = filtered;
-      if (Math.abs(out) > 1.0) {
-        out = (out >= 0 ? 1 : -1) * (1 - Math.exp(1 - Math.abs(out)));
+      // -- Soft clipping --
+      const abs = Math.abs(sample);
+      if (abs > 1) {
+        sample = (sample < 0 ? -1 : 1) * (1 - Math.exp(1 - abs));
       }
 
-      left[i]  = out;
-      right[i] = out;
+      left[i]  = sample;
+      right[i] = sample;
     }
 
-    // ---- Post-block cursor update (batched, not per-sample) ----
-    if (stepJustChanged && this.currentStep !== this.cursorSentStep) {
+    // -- Post-block: cursor update (batched) --
+    if (stepChanged && this.currentStep !== this.cursorSentStep) {
       this.cursorSentStep = this.currentStep;
       this.messagePort.postMessage({ type: 'CURSOR', step: this.currentStep });
     }
