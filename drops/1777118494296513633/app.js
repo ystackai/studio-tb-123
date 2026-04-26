@@ -78,10 +78,13 @@ function toggleStep(rowIdx, colIdx, cellEl) {
     cellEl.classList.add('active');
   }
 
-  // Sync grid state to worklet
+    // Sync grid state to worklet (serialize Sets to arrays)
   if (workletNode) {
-     workletNode.port.postMessage({ type: 'SET_GRID', grid });
-   }
+      workletNode.port.postMessage({
+        type: 'SET_GRID',
+        grid: grid.map((s) => Array.from(s)),
+      });
+    }
 }
 
 // ---- AUDIO INIT ----
@@ -98,9 +101,12 @@ async function initAudio() {
 
    workletNode.connect(audioCtx.destination);
 
-   // Initial grid sync
-   workletNode.port.postMessage({ type: 'SET_GRID', grid });
-   workletNode.port.postMessage({ type: 'SET_BPM', value: parseInt(tempoSlider.value) });
+    // Initial grid sync
+    workletNode.port.postMessage({
+      type: 'SET_GRID',
+      grid: grid.map((s) => Array.from(s)),
+     });
+    workletNode.port.postMessage({ type: 'SET_BPM', value: parseInt(tempoSlider.value) });
    workletNode.port.postMessage({
      type: 'SET_FILTER',
      value: mapFilterValue(parseInt(filterSlider.value)),
@@ -208,8 +214,11 @@ function loadDefaultPattern() {
   });
 
   if (workletNode) {
-     workletNode.port.postMessage({ type: 'SET_GRID', grid });
-   }
+      workletNode.port.postMessage({
+        type: 'SET_GRID',
+        grid: grid.map((s) => Array.from(s)),
+       });
+     }
 }
 
 // ---- INIT ----
