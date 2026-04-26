@@ -69,6 +69,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
           break;
         case 'SET_SWING':
           this.swingAmount = m.value / 100;
+          this.filterDirty = true;
           break;
         case 'SET_FILTER':
           this.baseFilterCutoff = m.value;
@@ -109,17 +110,20 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.recalcFilters();
   }
 
-  // ---- Recompute both filter coefficient sets ----
-  recalcFilters() {
-    const sr = this.sampleRate;
-    const evenCut = this.baseFilterCutoff;
-    // Odd-step cutoff pushes higher by swing amount for wah effect
-    const oddCut  = this.baseFilterCutoff * (1 + this.swingAmount * 0.8);
+    // ---- Recompute both filter coefficient sets ----
+   recalcFilters() {
+     const sr = this.sampleRate;
+     const evenCut = this.baseFilterCutoff;
+      // Odd-step cutoff pushes higher by swing amount for wah/groove effect
+     const oddCut   = this.baseFilterCutoff * (1 + this.swingAmount * 1.2);
+      // Resonance also breathes with swing: higher Q on odd steps
+     const evenQ = this.filterQ;
+     const oddQ  = this.filterQ * (1 + this.swingAmount * 0.5);
 
-    this.setBiquadCoeffs('fA', evenCut, this.filterQ, sr);
-    this.setBiquadCoeffs('fB', oddCut, this.filterQ, sr);
-    this.filterDirty = false;
-  }
+     this.setBiquadCoeffs('fA', evenCut, evenQ, sr);
+     this.setBiquadCoeffs('fB', oddCut, oddQ, sr);
+     this.filterDirty = false;
+    }
 
   // ---- Set biquad lowpass coefficients for a named filter pair (fA or fB) ----
   setBiquadCoeffs(prefix, cutoffHz, q, sr) {
@@ -208,104 +212,110 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.prevGridRows = new Set(currentRows);
   }
 
-  // ---- Main process loop ----
-  process(inputs, outputs) {
-    const out  = outputs[0];
-    const left = out[0];
-    const right = out[1];
-    const N    = left.length;
-    const sr   = this.sampleRate;
+   // ---- Main process loop ----
+   process(inputs, outputs) {
+     const out   = outputs[0];
+     const left  = out[0];
+     const right  = out[1];
+     const N     = left.length;
+     const sr    = this.sampleRate;
 
-    // Recompute filter coefficients only when params change
-    if (this.filterDirty) this.recalcFilters();
+     // Recompute filter coefficients only when params change
+     if (this.filterDirty) this.recalcFilters();
 
-    // Step duration = 16th note
-    const stepDur = (60 / this.bpm) / 4 * sr;
+     // Step duration = 16th note at current BPM
+     const stepDur = (60 / this.bpm) / 4 * sr;
 
-    // LFO: 1 cycle per 4 measures (4 * 16 = 64 steps)
-    const lfoSteps = 64;
-     const lfoPerSample = 1 / (lfoSteps * stepDur);
+     // LFO: 1 cycle per 4 measures (4 * 16 = 64 steps)
+     const lfoPerSample = 1 / (64 * stepDur);
 
-    let stepChanged = false;
+     // Fast local refs for step tracking
+     let stepChanged = false;
+     let newStep = -1;
 
-     for (let i = 0; i < N; i++) {
-       // -- Sample-accurate step advance via float accumulator --
-      if (this.isPlaying) {
-        this.stepPhase += 1;
+      for (let i = 0; i < N; i++) {
+         // -- Sample-accurate step advance via float accumulator --
+        if (this.isPlaying) {
+          this.stepPhase += 1;
 
-        if (this.stepPhase >= stepDur) {
-          this.stepPhase -= stepDur;
-          this.currentStep = (this.currentStep + 1) % 16;
-          this.processStep(this.currentStep);
-          stepChanged = true;
+          if (this.stepPhase >= stepDur) {
+            this.stepPhase -= stepDur;
+            this.currentStep = (this.currentStep + 1) % 16;
+            this.processStep(this.currentStep);
+            newStep = this.currentStep;
+            stepChanged = true;
+           }
          }
-       }
 
-      // -- Crossfade target: step-dependent swing --
-      // Even steps lean toward filter A (darker), odd toward filter B (brighter)
-      this.targetCrossfade = (this.currentStep % 2 === 0)
-        ? 0
-        : this.swingAmount;
+        // -- Crossfade target: step-dependent swing --
+        // Even steps lean toward filter A (darker), odd toward filter B (brighter)
+        this.targetCrossfade = (this.currentStep % 2 === 0)
+           ? 0
+           : this.swingAmount;
 
-      // Smooth crossfade (exponential approach)
-      const fadeSpeed = 0.12;
-      this.crossfade += (this.targetCrossfade - this.crossfade) * fadeSpeed;
+         // Smooth crossfade with asymmetric speed for organic feel
+        // Attack (opening filter) is faster than release (closing)
+        const isAttacking = this.targetCrossfade > this.crossfade;
+        const fadeSpeed = isAttacking ? 0.18 : 0.06;
+        this.crossfade += (this.targetCrossfade - this.crossfade) * fadeSpeed;
 
-      // -- LFO breath: adds continuous undulation on top of swing --
-      this.lfoPhase += lfoPerSample;
-      if (this.lfoPhase > 1) this.lfoPhase -= 1;
-      const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.lfoPhase);
+         // -- LFO breath: continuous undulation on top of step swing --
+        this.lfoPhase += lfoPerSample;
+        if (this.lfoPhase > 1) this.lfoPhase -= 1;
+        const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.lfoPhase);
 
-      // LFO modulates both filters' effective output via crossfade shift
-      const lfoShift = (lfo - 0.5) * 0.3 * this.swingAmount;
-      const blend = Math.min(1, Math.max(0, this.crossfade + lfoShift));
+         // LFO modulates blend toward the brighter filter on its peak
+        const lfoShift = (lfo - 0.5) * 0.25 * this.swingAmount;
+        const blend = Math.min(1, Math.max(0, this.crossfade + lfoShift));
 
-      // -- Voice synthesizer --
-      let mix = 0;
+         // -- Voice synthesis: sum all active voices --
+        let mix = 0;
 
-      for (let v = 0; v < 6; v++) {
-        if (!this.voiceActive[v] && !this.voiceReleasing[v]) continue;
+        for (let v = 0; v < 6; v++) {
+          if (!this.voiceActive[v] && !this.voiceReleasing[v]) continue;
 
-        // Phase advance
-        this.phases[v] += this.scale[v] / sr;
-        if (this.phases[v] >= 1) this.phases[v] -= 1;
+          // Phase advance (sample-accurate)
+          this.phases[v] += this.scale[v] / sr;
+          if (this.phases[v] >= 1) this.phases[v] -= 1;
 
-        this.voiceStartSample[v]++;
+          this.voiceStartSample[v]++;
 
-        const env = this.computeEnvelope(this.voiceStartSample[v], this.voiceReleasing[v]);
+          const env = this.computeEnvelope(this.voiceStartSample[v], this.voiceReleasing[v]);
 
-        if (env > 0) {
-          mix += this.triangleWave(this.phases[v]) * env;
+          if (env > 0) {
+            mix += this.triangleWave(this.phases[v]) * env;
+           }
+
+          if (this.voiceReleasing[v] && env <= 0) {
+            this.voiceReleasing[v] = 0;
+           }
+         }
+
+         // -- Dual parallel filter chain with crossfade --
+        // Each filter maintains its own state, no discontinuities
+        const yA = this.runFilter('fA', mix);
+        const yB = this.runFilter('fB', mix);
+        let sample = yA * (1 - blend) + yB * blend;
+
+         // -- Soft clipping for clean output --
+        const abs = Math.abs(sample);
+        if (abs > 1) {
+          sample = (sample < 0 ? -1 : 1) * (1 - Math.exp(1 - abs));
+         }
+
+         // -- Write stereo output --
+        left[i]   = sample * 0.7;
+        right[i]  = sample * 0.7;
         }
 
-        if (this.voiceReleasing[v] && env <= 0) {
-          this.voiceReleasing[v] = 0;
+        // -- Post-block: cursor step update (batched per audio block) --
+      if (stepChanged && newStep !== this.cursorSentStep) {
+        this.cursorSentStep = newStep;
+        this.messagePort.postMessage({ type: 'CURSOR', step: newStep });
         }
+
+      return true;
       }
-
-      // -- Dual parallel filters, crossfaded --
-      const yA = this.runFilter('fA', mix);
-      const yB = this.runFilter('fB', mix);
-      let sample = yA * (1 - blend) + yB * blend;
-
-      // -- Soft clipping --
-      const abs = Math.abs(sample);
-      if (abs > 1) {
-        sample = (sample < 0 ? -1 : 1) * (1 - Math.exp(1 - abs));
-      }
-
-      left[i]  = sample;
-      right[i] = sample;
-    }
-
-    // -- Post-block: cursor update (batched) --
-    if (stepChanged && this.currentStep !== this.cursorSentStep) {
-      this.cursorSentStep = this.currentStep;
-      this.messagePort.postMessage({ type: 'CURSOR', step: this.currentStep });
-    }
-
-    return true;
-  }
 }
 
 registerProcessor('pentatonic-worklet', PentatonicWorklet);
