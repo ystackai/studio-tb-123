@@ -6,6 +6,7 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.bpm = 140;
     this.currentStep = 0;
     this.isPlaying = false;
+    this.stepPhase = 0;
     this.samplesSinceStepStart = 0;
 
     // -- DSP parameters --
@@ -50,9 +51,11 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     this.crossfade = 0;
     this.targetCrossfade = 0;
 
-    // -- LFO breath --
-    // Cycles over 4 measures so it feels organic, not mechanical
+     // -- LFO breath --
+      // Cycles over 4 measures so it feels organic, not mechanical
     this.lfoPhase = 0;
+      // Secondary deep-swell LFO: 8-measure loop for slow undulation
+    this.deepLfoPhase = 0;
 
     // -- Cursor --
     this.cursorSentStep = -1;
@@ -85,15 +88,19 @@ class PentatonicWorklet extends AudioWorkletProcessor {
           this.isPlaying = true;
           this.currentStep = 0;
           this.stepPhase = 0;
+          this.lfoPhase = 0;
+          this.deepLfoPhase = 0;
           this.prevGridRows.clear();
           this.voiceActive.fill(0);
           this.voiceReleasing.fill(0);
           this.voiceStartSample.fill(0);
           this.phases.fill(0);
-          // Trigger step-0 notes immediately so there's no dead step at startup
+          this.crossfade = 0;
+          this.targetCrossfade = 0;
+           // Trigger step-0 notes immediately so there's no dead step at startup
           this.processStep(0);
           break;
-         }
+          }
         case 'STOP': {
           this.isPlaying = false;
           this.voiceActive.fill(0);
@@ -163,31 +170,39 @@ class PentatonicWorklet extends AudioWorkletProcessor {
     return y;
   }
 
-  // ---- Triangle oscillator ----
-  triangleWave(phase) {
-    return 4 * Math.abs(phase - 0.5) - 1;
-  }
+   // ---- Triangle oscillator ----
+   triangleWave(phase) {
+     let v = 4 * Math.abs(phase - 0.5) - 1;
+     // Subtle 2nd harmonic for warmth (pentatonic stays musical)
+     return v + 0.15 * Math.sin(2 * 2 * Math.PI * phase);
+    }
 
-  // ---- ADSR envelope ----
-  computeEnvelope(sinceTrigger, releasing) {
-    const atk = 0.008;
-    const dcy = 0.06;
-    const sus = 0.15;
-    const rel = 0.18;
+    // ---- ADSR envelope ----
+    // Fast attack, long decay, breathing sustain, smooth release
+   computeEnvelope(sinceTrigger, releasing) {
+    const atk = 0.004;
+    const dcy = 0.14;
+    const sus = 0.35;
+    const rel = 0.28;
 
     const t = sinceTrigger / this.sampleRate;
 
     if (releasing) {
-      return t < rel ? sus * (1 - t / rel) : 0;
-    }
+      if (t < rel) {
+        const frac = t / rel;
+        const linear = sus * (1 - frac);
+        return linear * linear * (3 - 2 * linear); // smoothstep release
+       }
+      return 0;
+     }
 
-    if (t < atk) return 0.25 * (t / atk);
+    if (t < atk) return t / atk;
 
     const dt = t - atk;
-    if (dt < dcy) return 0.25 - (0.25 - sus) * (dt / dcy);
+    if (dt < dcy) return 1 - (1 - sus) * (dt / dcy);
 
     return sus;
-  }
+   }
 
   // ---- Per-step voice scheduling ----
   processStep(stepIndex) {
@@ -259,14 +274,21 @@ class PentatonicWorklet extends AudioWorkletProcessor {
         const fadeSpeed = isAttacking ? 0.18 : 0.06;
         this.crossfade += (this.targetCrossfade - this.crossfade) * fadeSpeed;
 
-         // -- LFO breath: continuous undulation on top of step swing --
-        this.lfoPhase += lfoPerSample;
-        if (this.lfoPhase > 1) this.lfoPhase -= 1;
-        const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.lfoPhase);
+          // -- LFO breath: continuous undulation on top of step swing --
+         this.lfoPhase += lfoPerSample;
+         if (this.lfoPhase > 1) this.lfoPhase -= 1;
+         const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.lfoPhase);
 
-         // LFO modulates blend toward the brighter filter on its peak
-        const lfoShift = (lfo - 0.5) * 0.25 * this.swingAmount;
-        const blend = Math.min(1, Math.max(0, this.crossfade + lfoShift));
+          // Deep LFO: 8-measure cycle for slow, broad "breathing" swell
+         this.deepLfoPhase += lfoPerSample / 2; // half speed = 8 measures
+         if (this.deepLfoPhase > 1) this.deepLfoPhase -= 1;
+         const deepLfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * this.deepLfoPhase);
+
+           // LFO modulates blend toward the brighter filter on its peak
+         const lfoShift = (lfo - 0.5) * 0.3 * this.swingAmount;
+         // Deep modulation adds a broad undulation to the entire filter sweep
+         const deepShift = (deepLfo - 0.5) * 0.15 * this.swingAmount;
+         const blend = Math.min(1, Math.max(0, this.crossfade + lfoShift + deepShift));
 
          // -- Voice synthesis: sum all active voices --
         let mix = 0;
@@ -297,15 +319,15 @@ class PentatonicWorklet extends AudioWorkletProcessor {
         const yB = this.runFilter('fB', mix);
         let sample = yA * (1 - blend) + yB * blend;
 
-         // -- Soft clipping for clean output --
-        const abs = Math.abs(sample);
-        if (abs > 1) {
-          sample = (sample < 0 ? -1 : 1) * (1 - Math.exp(1 - abs));
-         }
+           // -- Soft clipping for clean output --
+         const abs = Math.abs(sample);
+         if (abs > 1.2) {
+           sample = (sample < 0 ? -1 : 1) * (1 - Math.exp(1.2 - abs));
+          }
 
-         // -- Write stereo output --
-        left[i]   = sample * 0.7;
-        right[i]  = sample * 0.7;
+            // -- Write stereo output — master gain 0.85, slight spread --
+          left[i]    = sample * 0.85;
+          right[i]   = sample * 0.78;
         }
 
         // -- Post-block: cursor step update (batched per audio block) --
