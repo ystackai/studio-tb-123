@@ -211,6 +211,13 @@ html, body {
 .step-cell.active.cursor {
   background: var(--step-cur);
   border-color: var(--step-cur) !important;
+  box-shadow: 0 0 6px rgba(0, 184, 124, 0.4);
+}
+
+/* Beat-bound cells get a subtle left-border accent */
+.step-cell.beat-bound {
+  border-left: 2px solid #3a3a40;
+  margin-left: 2px;
 }
 
 /* Beat boundaries */
