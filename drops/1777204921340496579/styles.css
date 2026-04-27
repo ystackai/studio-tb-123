@@ -74,6 +74,17 @@ html, body {
   border-color: var(--cyan);
 }
 
+#btn-export:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+#btn-export:active {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+
 #btn-record.active {
   background: var(--red);
   color: #fff;
