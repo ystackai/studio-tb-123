@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Circuit — Synth Stage</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="stage">
+    <header id="header">
+      <h1 class="accent">OPEN CIRCUIT</h1>
+      <div id="controls">
+        <div class="control-group">
+          <span class="label">CUTOFF</span>
+          <input type="range" id="cutoff-knob" min="200" max="12000" value="8000" step="50">
+          <span id="cutoff-value" class="value">8000 Hz</span>
+        </div>
+        <div class="control-group">
+          <span class="label">DECAY</span>
+          <input type="range" id="decay-knob" min="50" max="3000" value="800" step="10">
+          <span id="decay-value" class="value">800 ms</span>
+        </div>
+      </div>
+    </header>
+    <main id="grid-container">
+      <div id="grid"></div>
+    </main>
+    <footer id="footer">
+      <span class="accent">PATCH</span> MAJOR C-E-G &nbsp;|&nbsp;
+      <span class="accent">VCO</span> SAW/TRI &nbsp;|&nbsp;
+      <span class="accent">LATENCY</span> <span id="latency-display">4.0ms</span>
+    </footer>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
