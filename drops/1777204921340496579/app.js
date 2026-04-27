@@ -5,36 +5,49 @@ let audioCtx = null;
 let noiseBuffer = null;
 
 // State
+let recordGrid = [
+   Array(16).fill(false),
+   Array(16).fill(false),
+   Array(16).fill(false),
+   Array(16).fill(false),
+ ];
+let scheduleStartTime = 0;
+
 const state = {
-  bpm: 120,
-  playing: false,
-  recording: false,
-  currentStep: -1,
-  lookahead: 25,
-  scheduleAheadTime: 0.1,
-  lfoRate: 4,
-  lfoDepth: 0.3,
-  nextNoteTime: 0,
-  timerId: null,
-  grid: [
-    Array(16).fill(false), // kick
-    Array(16).fill(false), // snare
-    Array(16).fill(false), // hihat
-    Array(16).fill(false), // synth
-  ],
-  mode: 'drum',
-  waveform: 'saw',
-  // Synth params
-  cutoff: 2000,
-  resonance: 1,
-  attack: 0.01,
-  decay: 0.3,
-  // Drum params
-  kickDecay: 0.3,
-  snareDecay: 0.15,
-  // Note mapping for synth row
-  synthNotes: [65, 72, 77, 82, 87, 92, 99, 104, 110, 116, 123, 130, 138, 146, 155, 164],
-};
+   bpm: 120,
+   playing: false,
+   recording: false,
+   currentStep: -1,
+   lookahead: 20,
+   scheduleAheadTime: 0.1,
+   lfoRate: 4,
+   lfoDepth: 0.3,
+   nextNoteTime: 0,
+   timerId: null,
+   grid: [
+     Array(16).fill(false),
+     Array(16).fill(false),
+     Array(16).fill(false),
+     Array(16).fill(false),
+   ],
+   mode: 'drum',
+   waveform: 'saw',
+    // Synth params
+   cutoff: 2000,
+   resonance: 1,
+   attack: 0.01,
+   decay: 0.3,
+   sustain: 0.4,
+   release: 0.1,
+    // Drum params
+   kickDecay: 0.3,
+   snareDecay: 0.15,
+   hihatDecay: 0.08,
+    // Note mapping for synth row (C2-B2 minor pentatonic-ish scale)
+   synthNotes: [65.41, 73.42, 82.41, 87.31, 98.00, 103.83, 110.00, 123.47,
+                 130.81, 146.83, 155.56, 174.61, 185.00, 207.65, 220.00, 246.94],
+   pitch: 0,
+ };
 
 function initAudio() {
   if (audioCtx) return;
@@ -166,29 +179,30 @@ function playSynth(time, note = 65, gain = 0.4) {
   lfo.connect(lfoGain);
   lfoGain.connect(filterNode.frequency);
   
-  // ADSR envelope on gain
+   // ADSR envelope on gain
   const envGain = audioCtx.createGain();
   const atk = Math.max(state.attack, 0.001);
   const dec = state.decay;
-  const sustainLevel = 0.4;
-  const sustainTime = 0.3;
-  const release = 0.1;
+  const susLevel = state.sustain;
+  const susTime = getSecondsPerStep() * 2;
+  const rel = state.release;
+  const totalDur = atk + dec + susTime + rel;
   
   envGain.gain.setValueAtTime(0.001, time);
   envGain.gain.linearRampToValueAtTime(gain, time + atk);
-  envGain.gain.linearRampToValueAtTime(gain * sustainLevel, time + atk + dec);
-  envGain.gain.setValueAtTime(gain * sustainLevel, time + atk + dec + sustainTime);
-  envGain.gain.linearRampToValueAtTime(0.001, time + atk + dec + sustainTime + release);
+  envGain.gain.linearRampToValueAtTime(gain * susLevel, time + atk + dec);
+  envGain.gain.setValueAtTime(gain * susLevel, time + atk + dec + susTime);
+  envGain.gain.linearRampToValueAtTime(0.001, time + atk + dec + susTime + rel);
   
   osc.connect(filterNode);
   filterNode.connect(envGain);
   envGain.connect(audioCtx.destination);
   
   osc.start(time);
-  osc.stop(time + atk + dec + sustainTime + release + 0.01);
+  osc.stop(time + totalDur + 0.01);
   
   lfo.start(time);
-  lfo.stop(time + atk + dec + sustainTime + release + 0.01);
+  lfo.stop(time + totalDur + 0.01);
 }
 
 // ---- Scheduler ----
@@ -201,16 +215,17 @@ function scheduler() {
 }
 
 function scheduleStep(step, time) {
-  // Play active instruments
   if (state.grid[0][step]) playKick(time);
   if (state.grid[1][step]) playSnare(time);
   if (state.grid[2][step]) playHihat(time);
   if (state.grid[3][step]) playSynth(time, state.synthNotes[step]);
   
-  // Visual update - use requestAnimationFrame to stay in sync
-  setTimeout(() => {
-    updateCurrentStep(step);
-  }, Math.max(0, (time - audioCtx.currentTime) * 1000));
+  if (state.recording) {
+    recordGrid[0][step] |= state.grid[0][step];
+    recordGrid[1][step] |= state.grid[1][step];
+    recordGrid[2][step] |= state.grid[2][step];
+    recordGrid[3][step] |= state.grid[3][step];
+  }
 }
 
 function advanceStep() {
@@ -235,23 +250,34 @@ function updateCurrentStep(step) {
 
 // ---- Transport ----
 
-function startPlayback() {
-  if (!audioCtx) initAudio();
-  
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+function resetRecordGrid() {
+  for (let i = 0; i < 4; i++) {
+    recordGrid[i] = Array(16).fill(false);
    }
-  
-  if (state.playing) return;
-  
-  state.playing = true;
-  state.currentStep = 0;
-  state.nextNoteTime = audioCtx.currentTime + 0.05;
-  state.timerId = setInterval(scheduler, state.lookahead);
-  
-  document.getElementById('btn-play').classList.add('active');
-  lastVisualStep = -1;
-  animationFrameId = requestAnimationFrame(visualSyncLoop);
+ }
+
+function startPlayback() {
+   if (!audioCtx) initAudio();
+   
+   if (audioCtx.state === 'suspended') {
+     audioCtx.resume();
+     }
+   
+   if (state.playing) return;
+   
+   if (state.recording) {
+     resetRecordGrid();
+    }
+   
+   state.playing = true;
+   state.currentStep = 0;
+   scheduleStartTime = audioCtx.currentTime;
+   state.nextNoteTime = audioCtx.currentTime + 0.05;
+   state.timerId = setInterval(scheduler, state.lookahead);
+   
+   document.getElementById('btn-play').classList.add('active');
+   lastVisualStep = -1;
+   animationFrameId = requestAnimationFrame(visualSyncLoop);
   
    // Auto-enable some grid cells for demo
   if (state.grid[0].every(x => !x) &&
@@ -279,21 +305,33 @@ function startPlayback() {
 }
 
 function stopPlayback() {
-  if (!state.playing) return;
-  
-  state.playing = false;
-  clearInterval(state.timerId);
-  state.timerId = null;
-  state.currentStep = -1;
-  
-  document.getElementById('btn-play').classList.remove('active');
-  document.querySelectorAll('.cell').forEach(c => c.classList.remove('playing'));
-  
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
-   }
-}
+   if (!state.playing) return;
+   
+   state.playing = false;
+   clearInterval(state.timerId);
+   state.timerId = null;
+   state.currentStep = -1;
+   
+   if (state.recording) {
+       // Commit recorded grid
+     for (let row = 0; row < 4; row++) {
+       for (let col = 0; col < 16; col++) {
+         state.grid[row][col] = recordGrid[row][col];
+        }
+       }
+     renderGrid();
+     state.recording = false;
+     document.getElementById('btn-record').classList.remove('active');
+     }
+   
+   document.getElementById('btn-play').classList.remove('active');
+   document.querySelectorAll('.cell').forEach(c => c.classList.remove('playing'));
+   
+   if (animationFrameId) {
+     cancelAnimationFrame(animationFrameId);
+     animationFrameId = null;
+     }
+ }
 
 function togglePlayback() {
   if (state.playing) {
@@ -595,9 +633,23 @@ function setupTransport() {
   document.getElementById('btn-export').addEventListener('click', exportWav);
   
   document.getElementById('bpm-slider').addEventListener('input', (e) => {
+    const oldBpm = state.bpm;
     state.bpm = parseInt(e.target.value);
     document.getElementById('bpm-display').textContent = state.bpm;
-  });
+    
+     // Reschedule timing if playing so there's no drift
+    if (state.playing) {
+     const oldStepDur = 60.0 / oldBpm / 4;
+     const newStepDur = getSecondsPerStep();
+      // Recalculate nextNoteTime from current step position
+     const stepsSinceStart = state.currentStep - 0;
+     const elapsedSteps = ((audioCtx.currentTime - scheduleStartTime) / oldStepDur);
+      // Keep time aligned to where we are
+     const currentStepFloat = elapsedSteps % 16;
+     const completedSteps = Math.floor(elapsedSteps);
+     state.nextNoteTime = audioCtx.currentTime + (state.currentStep - (completedSteps % 16)) * newStepDur;
+    }
+   });
 }
 
 function setupModeToggle() {
@@ -725,23 +777,23 @@ let animationFrameId = null;
 let lastVisualStep = -1;
 
 function visualSyncLoop() {
-  if (!state.playing) {
-    animationFrameId = null;
-    return;
-  }
-  
-  const now = audioCtx.currentTime;
-  const secondsPerStep = getSecondsPerStep();
-  const elapsed = now - (state.nextNoteTime - (16 - state.currentStep) * secondsPerStep);
-  const currentVisualStep = Math.floor(elapsed / secondsPerStep) % 16;
-  
-  if (currentVisualStep !== lastVisualStep) {
-    lastVisualStep = currentVisualStep;
-    updateCurrentStep(currentVisualStep);
-  }
-  
-  animationFrameId = requestAnimationFrame(visualSyncLoop);
-}
+   if (!state.playing) {
+     animationFrameId = null;
+     return;
+    }
+   
+   const now = audioCtx.currentTime;
+   const secondsPerStep = getSecondsPerStep();
+   const elapsed = now - scheduleStartTime;
+   const currentVisualStep = Math.floor(elapsed / secondsPerStep) % 16;
+   
+   if (currentVisualStep !== lastVisualStep) {
+     lastVisualStep = currentVisualStep;
+     updateCurrentStep(currentVisualStep);
+    }
+   
+   animationFrameId = requestAnimationFrame(visualSyncLoop);
+ }
 
 // ---- Initialization ----
 
