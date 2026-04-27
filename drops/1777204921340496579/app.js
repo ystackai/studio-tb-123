@@ -1,586 +1,569 @@
 (function () {
   'use strict';
 
-  // ─── Audio Context ───
-  var ctx = null;
-  var masterGain = null;
+  /* ── Audio Context & State ── */
+  let audioCtx = null;
+  let masterGain = null;
+
+  var state = {
+    playing: false,
+    recording: false,
+    currentStep: -1,
+    bpm: 120,
+    mode: 'drum', // or 'synth'
+    waveform: 'saw',
+    // Synth params
+    cutoff: 2000,
+    resonance: 1,
+    attack: 0.01,
+    decay: 0.3,
+    // Drum params
+    kickDecay: 0.3,
+    snareDecay: 0.15,
+    // 4 channels x 16 steps: [kick, snare, hihat, synth]
+    grid: Array.from({ length: 4 }, function () {
+      return new Array(16).fill(false);
+    }),
+  };
+
+  // Default kick pattern
+  state.grid[0][0] = true;
+  state.grid[0][4] = true;
+  state.grid[0][8] = true;
+  state.grid[0][12] = true;
+  // Default snare pattern
+  state.grid[1][4] = true;
+  state.grid[1][12] = true;
+  // Default hi-hat pattern
+  for (var i = 0; i < 16; i++) {
+    state.grid[2][i] = true;
+  }
+  // Default synth pattern - bass line
+  state.grid[3][0] = true;
+  state.grid[3][3] = true;
+  state.grid[3][6] = true;
+  state.grid[3][10] = true;
+  state.grid[3][12] = true;
+
+  /* ── Sequencer Scheduler ── */
+  var timerID = null;
+  var nextStepTime = 0;
+  var currentStepAudio = 0;
+  var scheduleAheadTime = 0.1;
+  var lookahead = 25; // ms
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.7;
+    masterGain.connect(audioCtx.destination);
+  }
+
+  function getSixteenthDuration() {
+    return 60.0 / state.bpm / 4;
+  }
+
+  // LFO node for "breathing"
   var lfo = null;
   var lfoGain = null;
-  var lfoActive = false;
 
-  // ─── Sequencer State ───
-  var STEPS = 16;
-  var tempo = 120;
-  var playing = false;
-  var currentStep = -1;
-  var nextStepTime = 0;
-  var schedulerTimer = null;
-  var scheduleAheadTime = 0.1;
-  var lookahead = 25;
-
-  // Step grids: [track][step] = boolean
-  var drumGrid = {
-    kick:  new Array(STEPS).fill(false),
-    snare: new Array(STEPS).fill(false),
-    hihat: new Array(STEPS).fill(false)
-  };
-
-  // Synth notes: [noteIndex][step] = boolean
-  var synthNotes = [
-    'C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B2', 'C3'
-  ];
-  var noteToFreq = {
-    'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'F2': 87.31,
-    'G2': 98.00, 'A2': 110.00, 'B2': 123.47, 'C3': 130.81
-  };
-  var synthGrid = {};
-  synthNotes.forEach(function (n) {
-    synthGrid[n] = new Array(STEPS).fill(false);
-  });
-
-  // ─── Synth Params (live) ───
-  var synthParams = {
-    waveform: 'saw',
-    cutoff: 2000,
-    res: 1,
-    attack: 0.005,
-    decay: 0.2,
-    sustain: 0.6,
-    release: 0.2
-  };
-
-  // ─── Drum Params (live) ───
-  var drumParams = {
-    kickDecay: 0.2,
-    snareDecay: 0.15,
-    hhOpen: 0.08
-  };
-
-  // ─── Init Audio ───
-  function initAudio() {
-    if (ctx) return;
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    masterGain = ctx.createGain();
-    masterGain.gain.value = 0.7;
-    masterGain.connect(ctx.destination);
-
-    // LFO for "breathing" effect
-    lfo = ctx.createOscillator();
+  function startLFO() {
+    if (lfo) return;
+    lfo = audioCtx.createOscillator();
     lfo.type = 'sine';
-    lfo.frequency.value = 0.15; // slow modulation
-    lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0; // disabled by default, enabled via modulation
+    lfo.frequency.value = 0.08; // ~5 second cycle for slow breathing
+    lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 400; // Hz of modulation depth
     lfo.connect(lfoGain);
     lfo.start();
   }
 
-  // Resume context on user gesture
-  function resumeAudio() {
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume();
+  function stopLFO() {
+    if (lfo) {
+      try { lfo.stop(); } catch(e){}
+      try { lfo.disconnect(); } catch(e){}
+      lfo = null;
+      lfoGain = null;
     }
   }
 
-  // ─── 808-style Kick ───
-  function playKick(time) {
-    var osc = ctx.createOscillator();
-    var gain = ctx.createGain();
+  /* ── Drum Synthesis ── */
 
+  function playKick(time, decay) {
+    var osc = audioCtx.createOscillator();
+    var env = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(150, time);
-    osc.frequency.exponentialRampToValueAtTime(30, time + drumParams.kickDecay * 0.5);
-
-    gain.gain.setValueAtTime(1, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + drumParams.kickDecay);
-
-    osc.connect(gain);
-    gain.connect(masterGain);
-
+    osc.frequency.setValueAtTime(160, time);
+    osc.frequency.exponentialRampToValueAtTime(35, time + 0.08);
+    env.gain.setValueAtTime(1, time);
+    env.gain.exponentialRampToValueAtTime(0.001, time + (decay || state.kickDecay));
+    osc.connect(env);
+    env.connect(masterGain);
     osc.start(time);
-    osc.stop(time + drumParams.kickDecay + 0.01);
+    osc.stop(time + (decay || state.kickDecay) + 0.05);
   }
 
-  // ─── 808-style Snare ───
-  function playSnare(time) {
+  function playSnare(time, decay) {
     // Noise component
-    var bufferSize = ctx.sampleRate * drumParams.snareDecay;
-    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) {
+    var noiseLen = audioCtx.sampleRate * (decay || state.snareDecay);
+    var noiseBuffer = audioCtx.createBuffer(1, noiseLen, audioCtx.sampleRate);
+    var data = noiseBuffer.getChannelData(0);
+    for (var i = 0; i < noiseLen; i++) {
       data[i] = (Math.random() * 2 - 1);
     }
-
-    var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-
-    var noiseFilter = ctx.createBiquadFilter();
+    var noise = audioCtx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    var noiseEnv = audioCtx.createGain();
+    noiseEnv.gain.setValueAtTime(0.6, time);
+    noiseEnv.gain.exponentialRampToValueAtTime(0.001, time + (decay || state.snareDecay));
+    var noiseFilter = audioCtx.createBiquadFilter();
     noiseFilter.type = 'highpass';
     noiseFilter.frequency.value = 1000;
-
-    var noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.8, time);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + drumParams.snareDecay * 0.7);
-
     noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(masterGain);
+    noiseFilter.connect(noiseEnv);
+    noiseEnv.connect(masterGain);
     noise.start(time);
-    noise.stop(time + drumParams.snareDecay + 0.01);
+    noise.stop(time + (decay || state.snareDecay) + 0.01);
 
     // Tone component
-    var osc = ctx.createOscillator();
-    var oscGain = ctx.createGain();
+    var osc = audioCtx.createOscillator();
+    var toneEnv = audioCtx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(180, time);
-    osc.frequency.exponentialRampToValueAtTime(80, time + 0.05);
-
-    oscGain.gain.setValueAtTime(0.6, time);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, time + drumParams.snareDecay * 0.4);
-
-    osc.connect(oscGain);
-    oscGain.connect(masterGain);
+    osc.frequency.value = 180;
+    toneEnv.gain.setValueAtTime(0.5, time);
+    toneEnv.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+    osc.connect(toneEnv);
+    toneEnv.connect(masterGain);
     osc.start(time);
-    osc.stop(time + drumParams.snareDecay + 0.01);
+    osc.stop(time + 0.15);
   }
 
-  // ─── 808-style Hi-Hat ───
-  function playHihat(time, open) {
-    var decay = open ? drumParams.hhOpen : 0.04;
-
-    var bufferSize = ctx.sampleRate * Math.max(decay, 0.05);
-    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < bufferSize; i++) {
+  function playHiHat(time) {
+    var noiseLen = audioCtx.sampleRate * 0.08;
+    var noiseBuffer = audioCtx.createBuffer(1, noiseLen, audioCtx.sampleRate);
+    var data = noiseBuffer.getChannelData(0);
+    for (var i = 0; i < noiseLen; i++) {
       data[i] = (Math.random() * 2 - 1);
     }
-
-    var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-
-    var hpFilter = ctx.createBiquadFilter();
-    hpFilter.type = 'highpass';
-    hpFilter.frequency.value = 7000;
-
-    var bpFilter = ctx.createBiquadFilter();
-    bpFilter.type = 'bandpass';
-    bpFilter.frequency.value = 10000;
-    bpFilter.Q.value = 1.2;
-
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.4, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
-
-    noise.connect(hpFilter);
-    hpFilter.connect(bpFilter);
-    bpFilter.connect(gain);
-    gain.connect(masterGain);
-
+    var noise = audioCtx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    var env = audioCtx.createGain();
+    env.gain.setValueAtTime(0.35, time);
+    env.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    var filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+    noise.connect(filter);
+    filter.connect(env);
+    env.connect(masterGain);
     noise.start(time);
-    noise.stop(time + Math.max(decay, 0.05) + 0.01);
+    noise.stop(time + 0.1);
   }
 
-  // ─── Monophonic Synth ───
-  var activeSynthVoice = null;
+  /* ── Synth Engine (Monophonic Subtractive) ── */
 
-  function playSynth(freq, time, duration) {
-    // Stop previous voice for monophonic behavior
-    if (activeSynthVoice) {
+  // Note frequencies for bass line across 16 steps
+  var noteFrequencies = [
+    55.00,  // A1, step 0
+    55.00,
+    55.00,  // step 2
+    65.41,  // C2, step 3
+    65.41,
+    65.41,
+    73.42,  // D2, step 6
+    73.42,
+    55.00,  // A1, step 8
+    55.00,
+    82.41,  // E2, step 10
+    73.42,  // D2, step 11
+    65.41,  // C2, step 12
+    55.00,  // A1, step 13
+    55.00,
+    55.00,
+  ];
+
+  var activeSynthOsc = null;
+  var activeSynthFilter = null;
+  var activeSynthEnv = null;
+  var synthNoteTimeout = null;
+
+  function stopSynthNote() {
+    if (activeSynthOsc) {
+      var now = audioCtx.currentTime;
       try {
-        // Quick release of current voice
-        var relTime = Math.max(0.01, synthParams.release * 0.3);
-        activeSynthVoice.envelope.gain.cancelScheduledValues(time);
-        activeSynthVoice.envelope.gain.setValueAtTime(activeSynthVoice.envelope.gain.value, time);
-        activeSynthVoice.envelope.gain.exponentialRampToValueAtTime(0.001, time + relTime);
-        activeSynthVoice.osc.stop(time + relTime + 0.01);
-      } catch (e) { /* ignore */ }
-      activeSynthVoice = null;
+        activeSynthEnv.gain.cancelScheduledValues(now);
+        activeSynthEnv.gain.setValueAtTime(activeSynthEnv.gain.value, now);
+        activeSynthEnv.gain.linearRampToValueAtTime(0, now + 0.05);
+        activeSynthOsc.stop(now + 0.07);
+      } catch(e) {}
+      try { activeSynthOsc.disconnect(); } catch(e) {}
+      try { activeSynthFilter.disconnect(); } catch(e) {}
+      try { activeSynthEnv.disconnect(); } catch(e) {}
+      activeSynthOsc = null;
+      activeSynthFilter = null;
+      activeSynthEnv = null;
     }
+    if (synthNoteTimeout) {
+      clearTimeout(synthNoteTimeout);
+      synthNoteTimeout = null;
+    }
+  }
 
-    var osc = ctx.createOscillator();
-    osc.type = synthParams.waveform;
-    osc.frequency.setValueAtTime(freq, time);
+  function playSynth(time, stepIdx) {
+    stopSynthNote();
 
-    // LFO modulation on filter cutoff
-    var filter = ctx.createBiquadFilter();
+    var freq = noteFrequencies[stepIdx % 16] || 55;
+    var osc = audioCtx.createOscillator();
+    var filter = audioCtx.createBiquadFilter();
+    var env = audioCtx.createGain();
+
+    osc.type = state.waveform;
+    osc.frequency.value = freq;
+
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(synthParams.cutoff, time);
-    filter.Q.setValueAtTime(synthParams.res, time);
+    filter.Q.value = state.resonance;
+    var baseCutoff = state.cutoff;
+    filter.frequency.setValueAtTime(baseCutoff + 200, time);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(baseCutoff - 300, 20), time + state.decay);
 
-    // Connect LFO to filter if active
-    if (lfoActive && lfoGain) {
+    // Connect LFO breathing if running
+    if (lfoGain) {
+      lfoGain.disconnect();
       lfoGain.connect(filter.frequency);
-      lfoGain.gain.setValueAtTime(200, time);
     }
 
     // ADSR envelope
-    var envelope = ctx.createGain();
-    var a = Math.max(0.001, synthParams.attack);
-    var d = Math.max(0.001, synthParams.decay);
-    var s = synthParams.sustain;
-    var r = Math.max(0.001, synthParams.release);
-
-    envelope.gain.setValueAtTime(0.001, time);
-    envelope.gain.linearRampToValueAtTime(0.6, time + a);
-    envelope.gain.exponentialRampToValueAtTime(Math.max(0.001, 0.6 * s), time + a + d);
-    // Sustain holds here
-    envelope.gain.setValueAtTime(Math.max(0.001, 0.6 * s), time + a + d + duration - r);
-    envelope.gain.exponentialRampToValueAtTime(0.001, time + a + d + duration);
+    env.gain.setValueAtTime(0.001, time);
+    env.gain.linearRampToValueAtTime(0.6, time + Math.max(state.attack, 0.005));
+    env.gain.exponentialRampToValueAtTime(0.001, time + state.attack + state.decay);
 
     osc.connect(filter);
-    filter.connect(envelope);
-    envelope.connect(masterGain);
+    filter.connect(env);
+    env.connect(masterGain);
 
     osc.start(time);
-    osc.stop(time + a + d + duration + 0.01);
+    var noteDur = state.attack + state.decay + 0.05;
+    osc.stop(time + noteDur);
 
-    activeSynthVoice = { osc: osc, envelope: envelope, filter: filter };
+    activeSynthOsc = osc;
+    activeSynthFilter = filter;
+    activeSynthEnv = env;
 
-    // Cleanup reference after note ends
-    setTimeout(function () {
-      if (activeSynthVoice && activeSynthVoice.osc === osc) {
-        activeSynthVoice = null;
-      }
-    }, (a + d + duration + 0.1) * 1000);
+    synthNoteTimeout = setTimeout(function () {
+      try { stopSynthNote(); } catch(e) {}
+    }, noteDur * 1500);
   }
 
-  // ─── Sequencer Scheduler ───
-  function secondsPerStep() {
-    return 60.0 / tempo / 4; // 16th notes
-  }
+  /* ── Scheduler ── */
 
   function scheduleStep(step, time) {
-    // Schedule drum hits
-    if (drumGrid.kick[step]) playKick(time);
-    if (drumGrid.snare[step]) playSnare(time);
-    if (drumGrid.hihat[step]) playHihat(time, false);
+    // Kick
+    if (state.grid[0][step]) {
+      playKick(time);
+    }
+    // Snare
+    if (state.grid[1][step]) {
+      playSnare(time);
+    }
+    // Hi-hat
+    if (state.grid[2][step]) {
+      playHiHat(time);
+    }
+    // Synth
+    if (state.grid[3][step]) {
+      playSynth(time, step);
+    }
 
-    // Schedule synth notes
-    var duration = secondsPerStep() * 0.9;
-    synthNotes.forEach(function (note) {
-      if (synthGrid[note][step]) {
-        playSynth(noteToFreq[note], time, duration);
-      }
-    });
-
-    // Schedule UI update (visual feedback)
-    requestAnimationFrame(function () {
-      highlightCurrentStep(step);
-    });
+    // Visual feedback - schedule UI update via requestAnimationFrame
+    setTimeout(function () {
+      updatePlayhead(step);
+    }, Math.max(0, (time - audioCtx.currentTime) * 1000));
   }
 
   function scheduler() {
-    while (nextStepTime < ctx.currentTime + scheduleAheadTime) {
-      scheduleStep(currentStep, nextStepTime);
-      nextStepTime += secondsPerStep();
-      currentStep = (currentStep + 1) % STEPS;
+    while (nextStepTime < audioCtx.currentTime + scheduleAheadTime) {
+      scheduleStep(currentStepAudio, nextStepTime);
+      nextStepTime += getSixteenthDuration();
+      currentStepAudio = (currentStepAudio + 1) % 16;
     }
-    schedulerTimer = setTimeout(scheduler, lookahead);
+    if (state.playing) {
+      timerID = setTimeout(scheduler, lookahead);
+    }
   }
 
   function startSequencer() {
-    if (playing) return;
-    resumeAudio();
-    if (!ctx) initAudio();
-
-    playing = true;
-    currentStep = 0;
-    nextStepTime = ctx.currentTime + 0.05;
+    if (state.playing) return;
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    state.playing = true;
+    currentStepAudio = 0;
+    nextStepTime = audioCtx.currentTime;
+    startLFO();
     scheduler();
-
     document.getElementById('btn-play').classList.add('active');
   }
 
   function stopSequencer() {
-    playing = false;
-    if (schedulerTimer) {
-      clearTimeout(schedulerTimer);
-      schedulerTimer = null;
+    state.playing = false;
+    if (timerID) {
+      clearTimeout(timerID);
+      timerID = null;
     }
+    stopLFO();
+    stopSynthNote();
     currentStep = -1;
-    clearStepHighlights();
-
-    // Release active synth voice
-    if (activeSynthVoice) {
-      try {
-        activeSynthVoice.envelope.gain.cancelScheduledValues(ctx.currentTime);
-        activeSynthVoice.envelope.gain.setValueAtTime(0.001, ctx.currentTime);
-        activeSynthVoice.osc.stop(ctx.currentTime + 0.01);
-      } catch (e) { /* ignore */ }
-      activeSynthVoice = null;
-    }
-
+    currentStepAudio = 0;
+    clearPlayheadVisuals();
     document.getElementById('btn-play').classList.remove('active');
   }
 
-  // ─── UI: Build Grid ───
-  function buildDrumGrid() {
-    var tracks = ['kick', 'snare', 'hihat'];
-    var labels = document.getElementById('step-labels');
-
-    // Step number labels
-    var labelHTML = '<div class="step-label"></div>'; // empty corner
-    for (var i = 0; i < STEPS; i++) {
-      labelHTML += '<div class="step-label">' + (i + 1) + '</div>';
+  function togglePlay() {
+    if (state.playing) {
+      stopSequencer();
+    } else {
+      startSequencer();
     }
-    labels.innerHTML = labelHTML;
+  }
 
-    // Track rows
-    tracks.forEach(function (track) {
-      var trackEl = document.getElementById('track-' + track);
-      var stepsContainer = trackEl.querySelector('.steps');
-      var stepsHTML = '';
-      for (var s = 0; s < STEPS; s++) {
-        stepsHTML += '<div class="step" data-track="' + track + '" data-step="' + s + '"></div>';
+  /* ── Recording ── */
+
+  var recordedGrid = null;
+  var recordStartStep = 0;
+
+  function toggleRecord() {
+    state.recording = !state.recording;
+    var btn = document.getElementById('btn-record');
+    if (state.recording) {
+      btn.classList.add('active');
+      // Copy current grid as the starting point
+      recordedGrid = state.grid.map(function (row) { return row.slice(); });
+    } else {
+      btn.classList.remove('active');
+      // Apply recorded pattern
+      if (recordedGrid) {
+        state.grid = recordedGrid;
+        redrawGrid();
+        recordedGrid = null;
       }
-      stepsContainer.innerHTML = stepsHTML;
-
-      // Bind clicks
-      var stepEls = stepsContainer.querySelectorAll('.step');
-      stepEls.forEach(function (el) {
-        el.addEventListener('click', function () {
-          resumeAudio();
-          if (!ctx) initAudio();
-          var t = this.getAttribute('data-track');
-          var st = parseInt(this.getAttribute('data-step'), 10);
-          drumGrid[t][st] = !drumGrid[t][st];
-          this.classList.toggle('active', drumGrid[t][st]);
-
-          // Preview sound on activation
-          if (drumGrid[t][st]) {
-            if (t === 'kick') playKick(ctx.currentTime);
-            else if (t === 'snare') playSnare(ctx.currentTime);
-            else if (t === 'hihat') playHihat(ctx.currentTime, false);
-          }
-        });
-      });
-    });
-  }
-
-  function buildSynthGrid() {
-    var noteRows = document.querySelectorAll('.note-row');
-    noteRows.forEach(function (row) {
-      var note = row.getAttribute('data-note');
-      var stepsContainer = row.querySelector('.note-steps');
-      var stepsHTML = '';
-      for (var s = 0; s < STEPS; s++) {
-        stepsHTML += '<div class="note-step" data-note="' + note + '" data-step="' + s + '"></div>';
-      }
-      stepsContainer.innerHTML = stepsHTML;
-
-      var stepEls = stepsContainer.querySelectorAll('.note-step');
-      stepEls.forEach(function (el) {
-        el.addEventListener('click', function () {
-          resumeAudio();
-          if (!ctx) initAudio();
-          var n = this.getAttribute('data-note');
-          var st = parseInt(this.getAttribute('data-step'), 10);
-          synthGrid[n][st] = !synthGrid[n][st];
-          this.classList.toggle('active', synthGrid[n][st]);
-
-          // Preview note
-          if (synthGrid[n][st]) {
-            playSynth(noteToFreq[n], ctx.currentTime, 0.15);
-          }
-        });
-      });
-    });
-  }
-
-  // ─── UI: Step Highlighting ───
-  function highlightCurrentStep(step) {
-    clearStepHighlights();
-    currentStep = step;
-
-    // Highlight drum steps
-    var drumSteps = document.querySelectorAll('#sequencer .step[data-step="' + step + '"]');
-    drumSteps.forEach(function (el) { el.classList.add('current'); });
-
-    // Highlight synth steps
-    var synthSteps = document.querySelectorAll('.note-step[data-step="' + step + '"]');
-    synthSteps.forEach(function (el) { el.classList.add('current'); });
-  }
-
-  function clearStepHighlights() {
-    document.querySelectorAll('.step.current, .note-step.current').forEach(function (el) {
-      el.classList.remove('current');
-    });
-  }
-
-  // ─── UI: Controls ───
-  function bindControls() {
-    // Transport
-    document.getElementById('btn-play').addEventListener('click', function () {
-      if (playing) stopSequencer(); else startSequencer();
-    });
-
-    document.getElementById('btn-stop').addEventListener('click', stopSequencer);
-
-    document.getElementById('btn-clear').addEventListener('click', function () {
-      // Clear all grids
-      ['kick', 'snare', 'hihat'].forEach(function (t) {
-        drumGrid[t].fill(false);
-      });
-      Object.keys(synthGrid).forEach(function (n) {
-        synthGrid[n].fill(false);
-      });
-
-      // Clear UI
-      document.querySelectorAll('.step.active, .note-step.active').forEach(function (el) {
-        el.classList.remove('active');
-      });
-    });
-
-    // Tempo
-    var tempoInput = document.getElementById('tempo-input');
-    tempoInput.addEventListener('input', function () {
-      tempo = Math.max(60, Math.min(240, parseInt(this.value, 10) || 120));
-    });
-
-    // Synth params
-    document.getElementById('osc-waveform').addEventListener('change', function () {
-      synthParams.waveform = this.value;
-    });
-
-    var cutoffSlider = document.getElementById('filter-cutoff');
-    cutoffSlider.addEventListener('input', function () {
-      synthParams.cutoff = parseInt(this.value, 10);
-      document.getElementById('cutoff-value').textContent = this.value + ' Hz';
-    });
-
-    var resSlider = document.getElementById('filter-res');
-    resSlider.addEventListener('input', function () {
-      synthParams.res = parseFloat(this.value);
-      document.getElementById('res-value').textContent = parseFloat(this.value).toFixed(1);
-    });
-
-    var attackSlider = document.getElementById('env-attack');
-    attackSlider.addEventListener('input', function () {
-      synthParams.attack = parseInt(this.value, 10) / 1000;
-      document.getElementById('attack-value').textContent = this.value + ' ms';
-    });
-
-    var decaySlider = document.getElementById('env-decay');
-    decaySlider.addEventListener('input', function () {
-      synthParams.decay = parseInt(this.value, 10) / 1000;
-      document.getElementById('decay-value').textContent = this.value + ' ms';
-    });
-
-    var sustainSlider = document.getElementById('env-sustain');
-    sustainSlider.addEventListener('input', function () {
-      synthParams.sustain = parseInt(this.value, 10) / 100;
-      document.getElementById('sustain-value').textContent = this.value + '%';
-    });
-
-    var releaseSlider = document.getElementById('env-release');
-    releaseSlider.addEventListener('input', function () {
-      synthParams.release = parseInt(this.value, 10) / 1000;
-      document.getElementById('release-value').textContent = this.value + ' ms';
-    });
-
-    // Drum params
-    var kickDecaySlider = document.getElementById('kick-decay');
-    kickDecaySlider.addEventListener('input', function () {
-      drumParams.kickDecay = parseInt(this.value, 10) / 1000;
-      document.getElementById('kick-decay-value').textContent = this.value + ' ms';
-    });
-
-    var snareDecaySlider = document.getElementById('snare-decay');
-    snareDecaySlider.addEventListener('input', function () {
-      drumParams.snareDecay = parseInt(this.value, 10) / 1000;
-      document.getElementById('snare-decay-value').textContent = this.value + ' ms';
-    });
-
-    var hhOpenSlider = document.getElementById('hh-open');
-    hhOpenSlider.addEventListener('input', function () {
-      drumParams.hhOpen = parseInt(this.value, 10) / 1000;
-      document.getElementById('hh-open-value').textContent = this.value + ' ms';
-    });
-
-    // Mode toggle buttons (visual selection only)
-    var modeBtns = document.querySelectorAll('.mode-btn');
-    modeBtns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        modeBtns.forEach(function (b) { b.classList.remove('active'); });
-        this.classList.add('active');
-      });
-    });
-
-    // Keyboard input
-    document.addEventListener('keydown', function (e) {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-
-      resumeAudio();
-      if (!ctx) initAudio();
-
-      var key = e.key.toLowerCase();
-      var now = ctx.currentTime;
-
-      // Drum keys: 1=kick, 2=snare, 3=hihat
-      if (key === '1') playKick(now);
-      else if (key === '2') playSnare(now);
-      else if (key === '3') playHihat(now, false);
-      // Note keys: a-g for C2-B2
-      else if (key === 'a') playSynth(65.41, now, 0.15);  // C2
-      else if (key === 's') playSynth(73.42, now, 0.15);  // D2
-      else if (key === 'd') playSynth(82.41, now, 0.15);  // E2
-      else if (key === 'f') playSynth(87.31, now, 0.15);  // F2
-      else if (key === 'g') playSynth(98.00, now, 0.15);  // G2
-      else if (key === 'h') playSynth(110.00, now, 0.15); // A2
-      else if (key === 'j') playSynth(123.47, now, 0.15); // B2
-      else if (key === 'k') playSynth(130.81, now, 0.15); // C3
-      // Space: play/stop
-      else if (key === ' ') {
-        e.preventDefault();
-        if (playing) stopSequencer(); else startSequencer();
-      }
-    });
-  }
-
-  // ─── Boot ───
-  function init() {
-    buildDrumGrid();
-    buildSynthGrid();
-    bindControls();
-
-    // Default pattern for instant gratification
-    // Kick on beats 1, 5, 9, 13 (every quarter note)
-    drumGrid.kick[0] = true;
-    drumGrid.kick[4] = true;
-    drumGrid.kick[8] = true;
-    drumGrid.kick[12] = true;
-
-    // Snare on beats 5, 13
-    drumGrid.snare[4] = true;
-    drumGrid.snare[12] = true;
-
-    // Hi-hat on every 16th (closed)
-    for (var i = 0; i < 16; i++) {
-      drumGrid.hihat[i] = true;
     }
+  }
 
-    // Default bass line: C2 on steps 0, 3, 8, 11
-    synthGrid['C2'][0] = true;
-    synthGrid['C2'][3] = true;
-    synthGrid['G2'][8] = true;
-    synthGrid['G2'][11] = true;
+  /* ── UI: Grid Rendering ── */
 
-    // Update UI to reflect default pattern
-    document.querySelectorAll('#sequencer .step').forEach(function (el) {
-      var track = el.getAttribute('data-track');
-      var step = parseInt(el.getAttribute('data-step'), 10);
-      if (drumGrid[track][step]) el.classList.add('active');
-    });
-
-    document.querySelectorAll('.note-step').forEach(function (el) {
-      var note = el.getAttribute('data-note');
-      var step = parseInt(el.getAttribute('data-step'), 10);
-      if (synthGrid[note][step]) el.classList.add('active');
+  function buildGrid() {
+    var cells = document.querySelectorAll('.cells');
+    cells.forEach(function (rowEl) {
+      var rowIdx = parseInt(rowEl.getAttribute('data-row'));
+      rowEl.innerHTML = '';
+      for (var s = 0; s < 16; s++) {
+        var cell = document.createElement('div');
+        cell.className = 'cell' + (state.grid[rowIdx][s] ? ' on' : '');
+        cell.setAttribute('data-row', rowIdx);
+        cell.setAttribute('data-step', s);
+        // Mark every 4th step for beat reference
+        if (s % 4 === 0) {
+          cell.classList.add('cell-lead');
+        }
+        rowEl.appendChild(cell);
+      }
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  function redrawGrid() {
+    var cells = document.querySelectorAll('.cell');
+    cells.forEach(function (cell) {
+      var r = parseInt(cell.getAttribute('data-row'));
+      var s = parseInt(cell.getAttribute('data-step'));
+      cell.classList.toggle('on', !!state.grid[r][s]);
+    });
   }
+
+  function toggleCell(row, step) {
+    initAudio();
+    state.grid[row][step] = !state.grid[row][step];
+    if (recordedGrid) {
+      recordedGrid[row][step] = state.grid[row][step];
+    }
+    // Instant preview
+    if (state.grid[row][step]) {
+      triggerSound(row, step);
+    }
+    redrawGrid();
+  }
+
+  function triggerSound(row, step) {
+    if (!audioCtx) return;
+    var now = audioCtx.currentTime;
+    switch (row) {
+      case 0: playKick(now); break;
+      case 1: playSnare(now); break;
+      case 2: playHiHat(now); break;
+      case 3: playSynth(now, step); break;
+    }
+  }
+
+  /* ── UI: Playhead ── */
+
+  function updatePlayhead(step) {
+    state.currentStep = step;
+    var cells = document.querySelectorAll('.cell');
+    cells.forEach(function (cell) {
+      var s = parseInt(cell.getAttribute('data-step'));
+      cell.classList.toggle('playing', s === step);
+    });
+  }
+
+  function clearPlayheadVisuals() {
+    var cells = document.querySelectorAll('.cell.playing');
+    cells.forEach(function (cell) {
+      cell.classList.remove('playing');
+    });
+    state.currentStep = -1;
+  }
+
+  /* ── UI: Controls Wiring ── */
+
+  // BPM
+  var bpmSlider = document.getElementById('bpm-slider');
+  var bpmDisplay = document.getElementById('bpm-display');
+  bpmSlider.addEventListener('input', function () {
+    state.bpm = parseInt(this.value);
+    bpmDisplay.textContent = state.bpm;
+  });
+
+  // Mode toggle
+  var modeDrum = document.getElementById('mode-drum');
+  var modeSynth = document.getElementById('mode-synth');
+  modeDrum.addEventListener('click', function () {
+    state.mode = 'drum';
+    modeDrum.classList.add('active');
+    modeSynth.classList.remove('active');
+    document.getElementById('drum-controls').classList.remove('hidden');
+    document.getElementById('synth-controls').classList.add('hidden');
+  });
+  modeSynth.addEventListener('click', function () {
+    state.mode = 'synth';
+    modeSynth.classList.add('active');
+    modeDrum.classList.remove('active');
+    document.getElementById('synth-controls').classList.remove('hidden');
+    document.getElementById('drum-controls').classList.add('hidden');
+  });
+
+  // Waveform selector
+  document.querySelectorAll('.wave-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.wave-btn').forEach(function (b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      state.waveform = this.getAttribute('data-wave');
+    });
+  });
+
+  // Cutoff
+  var ctrlCutoff = document.getElementById('ctrl-cutoff');
+  var valCutoff = document.getElementById('val-cutoff');
+  ctrlCutoff.addEventListener('input', function () {
+    state.cutoff = parseFloat(this.value);
+    valCutoff.textContent = state.cutoff + ' Hz';
+  });
+
+  // Resonance
+  var ctrlRes = document.getElementById('ctrl-res');
+  var valRes = document.getElementById('val-res');
+  ctrlRes.addEventListener('input', function () {
+    state.resonance = parseFloat(this.value);
+    valRes.textContent = parseFloat(state.resonance).toFixed(1);
+  });
+
+  // Attack
+  var ctrlAttack = document.getElementById('ctrl-attack');
+  var valAtk = document.getElementById('val-atk');
+  ctrlAttack.addEventListener('input', function () {
+    state.attack = parseFloat(this.value);
+    valAtk.textContent = state.attack.toFixed(2) + 's';
+  });
+
+  // Decay
+  var ctrlDecay = document.getElementById('ctrl-decay');
+  var valDec = document.getElementById('val-dec');
+  ctrlDecay.addEventListener('input', function () {
+    state.decay = parseFloat(this.value);
+    valDec.textContent = state.decay.toFixed(2) + 's';
+  });
+
+  // Kick decay
+  var ctrlKickDecay = document.getElementById('ctrl-kick-decay');
+  var valKickDec = document.getElementById('val-kick-dec');
+  ctrlKickDecay.addEventListener('input', function () {
+    state.kickDecay = parseFloat(this.value);
+    valKickDec.textContent = state.kickDecay.toFixed(2) + 's';
+  });
+
+  // Snare decay
+  var ctrlSnareDecay = document.getElementById('ctrl-snare-decay');
+  var valSnareDec = document.getElementById('val-snare-dec');
+  ctrlSnareDecay.addEventListener('input', function () {
+    state.snareDecay = parseFloat(this.value);
+    valSnareDec.textContent = state.snareDecay.toFixed(2) + 's';
+  });
+
+  /* ── Grid Click Handling (delegation) ── */
+
+  document.getElementById('grid').addEventListener('click', function (e) {
+    var cell = e.target.closest('.cell');
+    if (!cell) return;
+    var row = parseInt(cell.getAttribute('data-row'));
+    var step = parseInt(cell.getAttribute('data-step'));
+    toggleCell(row, step);
+  });
+
+  /* ── Transport Buttons ── */
+
+  document.getElementById('btn-play').addEventListener('click', togglePlay);
+  document.getElementById('btn-stop').addEventListener('click', function () {
+    if (state.playing) stopSequencer();
+  });
+  document.getElementById('btn-record').addEventListener('click', toggleRecord);
+
+  /* ── Keyboard Input ── */
+
+  var keyMap = {
+    '1': function () { initAudio(); if (state.grid[0][0]) playKick(audioCtx.currentTime); highlightRow(0); },
+    '2': function () { initAudio(); if (state.grid[1][0]) playSnare(audioCtx.currentTime); highlightRow(1); },
+    '3': function () { initAudio(); playHiHat(audioCtx.currentTime); highlightRow(2); },
+    '4': function () { initAudio(); playSynth(audioCtx.currentTime, 0); highlightRow(3); },
+  };
+
+  function highlightRow(row) {
+    var cells = document.querySelectorAll('.cells[data-row="' + row + '"] .cell');
+    cells.forEach(function (c) {
+      c.classList.add('playing');
+      setTimeout(function () { c.classList.remove('playing'); }, 150);
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT') return;
+    var k = e.key.toLowerCase();
+    if (keyMap[k]) {
+      e.preventDefault();
+      keyMap[k]();
+      return;
+    }
+    if (k === ' ') {
+      e.preventDefault();
+      togglePlay();
+      return;
+    }
+    if (k === 'r') {
+      e.preventDefault();
+      toggleRecord();
+      return;
+    }
+  });
+
+  /* ── Init ── */
+
+  buildGrid();
+
 })();

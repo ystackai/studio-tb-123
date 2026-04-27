@@ -3,162 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TB-123</title>
+  <title>TB-123 — ystackai</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
     <header id="header">
-      <h1 id="logo">TB-123</h1>
+      <div id="brand">TB-123</div>
       <div id="transport">
-        <button id="btn-play" class="ctrl-btn">PLAY</button>
-        <button id="btn-stop" class="ctrl-btn">STOP</button>
-        <button id="btn-clear" class="ctrl-btn">CLEAR</button>
-        <label class="ctrl-label">
-          BPM
-          <input id="tempo-input" type="number" value="120" min="60" max="240" step="1">
-        </label>
+        <button id="btn-play" data-tool="play">▶</button>
+        <button id="btn-stop" data-tool="stop">■</button>
+        <button id="btn-record" data-tool="record">●</button>
+        <span id="bpm-display">120</span>
+        <input type="range" id="bpm-slider" min="60" max="200" value="120" step="1" data-tool="bpm">
       </div>
     </header>
 
-    <section id="mode-toggle">
-      <button id="mode-kick" class="mode-btn active" data-mode="kick">KICK</button>
-      <button id="mode-snare" class="mode-btn" data-mode="snare">SNARE</button>
-      <button id="mode-hihat" class="mode-btn" data-mode="hihat">HH</button>
-      <button id="mode-synth" class="mode-btn" data-mode="synth">SYNTH</button>
-    </section>
+    <div id="mode-toggle">
+      <button id="mode-drum" class="active" data-tool="mode" data-mode="drum">DRUM</button>
+      <button id="mode-synth" data-tool="mode" data-mode="synth">SYNTH</button>
+    </div>
 
-    <section id="sequencer">
-      <div id="step-labels"></div>
-      <div id="track-kick" class="track" data-track="kick">
-        <span class="track-label">KICK</span>
-        <div class="steps"></div>
+    <main id="grid-container">
+      <div id="grid">
+        <div class="grid-row" data-channel="kick">
+          <div class="channel-label">KICK</div>
+          <div class="cells" data-row="0"></div>
+        </div>
+        <div class="grid-row" data-channel="snare">
+          <div class="channel-label">SNARE</div>
+          <div class="cells" data-row="1"></div>
+        </div>
+        <div class="grid-row" data-channel="hihat">
+          <div class="channel-label">HH CL</div>
+          <div class="cells" data-row="2"></div>
+        </div>
+        <div class="grid-row" data-channel="synth">
+          <div class="channel-label">SYNTH</div>
+          <div class="cells" data-row="3"></div>
+        </div>
       </div>
-      <div id="track-snare" class="track" data-track="snare">
-        <span class="track-label">SNARE</span>
-        <div class="steps"></div>
-      </div>
-      <div id="track-hihat" class="track" data-track="hihat">
-        <span class="track-label">HH</span>
-        <div class="steps"></div>
-      </div>
-      <div id="track-synth" class="track" data-track="synth">
-        <span class="track-label">SYNTH</span>
-        <div class="steps"></div>
-      </div>
-    </section>
+    </div>
 
-    <section id="synth-controls">
-      <h2>SYNTH</h2>
-      <div id="synth-params">
-        <div class="param-group">
-          <label class="param-label">WAVE
-            <select id="osc-waveform">
-              <option value="saw" selected>SAW</option>
-              <option value="square">SQ</option>
-              <option value="sine">SIN</option>
-              <option value="triangle">TRI</option>
-            </select>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">CUTOFF
-            <input id="filter-cutoff" type="range" min="50" max="10000" value="2000" step="1">
-            <span id="cutoff-value">2000 Hz</span>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">RES
-            <input id="filter-res" type="range" min="0.1" max="20" value="1" step="0.1">
-            <span id="res-value">1.0</span>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">ATTACK
-            <input id="env-attack" type="range" min="0" max="1000" value="5" step="1">
-            <span id="attack-value">5 ms</span>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">DECAY
-            <input id="env-decay" type="range" min="10" max="2000" value="200" step="1">
-            <span id="decay-value">200 ms</span>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">SUSTAIN
-            <input id="env-sustain" type="range" min="0" max="100" value="60" step="1">
-            <span id="sustain-value">60%</span>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">RELEASE
-            <input id="env-release" type="range" min="10" max="3000" value="200" step="1">
-            <span id="release-value">200 ms</span>
-          </label>
-        </div>
+    <section id="synth-controls" class="hidden">
+      <div class="control-group">
+        <label class="control-label">CUTOFF</label>
+        <input type="range" id="ctrl-cutoff" min="100" max="10000" value="2000" step="1" data-tool="cutoff">
+        <span class="control-value" id="val-cutoff">2000 Hz</span>
       </div>
-
-      <h2>PATTERN MIDI</h2>
-      <div id="synth-note-grid">
-        <div class="note-row" data-note="C2">
-          <span class="note-label">C2</span>
-          <div class="note-steps"></div>
-        </div>
-        <div class="note-row" data-note="D2">
-          <span class="note-label">D2</span>
-          <div class="note-steps"></div>
-        </div>
-        <div class="note-row" data-note="E2">
-          <span class="note-label">E2</span>
-          <div class="note-steps"></div>
-        </div>
-        <div class="note-row" data-note="F2">
-          <span class="note-label">F2</span>
-          <div class="note-steps"></div>
-        </div>
-        <div class="note-row" data-note="G2">
-          <span class="note-label">G2</span>
-          <div class="note-steps"></div>
-        </div>
-        <div class="note-row" data-note="A2">
-          <span class="note-label">A2</span>
-          <div class="note-steps"></div>
-        </div>
-        <div class="note-row" data-note="B2">
-          <span class="note-label">B2</span>
-          <div class="note-steps"></div>
-        </div>
-        <div class="note-row" data-note="C3">
-          <span class="note-label">C3</span>
-          <div class="note-steps"></div>
+      <div class="control-group">
+        <label class="control-label">RES</label>
+        <input type="range" id="ctrl-res" min="0.1" max="20" value="1" step="0.1" data-tool="resonance">
+        <span class="control-value" id="val-res">1.0</span>
+      </div>
+      <div class="control-group">
+        <label class="control-label">ATTACK</label>
+        <input type="range" id="ctrl-attack" min="0" max="1" value="0.01" step="0.01" data-tool="attack">
+        <span class="control-value" id="val-atk">0.01s</span>
+      </div>
+      <div class="control-group">
+        <label class="control-label">DECAY</label>
+        <input type="range" id="ctrl-decay" min="0.01" max="2" value="0.3" step="0.01" data-tool="decay">
+        <span class="control-value" id="val-dec">0.30s</span>
+      </div>
+      <div class="control-group">
+        <label class="control-label">WAVE</label>
+        <div id="wave-select">
+          <button class="wave-btn active" data-wave="saw">saw</button>
+          <button class="wave-btn" data-wave="square">sq</button>
+          <button class="wave-btn" data-wave="triangle">tri</button>
+          <button class="wave-btn" data-wave="sine">sin</button>
         </div>
       </div>
     </section>
 
     <section id="drum-controls">
-      <h2>DRUMS</h2>
-      <div id="drum-params">
-        <div class="param-group">
-          <label class="param-label">KICK DECAY
-            <input id="kick-decay" type="range" min="50" max="500" value="200" step="1">
-            <span id="kick-decay-value">200 ms</span>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">SNARE DECAY
-            <input id="snare-decay" type="range" min="30" max="400" value="150" step="1">
-            <span id="snare-decay-value">150 ms</span>
-          </label>
-        </div>
-        <div class="param-group">
-          <label class="param-label">HH OPEN
-            <input id="hh-open" type="range" min="30" max="400" value="80" step="1">
-            <span id="hh-open-value">80 ms</span>
-          </label>
-        </div>
+      <div class="control-group">
+        <label class="control-label">KICK DECAY</label>
+        <input type="range" id="ctrl-kick-decay" min="0.05" max="1" value="0.3" step="0.01" data-tool="kickDecay">
+        <span class="control-value" id="val-kick-dec">0.30s</span>
+      </div>
+      <div class="control-group">
+        <label class="control-label">SNARE DECAY</label>
+        <input type="range" id="ctrl-snare-decay" min="0.05" max="0.6" value="0.15" step="0.01" data-tool="snareDecay">
+        <span class="control-value" id="val-snare-dec">0.15s</span>
       </div>
     </section>
+
+    <footer id="keymap">
+      <span>KEYS: 1=KICK 2=SNARE 3=HH 4=SYNTH | SPACE=PLAY/STOP | R=RECORD</span>
+    </footer>
   </div>
   <script src="app.js"></script>
 </body>
