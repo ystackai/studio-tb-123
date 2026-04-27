@@ -1,99 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TB-123 — ystackai</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TB-123 — ystackai</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app">
-    <header id="header">
-      <div id="brand">TB-123</div>
-      <div id="transport">
-        <button id="btn-play" data-tool="play">▶</button>
-        <button id="btn-stop" data-tool="stop">■</button>
-        <button id="btn-record" data-tool="record">●</button>
-        <span id="bpm-display">120</span>
-        <input type="range" id="bpm-slider" min="60" max="200" value="120" step="1" data-tool="bpm">
-      </div>
-    </header>
+    <div id="app">
+        <header id="header">
+            <div id="brand">TB-123</div>
+            <div id="transport">
+                <button id="btn-play" data-tool="play">▶</button>
+                <button id="btn-stop" data-tool="stop">■</button>
+                <button id="btn-record" data-tool="record">●</button>
+                <button id="btn-export" data-tool="export">⤓</button>
+                <span id="bpm-display">120</span>
+                <input type="range" id="bpm-slider" min="60" max="200" value="120" step="1" data-tool="bpm">
+            </div>
+        </header>
 
-    <div id="mode-toggle">
-      <button id="mode-drum" class="active" data-tool="mode" data-mode="drum">DRUM</button>
-      <button id="mode-synth" data-tool="mode" data-mode="synth">SYNTH</button>
+        <div id="mode-toggle">
+            <button id="mode-drum" class="active" data-tool="mode" data-mode="drum">DRUM</button>
+            <button id="mode-synth" data-tool="mode" data-mode="synth">SYNTH</button>
+        </div>
+
+        <main id="grid-container">
+            <div id="grid">
+                <div class="grid-row" data-channel="kick">
+                    <div class="channel-label">KICK</div>
+                    <div class="cells" data-row="0"></div>
+                </div>
+                <div class="grid-row" data-channel="snare">
+                    <div class="channel-label">SNARE</div>
+                    <div class="cells" data-row="1"></div>
+                </div>
+                <div class="grid-row" data-channel="hihat">
+                    <div class="channel-label">HH CL</div>
+                    <div class="cells" data-row="2"></div>
+                </div>
+                <div class="grid-row" data-channel="synth">
+                    <div class="channel-label">SYNTH</div>
+                    <div class="cells" data-row="3"></div>
+                </div>
+            </div>
+        </main>
+
+        <section id="synth-controls" class="hidden">
+            <div class="control-group">
+                <label class="control-label">CUTOFF</label>
+                <input type="range" id="ctrl-cutoff" min="100" max="10000" value="2000" step="1" data-tool="cutoff">
+                <span class="control-value" id="val-cutoff">2000 Hz</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">RES</label>
+                <input type="range" id="ctrl-res" min="0.1" max="20" value="1" step="0.1" data-tool="resonance">
+                <span class="control-value" id="val-res">1.0</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">ATTACK</label>
+                <input type="range" id="ctrl-attack" min="0" max="1" value="0.01" step="0.01" data-tool="attack">
+                <span class="control-value" id="val-atk">0.01s</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">DECAY</label>
+                <input type="range" id="ctrl-decay" min="0.01" max="2" value="0.3" step="0.01" data-tool="decay">
+                <span class="control-value" id="val-dec">0.30s</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">WAVE</label>
+                <div id="wave-select">
+                    <button class="wave-btn active" data-wave="saw">saw</button>
+                    <button class="wave-btn" data-wave="square">sq</button>
+                    <button class="wave-btn" data-wave="triangle">tri</button>
+                    <button class="wave-btn" data-wave="sine">sin</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="drum-controls">
+            <div class="control-group">
+                <label class="control-label">KICK DECAY</label>
+                <input type="range" id="ctrl-kick-decay" min="0.05" max="1" value="0.3" step="0.01" data-tool="kickDecay">
+                <span class="control-value" id="val-kick-dec">0.30s</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">SNARE DECAY</label>
+                <input type="range" id="ctrl-snare-decay" min="0.05" max="0.6" value="0.15" step="0.01" data-tool="snareDecay">
+                <span class="control-value" id="val-snare-dec">0.15s</span>
+            </div>
+        </section>
+
+        <footer id="keymap">
+            <span>KEYS: 1=KICK 2=SNARE 3=HH 4=SYNTH | SPACE=PLAY/STOP | R=REC | E=EXPORT</span>
+        </footer>
     </div>
-
-    <main id="grid-container">
-      <div id="grid">
-        <div class="grid-row" data-channel="kick">
-          <div class="channel-label">KICK</div>
-          <div class="cells" data-row="0"></div>
-        </div>
-        <div class="grid-row" data-channel="snare">
-          <div class="channel-label">SNARE</div>
-          <div class="cells" data-row="1"></div>
-        </div>
-        <div class="grid-row" data-channel="hihat">
-          <div class="channel-label">HH CL</div>
-          <div class="cells" data-row="2"></div>
-        </div>
-        <div class="grid-row" data-channel="synth">
-          <div class="channel-label">SYNTH</div>
-          <div class="cells" data-row="3"></div>
-        </div>
-      </div>
-    </div>
-
-    <section id="synth-controls" class="hidden">
-      <div class="control-group">
-        <label class="control-label">CUTOFF</label>
-        <input type="range" id="ctrl-cutoff" min="100" max="10000" value="2000" step="1" data-tool="cutoff">
-        <span class="control-value" id="val-cutoff">2000 Hz</span>
-      </div>
-      <div class="control-group">
-        <label class="control-label">RES</label>
-        <input type="range" id="ctrl-res" min="0.1" max="20" value="1" step="0.1" data-tool="resonance">
-        <span class="control-value" id="val-res">1.0</span>
-      </div>
-      <div class="control-group">
-        <label class="control-label">ATTACK</label>
-        <input type="range" id="ctrl-attack" min="0" max="1" value="0.01" step="0.01" data-tool="attack">
-        <span class="control-value" id="val-atk">0.01s</span>
-      </div>
-      <div class="control-group">
-        <label class="control-label">DECAY</label>
-        <input type="range" id="ctrl-decay" min="0.01" max="2" value="0.3" step="0.01" data-tool="decay">
-        <span class="control-value" id="val-dec">0.30s</span>
-      </div>
-      <div class="control-group">
-        <label class="control-label">WAVE</label>
-        <div id="wave-select">
-          <button class="wave-btn active" data-wave="saw">saw</button>
-          <button class="wave-btn" data-wave="square">sq</button>
-          <button class="wave-btn" data-wave="triangle">tri</button>
-          <button class="wave-btn" data-wave="sine">sin</button>
-        </div>
-      </div>
-    </section>
-
-    <section id="drum-controls">
-      <div class="control-group">
-        <label class="control-label">KICK DECAY</label>
-        <input type="range" id="ctrl-kick-decay" min="0.05" max="1" value="0.3" step="0.01" data-tool="kickDecay">
-        <span class="control-value" id="val-kick-dec">0.30s</span>
-      </div>
-      <div class="control-group">
-        <label class="control-label">SNARE DECAY</label>
-        <input type="range" id="ctrl-snare-decay" min="0.05" max="0.6" value="0.15" step="0.01" data-tool="snareDecay">
-        <span class="control-value" id="val-snare-dec">0.15s</span>
-      </div>
-    </section>
-
-    <footer id="keymap">
-      <span>KEYS: 1=KICK 2=SNARE 3=HH 4=SYNTH | SPACE=PLAY/STOP | R=RECORD</span>
-    </footer>
-  </div>
-  <script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
