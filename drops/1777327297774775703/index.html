@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Circuit</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <h1 id="title">OPEN CIRCUIT</h1>
+      <div id="controls">
+        <div class="control-group">
+          <label for="decay">Decay</label>
+          <input type="range" id="decay" min="0" max="100" value="65">
+          <span id="decay-value">65</span>
+        </div>
+        <div class="control-group">
+          <label for="cutoff">Cutoff</label>
+          <input type="range" id="cutoff" min="0" max="100" value="50">
+          <span id="cutoff-value">50</span>
+        </div>
+        <div class="control-group">
+          <label for="resonance">Resonance</label>
+          <input type="range" id="resonance" min="0" max="100" value="40">
+          <span id="resonance-value">40</span>
+        </div>
+        <div class="control-group">
+          <label for="mix">Mix</label>
+          <input type="range" id="mix" min="0" max="100" value="50">
+          <span id="mix-value">50</span>
+        </div>
+      </div>
+    </header>
+    <main id="stage">
+      <canvas id="grid-canvas"></canvas>
+      <canvas id="waveform-canvas"></canvas>
+      <div id="status">
+        <span id="latency-display">Latency: --ms</span>
+        <span id="oscillation-indicator" class="indicator">OSC: OFF</span>
+        <span id="clip-indicator" class="indicator">CLIP: OFF</span>
+      </div>
+    </main>
+    <div id="patch-info">
+      <span id="patch-name">Default: Major Chord</span>
+      <span id="patch-desc">Lush, warm, open — woody tail</span>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
