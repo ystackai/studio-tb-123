@@ -243,32 +243,11 @@
     function drawGrid(noise) {
       const gridOpacity = Math.min(1, noise * 10);
       if (gridOpacity <= 0.01) return;
-      
-      const gridCtx = grid.getContext('2d');
-      gridCtx.clearRect(0, 0, grid.width, grid.height);
-      
-      gridCtx.strokeStyle = '#00ffff';
-      gridCtx.lineWidth = 1;
-      
-      const width = grid.width;
-      const height = grid.height;
+
       const gridSize = 50 + noise * 200;
-      
-      // Draw vertical lines
-      for (let x = 0; x < width; x += gridSize) {
-        gridCtx.beginPath();
-        gridCtx.moveTo(x, 0);
-        gridCtx.lineTo(x, height);
-        gridCtx.stroke();
-      }
-      
-      // Draw horizontal lines
-      for (let y = 0; y < height; y += gridSize) {
-        gridCtx.beginPath();
-        gridCtx.moveTo(0, y);
-        gridCtx.lineTo(width, y);
-        gridCtx.stroke();
-      }
+      grid.style.opacity = gridOpacity;
+      grid.style.backgroundImage = 'linear-gradient(rgba(0,255,255,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,255,0.25) 1px, transparent 1px)';
+      grid.style.backgroundSize = gridSize + 'px ' + gridSize + 'px';
     }
     
     // Trigger kick sound based on noise
