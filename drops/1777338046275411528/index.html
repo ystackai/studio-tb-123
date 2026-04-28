@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Circuit Synthesizer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="game.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <h1 id="title">OPEN CIRCUIT</h1>
+      <p id="subtitle">Browser Synthesizer</p>
+    </header>
+    <div id="controls">
+       <div class="knob-group">
+         <label for="filter-cutoff" id="filter-cutoff-label">Filter Cutoff</label>
+         <div class="knob-container">
+           <div class="knob" id="filter-cutoff" data-param="cutoff" data-min="200" data-max="12000" data-value="4000"><div class="knob-indicator"></div></div>
+           <span class="knob-value" id="cutoff-display">4000 Hz</span>
+         </div>
+       </div>
+       <div class="knob-group">
+         <label for="decay" id="decay-label">Decay</label>
+         <div class="knob-container">
+           <div class="knob" id="decay" data-param="decay" data-min="0.1" data-max="5" data-value="1.2"><div class="knob-indicator"></div></div>
+           <span class="knob-value" id="decay-display">1.2s</span>
+         </div>
+       </div>
+       <div class="knob-group">
+         <label for="vcapredelay" id="vcapredelay-label">VCA Pre-delay</label>
+         <div class="knob-container">
+           <div class="knob" id="vcapredelay" data-param="vcapredelay" data-min="0" data-max="50" data-value="10"><div class="knob-indicator"></div></div>
+           <span class="knob-value" id="vcapredelay-display">10ms</span>
+         </div>
+       </div>
+    </div>
+    <div id="grid-container">
+      <canvas id="grid-canvas"></canvas>
+    </div>
+    <div id="visualizer-container">
+      <canvas id="visualizer-canvas"></canvas>
+    </div>
+    <div id="amplitude-overlay"></div>
+    <footer id="footer">
+      <span>Click grid cells to play | Drag to sequence</span>
+    </footer>
+  </div>
+</body>
+</html>
