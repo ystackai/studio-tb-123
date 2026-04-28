@@ -241,6 +241,7 @@
     
     // Draw grid visualization
     function drawGrid(noise) {
+      const gridOpacity = Math.min(1, noise * 10);
       if (gridOpacity <= 0.01) return;
       
       const gridCtx = grid.getContext('2d');
