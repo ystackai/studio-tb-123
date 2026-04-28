@@ -545,8 +545,12 @@
     ctx.fillStyle = `rgba(10, 10, 12, 1)`;
     ctx.fillRect(0, 0, w, h);
 
-    // Read time-domain data directly from analyser (hardwired to audio)
-    analyser.getByteTimeDomainData(freqData);
+    // Read time-domain data directly from analyser when audio has been started.
+    if (analyser) {
+      analyser.getByteTimeDomainData(freqData);
+    } else {
+      freqData.fill(128);
+    }
 
     const dbLevel = env;
     const brightness = Math.max(0.08, dbLevel);   // floor so signal is never hidden

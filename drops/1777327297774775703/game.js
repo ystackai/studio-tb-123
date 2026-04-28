@@ -249,6 +249,7 @@ function handleGridInput(e) {
 
   if (col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS) {
     gridCells[col + row * GRID_COLS] = true;
+    if (!state.audioCtx || !state.filterNode || !state.vcaGain) return;
 
     const cutoffNorm = col / GRID_COLS;
     const resonanceNorm = 1 - row / GRID_ROWS;

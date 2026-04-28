@@ -218,8 +218,23 @@
         
         return { oscillator, gainNode, filter };
       } catch (err) {
-        console.error('Audio initialization error:', err);
-        status.textContent = 'MIC ACCESS REQUIRED';
+        status.textContent = 'MIC SIMULATION MODE';
+        function processFallbackAudio() {
+          if (!isRunning) return;
+          noiseFloor = 0.05 + Math.random() * 0.08;
+          noiseHistory.push(noiseFloor);
+          if (noiseHistory.length > 10) {
+            noiseHistory.shift();
+          }
+          const smoothedNoise = noiseHistory.reduce((a, b) => a + b, 0) / noiseHistory.length;
+          led.style.opacity = Math.min(1, smoothedNoise * 3);
+          if (bootPhase > 0) {
+            grid.style.opacity = Math.min(1, smoothedNoise * 10);
+            drawGrid(smoothedNoise);
+          }
+          requestAnimationFrame(processFallbackAudio);
+        }
+        processFallbackAudio();
         return null;
       }
     }
