@@ -1,0 +1,131 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #080808;
+  --bg-cell: #141414;
+  --cell-active: #e02828;
+  --cell-glow: #ff4040;
+  --cell-pressed: #ffffff;
+  --cell-fade: #2a0a0a;
+  --text-primary: #f0f0f0;
+  --text-dim: #777;
+  --grid-gap: 6px;
+  --cell-size: clamp(44px, 8vmin, 72px);
+  --radius: 6px;
+  --glow-spread: 18px;
+  --transition-fast: 80ms;
+  --transition-decay: 600ms;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100dvh;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 2vmin;
+  gap: 3vmin;
+}
+
+header {
+  text-align: center;
+}
+
+h1 {
+  font-size: clamp(1.4rem, 4vmin, 2.4rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.subtitle {
+  font-size: clamp(0.7rem, 2vmin, 0.95rem);
+  color: var(--text-dim);
+  margin-top: 0.5em;
+  letter-spacing: 0.08em;
+}
+
+.grid {
+  display: grid;
+  gap: var(--grid-gap);
+  grid-template-columns: repeat(var(--cols, 8), var(--cell-size));
+  grid-template-rows: repeat(var(--rows, 5), var(--cell-size));
+}
+
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border-radius: var(--radius);
+  background: var(--bg-cell);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  cursor: pointer;
+  position: relative;
+  outline: none;
+}
+
+.cell:hover {
+  background: #1e1e1e;
+}
+
+.cell:focus-visible {
+  box-shadow: 0 0 0 2px var(--text-primary);
+}
+
+.cell.active {
+  background: var(--cell-active);
+  box-shadow:
+    0 0 var(--glow-spread) rgba(255, 64, 64, 0.45),
+    0 0 calc(var(--glow-spread) * 2) rgba(255, 64, 64, 0.15);
+}
+
+.cell.pressed {
+  background: var(--cell-pressed);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.6),
+    0 0 24px rgba(255, 255, 255, 0.2);
+  transition: none;
+}
+
+.cell.decaying {
+  background: var(--cell-fade);
+  transition: background var(--transition-decay) ease-out;
+}
+
+.status {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-align: center;
+  min-height: 1.2em;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --grid-gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell {
+    transition: none;
+  }
+}
