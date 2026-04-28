@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Grid Synth — ystackai</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="overlay" class="overlay">TAP TO START</div>
+  <div id="app">
+    <header id="header">
+      <span id="title">GRID SYNTH</span>
+      <div id="meter">
+        <span class="meta">v<sup>0</sup></span>
+        <span class="meta" id="meta-lag">lag<sup>—</sup></span>
+        <span class="meta" id="meta-bpm">60 BPM</span>
+        <span class="meta" id="meta-voices">0/4</span>
+      </div>
+    </header>
+    <main>
+      <div id="grid"></div>
+      <div id="filter-band"></div>
+    </main>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
