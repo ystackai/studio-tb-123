@@ -1,539 +1,650 @@
-// ============================================================
-// Open Circuit - Browser Synthesizer Core
-// Signal Flow: VCO -> Soft-knee Filter -> VCA -> Soft-clamp -> Output
-// ============================================================
+(function () {
+  "use strict";
 
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  // ─── Config ────────────────────────────────────────────────
+  var DEFAULT_CUTOFF = 2000;
+  var CUTOFF_MIN = 50;
+  var CUTOFF_MAX = 12000;
+  var SELF_OSC_THRESHOLD = 0.85;
+  var GRID_COLS = 16;
+  var GRID_ROWS = 10;
+  var CHORD = [261.63, 329.63, 392.00]; // C4 E4 G4
 
-// Default Major Chord Patch
-const PATCH = {
-  name: "Major Chord",
-  desc: "Lush, warm, open — woody tail",
-  frequencies: [261.63, 329.63, 392.00],
-  decay: 0.65,
-  cutoff: 0.50,
-  resonance: 0.40,
-  mix: 0.50,
-  waveform: "sawtooth",
-};
+  // ─── State ─────────────────────────────────────────────────
+  var audioCtx = null;
+  var oscillators = [];
+  var filterNode = null;
+  var vcaNode = null;
+  var analyser = null;
+  var softClamp = null;
+  var gainNode = null;
+  var preDelayNode = null;
+  var selfOscOsc = null;
+  var selfOscGain = null;
+  var engineStarted = false;
+  var dragging = false;
+  var currentCutoff = DEFAULT_CUTOFF;
+  var currentResonance = 5;
+  var currentDecay = 0.3;
+  var currentGain = 0.5;
+  var selfOscActive = false;
+  var amplitudeHistory = new Float32Array(64);
+  var ampIndex = 0;
+  var frameId = null;
+  var lastFrameTime = 0;
 
-// State
-const state = {
-  audioCtx: null,
-  masterGain: null,
-  filterNode: null,
-  vcaGain: null,
-  oscillators: [],
-  softClampNode: null,
-  analyser: null,
-  decayParam: null,
-  decayEnvelope: null,
-  selfOscillating: false,
-  clipping: false,
-  gridAmplitude: 0,
-  mouseDown: false,
-  mouseX: 0,
-  mouseY: 0,
-  isRunning: false,
-  startTime: 0,
-  lastFrameTime: 0,
-  latencyMs: 0,
-};
+  // ─── Canvas Setup ──────────────────────────────────────────
+  var canvas = document.getElementById("grid-canvas");
+  var ctx = canvas.getContext("2d");
+  var dpr = window.devicePixelRatio || 1;
 
-// Grid Config
-const GRID_COLS = 32;
-const GRID_ROWS = 16;
-let gridCells = [];
-let cellWidth = 0;
-let cellHeight = 0;
+  function resizeCanvas() {
+    var rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
 
-// DOM Refs
-const gridCanvas = document.getElementById("grid-canvas");
-const waveCanvas = document.getElementById("waveform-canvas");
-const gridCtx = gridCanvas.getContext("2d");
-const waveCtx = waveCanvas.getContext("2d");
-
-const decaySlider = document.getElementById("decay");
-const cutoffSlider = document.getElementById("cutoff");
-const resonanceSlider = document.getElementById("resonance");
-const mixSlider = document.getElementById("mix");
-
-const decayValue = document.getElementById("decay-value");
-const cutoffValue = document.getElementById("cutoff-value");
-const resonanceValue = document.getElementById("resonance-value");
-const mixValue = document.getElementById("mix-value");
-
-const latencyDisplay = document.getElementById("latency-display");
-const oscIndicator = document.getElementById("oscillation-indicator");
-const clipIndicator = document.getElementById("clip-indicator");
-
-// Audio Engine Initialization
-function initAudio() {
-  if (state.audioCtx) return;
-
-  const ctx = new AudioCtx({ latencyHint: "interactive" });
-  state.audioCtx = ctx;
-
-  // Master gain
-  const master = ctx.createGain();
-  master.gain.value = 0.75;
-  state.masterGain = master;
-
-  // Analyser for visual feedback
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 2048;
-  analyser.smoothingTimeConstant = 0.8;
-  state.analyser = analyser;
-
-  // Soft-knee filter
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 4000;
-  filter.Q.value = 2;
-  filter.detune.value = 0;
-  state.filterNode = filter;
-
-  // VCA (amplitude control for decay envelope)
-  const vca = ctx.createGain();
-  vca.gain.value = 0;
-  state.vcaGain = vca;
-
-  // Decay envelope
-  const now = ctx.currentTime;
-  vca.gain.setValueAtTime(0, now);
-  vca.gain.linearRampToValueAtTime(0.8, now + 0.01);
-  vca.gain.exponentialRampToValueAtTime(0.001, now + 5);
-  state.decayEnvelope = vca.gain;
-
-  // Decay parameter
-  const decayParam = ctx.createGain();
-  decayParam.gain.value = PATCH.decay;
-  state.decayParam = decayParam;
-
-  // Create VCOs for major chord
-  const oscs = [];
-  PATCH.frequencies.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    osc.type = PATCH.waveform;
-    osc.frequency.value = freq;
-
-    const oscGain = ctx.createGain();
-    oscGain.gain.value = 0.18 - (i * 0.025);
-
-    osc.connect(oscGain);
-    oscGain.connect(filter);
-    osc.start(now);
-    oscs.push({ osc, gain: oscGain, freq });
-  });
-  state.oscillators = oscs;
-
-  // Signal chain: filter -> vca -> master -> softClamp -> analyser
-  filter.connect(vca);
-  vca.connect(master);
-
-  // Load audio worklet for soft-clamp processing
-  ctx.audioWorklet
-    .addModule("audio-worklet-processor.js")
-    .then(() => {
-      const worklet = new AudioWorkletNode(ctx, "softclamp-processor");
-      master.connect(worklet);
-      worklet.connect(analyser);
-      analyser.connect(ctx.destination);
-      state.softClampNode = worklet;
-      state.isRunning = true;
-      console.log("[Open Circuit] Audio engine initialized");
-    })
-    .catch((err) => {
-      console.warn("[Open Circuit] Worklet failed, routing direct:", err);
-      master.connect(analyser);
-      analyser.connect(ctx.destination);
-      state.isRunning = true;
+  // ─── Audio Engine Initialization ───────────────────────────
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+      latencyHint: "interactive",
+      sampleRate: 48000,
     });
 
-  startVisualLoop();
-}
+    // Analyser for amplitude routing
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.75;
 
-// Soft-Knee Filter Update
-function updateFilter() {
-  const cutoff = parseFloat(cutoffSlider.value) / 100;
-  const resonance = parseFloat(resonanceSlider.value) / 100;
+    // Filter - soft-knee lowpass
+    filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = "lowpass";
+    filterNode.frequency.value = currentCutoff;
+    filterNode.Q.value = currentResonance;
 
-  const freq = 200 + Math.pow(cutoff, 2.5) * 18000;
-  const qVal = 0.5 + Math.pow(resonance, 1.5) * 15;
+    // VCA - gain controlled by amplitude routing
+    vcaNode = audioCtx.createGain();
+    vcaNode.gain.value = 1;
 
-  const now = state.audioCtx.currentTime;
-  state.filterNode.frequency.setTargetAtTime(freq, now, 0.02);
-  state.filterNode.Q.setTargetAtTime(qVal, now, 0.03);
+    // Pre-delay node for VCA envelope shaping
+    preDelayNode = audioCtx.createDelay(0.01);
+    preDelayNode.delayTime.value = 0.002; // ~2ms pre-delay
 
-  // Self-oscillation detection
-  const oscThreshold = 0.75;
-  if (resonance > oscThreshold && cutoff > 0.7) {
-    if (!state.selfOscillating) {
-      state.selfOscillating = true;
-      oscIndicator.classList.add("active");
-      oscIndicator.textContent = "OSC: ON";
-      state.filterNode.Q.setTargetAtTime(qVal * 1.5, now, 0.01);
+    // Soft-clamp using WaveShaper
+    softClamp = audioCtx.createWaveShaper();
+    softClamp.curve = makeSoftClampCurve();
+    softClamp.oversample = "4x";
+
+    // Master output gain
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = currentGain;
+
+    // Self-oscillation oscillator (hidden, triggered at threshold)
+    selfOscOsc = audioCtx.createOscillator();
+    selfOscOsc.type = "triangle";
+    selfOscOsc.frequency.value = currentCutoff * 0.5;
+    selfOscOsc.stop();
+
+    selfOscGain = audioCtx.createGain();
+    selfOscGain.gain.value = 0;
+
+    // Signal chain:
+    // VCOs -> Filter -> VCA -> Pre-delay -> Soft-clamp -> Gain -> Analyser -> Output
+
+    // Create oscillators for C major chord
+    CHORD.forEach(function (freq) {
+      var osc = audioCtx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = freq;
+
+      // Soft-knee compression on individual VCO
+      var vcoComp = audioCtx.createDynamicsCompressor();
+      vcoComp.threshold.value = -20;
+      vcoComp.ratio.value = 4;
+      vcoComp.attack.value = 0.001;
+      vcoComp.release.value = 0.1;
+
+      osc.connect(vcoComp);
+      vcoComp.connect(filterNode);
+      osc.start();
+      oscillators.push({ osc: osc, compressor: vcoComp });
+    });
+
+    // Connect filter -> vca -> pre-delay -> softclamp -> gain -> analyser -> destination
+    filterNode.connect(vcaNode);
+    vcaNode.connect(preDelayNode);
+    preDelayNode.connect(softClamp);
+    softClamp.connect(gainNode);
+    gainNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    // Self-osc feedback path
+    selfOscOsc.connect(selfOscGain);
+    selfOscGain.connect(filterNode);
+
+    engineStarted = true;
+    updateSelfOscState();
+  }
+
+  // ─── Soft-Clamp Curve ──────────────────────────────────────
+  function makeSoftClampCurve() {
+    var n = 4096;
+    var curve = new Float32Array(n);
+    for (var i = 0; i < n; i++) {
+      var x = (i * 2) / (n - 1) - 1;
+      // Smooth tanh-based soft clamp
+      curve[i] = Math.tanh(x * 2.5);
     }
-  } else {
-    if (state.selfOscillating) {
-      state.selfOscillating = false;
-      oscIndicator.classList.remove("active");
-      oscIndicator.textContent = "OSC: OFF";
+    return curve;
+  }
+
+  // ─── Self-Oscillation Management ───────────────────────────
+  function updateSelfOscState() {
+    if (!engineStarted) return;
+
+    var wasActive = selfOscActive;
+    selfOscActive = currentDecay >= SELF_OSC_THRESHOLD;
+    var now = audioCtx.currentTime;
+
+    if (selfOscActive && !wasActive) {
+      // Starting self-osc: ramp filter Q up smoothly
+      var targetQ = 22 + (currentDecay - SELF_OSC_THRESHOLD) * 80;
+
+      filterNode.frequency.setTargetAtTime(currentCutoff, now, 0.01);
+      filterNode.Q.setTargetAtTime(targetQ, now, 0.05);
+
+      // Start self-osc oscillator at filter freq
+      if (selfOscOsc) {
+        try {
+          selfOscOsc.frequency.setTargetAtTime(currentCutoff * 0.95, now, 0.02);
+          selfOscGain.gain.setTargetAtTime(0.15 + (currentDecay - SELF_OSC_THRESHOLD) * 3, now, 0.08);
+          selfOscOsc.start(now);
+        } catch (e) {}
+      }
+
+      // VCA boost for self-osc
+      vcaNode.gain.setTargetAtTime(1.3, now, 0.03);
+    } else if (!selfOscActive && wasActive) {
+      // Stopping self-osc: smooth decay
+      filterNode.Q.setTargetAtTime(currentResonance, now, 0.1);
+      if (selfOscGain) {
+        selfOscGain.gain.setTargetAtTime(0, now, 0.15);
+      }
+      if (selfOscOsc) {
+        try {
+          selfOscOsc.stop(now + 0.2);
+          selfOscOsc = audioCtx.createOscillator();
+          selfOscOsc.type = "triangle";
+          selfOscOsc.frequency.value = currentCutoff * 0.5;
+          selfOscOsc.connect(selfOscGain);
+          selfOscGain.connect(filterNode);
+        } catch (e) {}
+      }
+      vcaNode.gain.setTargetAtTime(1, now, 0.05);
+    } else if (selfOscActive) {
+      // Adjust self-osc intensity while active
+      var targetQ = 22 + (currentDecay - SELF_OSC_THRESHOLD) * 80;
+      filterNode.Q.setTargetAtTime(targetQ, now, 0.02);
+      if (selfOscGain) {
+        selfOscGain.gain.setTargetAtTime(
+          0.15 + (currentDecay - SELF_OSC_THRESHOLD) * 3,
+          now,
+          0.02
+        );
+      }
+      if (selfOscOsc) {
+        selfOscOsc.frequency.setTargetAtTime(currentCutoff * 0.95, now, 0.01);
+      }
     }
   }
-}
 
-// Decay Envelope
-function updateDecay() {
-  const decay = parseFloat(decaySlider.value) / 100;
-  const ctx = state.audioCtx;
-  const now = ctx.currentTime;
+  // ─── Amplitude Routing to VCA Pre-Delay ───────────────────
+  function updateAmplitudeRouting() {
+    if (!analyser || !engineStarted) return;
 
-  const tailTime = 1.0 + decay * 10;
-  const attackTime = 0.005;
+    var data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
 
-  state.decayEnvelope.cancelScheduledValues(now);
-  state.decayEnvelope.setValueAtTime(0, now);
-  state.decayEnvelope.linearRampToValueAtTime(0.8, now + attackTime);
-  state.decayEnvelope.exponentialRampToValueAtTime(0.001, now + tailTime);
+    // Calculate weighted amplitude from lower frequencies (transient-sensitive)
+    var weightedSum = 0;
+    var weightCount = 0;
+    for (var i = 0; i < data.length; i++) {
+      var weight = 1.0 - (i / data.length) * 0.7;
+      weightedSum += data[i] * weight;
+      weightCount += weight;
+    }
+    var amplitude = weightCount > 0 ? weightedSum / weightCount / 255 : 0;
 
-  // Decay modulates filter cutoff for "misuse" behavior
-  const decayMod = decay * 2000;
-  state.filterNode.frequency.setTargetAtTime(
-    state.filterNode.frequency.value + decayMod,
-    now,
-    0.05
-  );
-}
+    // Store in history ring buffer
+    amplitudeHistory[ampIndex % amplitudeHistory.length] = amplitude;
+    ampIndex++;
 
-// Mix Control
-function updateMix() {
-  const mix = parseFloat(mixSlider.value) / 100;
-  state.masterGain.gain.setTargetAtTime(0.3 + mix * 0.7, state.audioCtx.currentTime, 0.02);
-}
+    // VCA pre-delay envelope: attack from transients, hold from avg
+    var now = audioCtx.currentTime;
+    var avgAmp = 0;
+    for (var j = 0; j < amplitudeHistory.length; j++) {
+      avgAmp += amplitudeHistory[j];
+    }
+    avgAmp /= amplitudeHistory.length;
 
-// Grid Interaction
-function setupGridInteraction() {
-  gridCanvas.addEventListener("mousedown", (e) => {
-    state.mouseDown = true;
-    handleGridInput(e);
-  });
-  gridCanvas.addEventListener("mousemove", (e) => {
-    if (state.mouseDown) handleGridInput(e);
-  });
-  window.addEventListener("mouseup", () => {
-    state.mouseDown = false;
-  });
+    // Route amplitude to VCA with smooth attack/decay
+    var envTarget = 0.5 + amplitude * 0.5;
+    vcaNode.gain.setTargetAtTime(envTarget, now, 0.004);
 
-  gridCanvas.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    state.mouseDown = true;
-    handleGridInput(e.touches[0]);
-  });
-  gridCanvas.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-    handleGridInput(e.touches[0]);
-  });
-  gridCanvas.addEventListener("touchend", () => {
-    state.mouseDown = false;
-  });
-}
-
-function handleGridInput(e) {
-  const rect = gridCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const col = Math.floor(x / cellWidth);
-  const row = Math.floor(y / cellHeight);
-
-  if (col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS) {
-    gridCells[col + row * GRID_COLS] = true;
-
-    const cutoffNorm = col / GRID_COLS;
-    const resonanceNorm = 1 - row / GRID_ROWS;
-
-    const cutoffFreq = 200 + Math.pow(cutoffNorm, 2.5) * 18000;
-    const qVal = 0.5 + Math.pow(resonanceNorm, 1.5) * 15;
-    const now = state.audioCtx.currentTime;
-    state.filterNode.frequency.setTargetAtTime(cutoffFreq, now, 0.01);
-    state.filterNode.Q.setTargetAtTime(qVal, now, 0.02);
-
-    state.gridAmplitude = Math.min(1, (col + row) / (GRID_COLS + GRID_ROWS));
-
-    const preDelay = 0.002 + state.gridAmplitude * 0.004;
-    state.vcaGain.gain.setTargetAtTime(
-      Math.min(1, 0.4 + state.gridAmplitude * 0.6),
-      now + preDelay,
-      0.008
-    );
-  }
-}
-
-// Canvas Resize
-function resizeCanvases() {
-  const dpr = window.devicePixelRatio || 1;
-
-  const gRect = gridCanvas.getBoundingClientRect();
-  gridCanvas.width = gRect.width * dpr;
-  gridCanvas.height = gRect.height * dpr;
-  gridCtx.scale(dpr, dpr);
-
-  const wRect = waveCanvas.getBoundingClientRect();
-  waveCanvas.width = wRect.width * dpr;
-  waveCanvas.height = wRect.height * dpr;
-  waveCtx.scale(dpr, dpr);
-
-  cellWidth = gRect.width / GRID_COLS;
-  cellHeight = gRect.height / GRID_ROWS;
-}
-
-// Visual Rendering
-function drawGrid(timestamp) {
-  const dpr = window.devicePixelRatio || 1;
-  const w = gridCanvas.width / dpr;
-  const h = gridCanvas.height / dpr;
-
-  gridCtx.clearRect(0, 0, w, h);
-  gridCtx.fillStyle = "#0a0a0c";
-  gridCtx.fillRect(0, 0, w, h);
-
-  // Grid lines
-  gridCtx.strokeStyle = "#1a1a1e";
-  gridCtx.lineWidth = 0.5;
-
-  for (let c = 0; c <= GRID_COLS; c++) {
-    const x = c * cellWidth;
-    gridCtx.beginPath();
-    gridCtx.moveTo(x, 0);
-    gridCtx.lineTo(x, h);
-    gridCtx.stroke();
-  }
-  for (let r = 0; r <= GRID_ROWS; r++) {
-    const y = r * cellHeight;
-    gridCtx.beginPath();
-    gridCtx.moveTo(0, y);
-    gridCtx.lineTo(w, y);
-    gridCtx.stroke();
+    return amplitude;
   }
 
-  // Active cells with distortion visualization
-  const time = (timestamp - state.startTime) / 1000;
-  const oscPulse = state.selfOscillating ? Math.sin(time * 25) * 0.3 + 0.7 : 1;
-  const breathe = Math.sin(time * 1.5) * 0.1 + 0.9;
-
-  for (let i = 0; i < gridCells.length; i++) {
-    if (!gridCells[i]) continue;
-
-    const col = i % GRID_COLS;
-    const row = Math.floor(i / GRID_COLS);
-    const cx = col * cellWidth + cellWidth / 2;
-    const cy = row * cellHeight + cellHeight / 2;
-    const pad = 2;
-
-    const dx = state.selfOscillating ? Math.sin(time * 30 + i * 0.1) * oscPulse * 6 : 0;
-    const dy = state.selfOscillating ? Math.cos(time * 25 + i * 0.08) * oscPulse * 3 : 0;
-
-    const alpha = breathe * (0.5 + state.gridAmplitude * 0.5);
-
-    gridCtx.fillStyle = "rgba(230, 57, 70, " + alpha.toFixed(3) + ")";
-    gridCtx.shadowColor = "rgba(230, 57, 70, 0.6)";
-    gridCtx.shadowBlur = state.selfOscillating ? 12 : 4;
-
-    const size = Math.min(cellWidth, cellHeight) - pad * 2;
-    gridCtx.fillRect(
-      cx - size / 2 + dx,
-      cy - size / 2 + dy,
-      size,
-      size
-    );
+  // ─── Grid Interaction ──────────────────────────────────────
+  function getGridPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    return {
+      x: (clientX - rect.left) / rect.width,
+      y: (clientY - rect.top) / rect.height,
+    };
   }
-  gridCtx.shadowBlur = 0;
-}
 
-function drawWaveform(timestamp) {
-  if (!state.analyser) return;
-
-  const dpr = window.devicePixelRatio || 1;
-  const w = waveCanvas.width / dpr;
-  const h = waveCanvas.height / dpr;
-
-  const bufLen = state.analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufLen);
-  state.analyser.getByteTimeDomainData(dataArray);
-
-  waveCtx.clearRect(0, 0, w, h);
-  waveCtx.fillStyle = "#0a0a0c";
-  waveCtx.fillRect(0, 0, w, h);
-
-  // Center line
-  waveCtx.strokeStyle = "#1a1a1e";
-  waveCtx.lineWidth = 1;
-  waveCtx.beginPath();
-  waveCtx.moveTo(0, h / 2);
-  waveCtx.lineTo(w, h / 2);
-  waveCtx.stroke();
-
-  // Waveform
-  waveCtx.lineWidth = 2;
-  waveCtx.strokeStyle = "#e63946";
-  waveCtx.shadowColor = "rgba(230, 57, 70, 0.4)";
-  waveCtx.shadowBlur = 4;
-  waveCtx.beginPath();
-
-  const sliceWidth = w / bufLen;
-  let x = 0;
-  for (let i = 0; i < bufLen; i++) {
-    const v = dataArray[i] / 128.0;
-    const y = v * h / 2;
-    if (i === 0) waveCtx.moveTo(x, y);
-    else waveCtx.lineTo(x, y);
-    x += sliceWidth;
+  function gridToCutoff(pos) {
+    // X-axis maps to cutoff frequency (logarithmic)
+    var minLog = Math.log(CUTOFF_MIN);
+    var maxLog = Math.log(CUTOFF_MAX);
+    return Math.exp(minLog + pos.x * (maxLog - minLog));
   }
-  waveCtx.stroke();
-  waveCtx.shadowBlur = 0;
 
-  // Check clipping
-  let maxVal = 0;
-  for (let i = 0; i < bufLen; i++) {
-    const val = Math.abs(dataArray[i] - 128);
-    if (val > maxVal) maxVal = val;
-  }
-  const clipLevel = maxVal / 128;
-  if (clipLevel > 0.85) {
-    if (!state.clipping) {
-      state.clipping = true;
-      clipIndicator.classList.add("active");
-      clipIndicator.textContent = "CLIP: ON";
-      // Clip triggers filter sweep
-      const now = state.audioCtx.currentTime;
-      state.filterNode.frequency.setTargetAtTime(
-        state.filterNode.frequency.value * 1.15,
-        now,
-        0.01
+  canvas.addEventListener("mousedown", function (e) {
+    dragging = true;
+    var pos = getGridPos(e);
+    currentCutoff = gridToCutoff(pos);
+    if (filterNode && engineStarted) {
+      filterNode.frequency.setTargetAtTime(
+        Math.max(CUTOFF_MIN, Math.min(CUTOFF_MAX, currentCutoff)),
+        audioCtx.currentTime,
+        0.004
       );
     }
-  } else {
-    if (state.clipping) {
-      state.clipping = false;
-      clipIndicator.classList.remove("active");
-      clipIndicator.textContent = "CLIP: OFF";
+    syncCutoffSlider();
+    updateSelfOscState();
+  });
+
+  canvas.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+    var pos = getGridPos(e);
+    currentCutoff = gridToCutoff(pos);
+    if (filterNode && engineStarted) {
+      filterNode.frequency.setTargetAtTime(
+        Math.max(CUTOFF_MIN, Math.min(CUTOFF_MAX, currentCutoff)),
+        audioCtx.currentTime,
+        0.004
+      );
+    }
+    syncCutoffSlider();
+    updateSelfOscState();
+  });
+
+  window.addEventListener("mouseup", function () {
+    dragging = false;
+  });
+
+  // Touch support
+  canvas.addEventListener("touchstart", function (e) {
+    e.preventDefault();
+    dragging = true;
+    var pos = getGridPos(e);
+    currentCutoff = gridToCutoff(pos);
+    if (filterNode && engineStarted) {
+      filterNode.frequency.setTargetAtTime(
+        Math.max(CUTOFF_MIN, Math.min(CUTOFF_MAX, currentCutoff)),
+        audioCtx.currentTime,
+        0.004
+      );
+    }
+    syncCutoffSlider();
+    updateSelfOscState();
+  });
+
+  canvas.addEventListener("touchmove", function (e) {
+    e.preventDefault();
+    if (!dragging) return;
+    var pos = getGridPos(e);
+    currentCutoff = gridToCutoff(pos);
+    if (filterNode && engineStarted) {
+      filterNode.frequency.setTargetAtTime(
+        Math.max(CUTOFF_MIN, Math.min(CUTOFF_MAX, currentCutoff)),
+        audioCtx.currentTime,
+        0.004
+      );
+    }
+    syncCutoffSlider();
+    updateSelfOscState();
+  });
+
+  window.addEventListener("touchend", function () {
+    dragging = false;
+  });
+
+  function syncCutoffSlider() {
+    var slider = document.getElementById("cutoff-slider");
+    if (slider) slider.value = Math.round(currentCutoff);
+    updateDisplays();
+  }
+
+  // ─── UI Controls ───────────────────────────────────────────
+  document.getElementById("start-btn").addEventListener("click", function () {
+    if (!engineStarted) {
+      initAudio();
+      this.textContent = "Restart Audio Engine";
+      startRenderLoop();
+    } else {
+      // Restart
+      if (audioCtx) audioCtx.close();
+      audioCtx = null;
+      oscillators = [];
+      engineStarted = false;
+      this.textContent = "Start Audio Engine";
+      setTimeout(function () {
+        initAudio();
+        document.getElementById("start-btn").textContent = "Restart Audio Engine";
+      }, 100);
+    }
+  });
+
+  document.getElementById("cutoff-slider").addEventListener("input", function () {
+    currentCutoff = parseFloat(this.value);
+    if (filterNode && engineStarted) {
+      filterNode.frequency.setTargetAtTime(currentCutoff, audioCtx.currentTime, 0.004);
+    }
+    updateSelfOscState();
+    updateDisplays();
+  });
+
+  document.getElementById("resonance-slider").addEventListener("input", function () {
+    currentResonance = parseFloat(this.value);
+    if (filterNode && engineStarted && !selfOscActive) {
+      filterNode.Q.setTargetAtTime(currentResonance, audioCtx.currentTime, 0.01);
+    }
+    updateDisplays();
+  });
+
+  document.getElementById("decay-slider").addEventListener("input", function () {
+    currentDecay = parseFloat(this.value);
+    updateSelfOscState();
+    updateDisplays();
+  });
+
+  document.getElementById("gain-slider").addEventListener("input", function () {
+    currentGain = parseFloat(this.value);
+    if (gainNode && engineStarted) {
+      gainNode.gain.setTargetAtTime(currentGain, audioCtx.currentTime, 0.005);
+    }
+    updateDisplays();
+  });
+
+  document.getElementById("wave-select").addEventListener("change", function () {
+    var type = this.value;
+    oscillators.forEach(function (vco) {
+      vco.osc.type = type;
+    });
+  });
+
+  function updateDisplays() {
+    var cutEl = document.getElementById("cutoff-value");
+    if (cutEl) cutEl.textContent = Math.round(currentCutoff) + " Hz";
+
+    var resEl = document.getElementById("resonance-value");
+    if (resEl) resEl.textContent = currentResonance.toFixed(1);
+
+    var decEl = document.getElementById("decay-value");
+    if (decEl)
+      decEl.textContent =
+        "Decay: " +
+        currentDecay.toFixed(3) +
+        " | Self-Osc: " +
+        (selfOscActive ? "ON" : "OFF");
+
+    var gainEl = document.getElementById("gain-value");
+    if (gainEl) gainEl.textContent = currentGain.toFixed(2);
+
+    // Clip indicator based on amplitude + self-osc state
+    var clipEl = document.getElementById("clip-indicator");
+    if (clipEl) {
+      if (selfOscActive) {
+        clipEl.classList.add("active");
+      } else {
+        clipEl.classList.remove("active");
+      }
+    }
+
+    // Status bar
+    var oscStateEl = document.getElementById("osc-state");
+    if (oscStateEl) oscStateEl.textContent = "Self-Osc: " + (selfOscActive ? "ON" : "OFF");
+
+    var chordEl = document.getElementById("chord-display");
+    if (chordEl) {
+      var waveType = document.getElementById("wave-select").value;
+      chordEl.textContent = "Chord: Cmaj (C E G) | " + waveType;
     }
   }
 
-  // Amplitude indicator
-  state.gridAmplitude = clipLevel;
-}
-
-// Latency measurement
-function updateLatency(timestamp) {
-  if (!state.audioCtx) return;
-
-  const baseLatency = state.audioCtx.baseLatency || 0;
-  const outputLatency = state.audioCtx.outputLatency || 0;
-  const estimated = (baseLatency + outputLatency) * 1000;
-
-  const frameDelta = timestamp - state.lastFrameTime;
-  state.lastFrameTime = timestamp;
-
-  if (estimated > 0) {
-    state.latencyMs = estimated.toFixed(1);
-  } else {
-    state.latencyMs = Math.min(4, frameDelta * 0.1).toFixed(1);
+  // ─── Canvas Rendering ──────────────────────────────────────
+  var gridCells = [];
+  for (var gi = 0; gi < GRID_ROWS; gi++) {
+    gridCells[gi] = [];
+    for (var gj = 0; gj < GRID_COLS; gj++) {
+      gridCells[gi][gj] = {
+        baseAlpha: 0.03 + (gi / GRID_ROWS) * 0.05,
+        energy: 0,
+        distortion: 0,
+      };
+    }
   }
 
-  latencyDisplay.textContent = "Latency: " + state.latencyMs + "ms";
-}
+  function getAmplitudeData() {
+    if (!analyser || !engineStarted) return new Uint8Array(0);
+    var data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    return data;
+  }
 
-// Main visual-audio sync loop
-function visualLoop(timestamp) {
-  if (!state.startTime) state.startTime = timestamp;
+  var prevFrame = performance.now();
+  var latencySamples = [];
 
-  drawGrid(timestamp);
-  drawWaveform(timestamp);
-  updateLatency(timestamp);
+  function renderFrame(timestamp) {
+    frameId = requestAnimationFrame(renderFrame);
 
-  requestAnimationFrame(visualLoop);
-}
+    // Measure latency
+    var now = performance.now();
+    var delta = now - prevFrame;
+    prevFrame = now;
+    latencySamples.push(delta);
+    if (latencySamples.length > 60) latencySamples.shift();
 
-function startVisualLoop() {
-  state.startTime = performance.now();
-  state.lastFrameTime = state.startTime;
-  requestAnimationFrame(visualLoop);
-}
+    // Update amplitude routing
+    var amp = 0;
+    if (engineStarted) {
+      amp = updateAmplitudeRouting();
+    }
 
-// Init grid cells array
-function initGridCells() {
-  gridCells = new Array(GRID_COLS * GRID_ROWS).fill(false);
-}
+    var fftData = getAmplitudeData();
 
-// Slider event handlers
-function setupControls() {
-  decaySlider.value = Math.round(PATCH.decay * 100);
-  cutoffSlider.value = Math.round(PATCH.cutoff * 100);
-  resonanceSlider.value = Math.round(PATCH.resonance * 100);
-  mixSlider.value = Math.round(PATCH.mix * 100);
+    // Update displays
+    var latEl = document.getElementById("latency-display");
+    if (latEl && latencySamples.length > 0) {
+      var avgLat = latencySamples.reduce(function (a, b) {
+        return a + b;
+      }, 0) / latencySamples.length;
+      var audioLatency = engineStarted ? (1 / (audioCtx.sampleRate / 256) * 1000).toFixed(1) : "--";
+      latEl.textContent =
+        "Frame: " +
+        avgLat.toFixed(1) +
+        "ms | Audio: " +
+        audioLatency +
+        "ms";
+    }
 
-  decayValue.textContent = decaySlider.value;
-  cutoffValue.textContent = cutoffSlider.value;
-  resonanceValue.textContent = resonanceSlider.value;
-  mixValue.textContent = mixSlider.value;
+    // ── Render Grid ─────────────────────────────────────────
+    var cw = canvas.width / dpr;
+    var ch = canvas.height / dpr;
 
-  decaySlider.addEventListener("input", () => {
-    decayValue.textContent = decaySlider.value;
-    if (state.audioCtx) updateDecay();
-  });
-  cutoffSlider.addEventListener("input", () => {
-    cutoffValue.textContent = cutoffSlider.value;
-    if (state.audioCtx) updateFilter();
-  });
-  resonanceSlider.addEventListener("input", () => {
-    resonanceValue.textContent = resonanceSlider.value;
-    if (state.audioCtx) updateFilter();
-  });
-  mixSlider.addEventListener("input", () => {
-    mixValue.textContent = mixSlider.value;
-    if (state.audioCtx) updateMix();
-  });
-}
+    // Clear
+    ctx.fillStyle = "#111827";
+    ctx.fillRect(0, 0, cw, ch);
 
-// Start button (user gesture required for audio)
-function setupStart() {
-  const header = document.getElementById("header");
-  header.addEventListener("click", () => { initAudio(); });
+    var cellW = cw / GRID_COLS;
+    var cellH = ch / GRID_ROWS;
+    var padding = 1;
 
-  // Also start on first interaction with anything
-  document.addEventListener("mousedown", function once() {
-    initAudio();
-    document.removeEventListener("mousedown", once);
-  }, { once: true });
+    // Map FFT data to grid cells
+    if (fftData.length > 0) {
+      for (var row = 0; row < GRID_ROWS; row++) {
+        for (var col = 0; col < GRID_COLS; col++) {
+          var fftIndex = Math.floor(
+            ((row * GRID_COLS + col) / (GRID_ROWS * GRID_COLS)) * fftData.length * 0.5
+          );
+          var cellAmp = fftData[fftIndex] / 255;
 
-  document.addEventListener("touchstart", function once() {
-    initAudio();
-    document.removeEventListener("touchstart", once);
-  }, { once: true });
-}
+          // Decay affects cell energy
+          var energy = cellAmp * (1 + currentDecay * 2);
+          gridCells[row][col].energy = gridCells[row][col].energy * 0.92 + energy * 0.08;
+          gridCells[row][col].distortion = selfOscActive
+            ? gridCells[row][col].distortion * 0.9 + (cellAmp * 0.3) * 0.1
+            : gridCells[row][col].distortion * 0.95;
+        }
+      }
+    }
 
-// Entry point
-function init() {
-  resizeCanvases();
-  initGridCells();
-  setupControls();
-  setupGridInteraction();
-  setupStart();
+    // Draw grid cells
+    for (var row2 = 0; row2 < GRID_ROWS; row2++) {
+      for (var col2 = 0; col2 < GRID_COLS; col2++) {
+        var cell = gridCells[row2][col2];
+        var x = col2 * cellW + padding;
+        var y = row2 * cellH + padding;
+        var w = cellW - padding * 2;
+        var h = cellH - padding * 2;
 
-  window.addEventListener("resize", () => {
-    // Reset transforms
-    const dpr = window.devicePixelRatio || 1;
-    gridCtx.setTransform(1, 0, 0, 1, 0, 0);
-    waveCtx.setTransform(1, 0, 0, 1, 0, 0);
-    resizeCanvases();
-  });
+        // Energy-driven color
+        var energyNorm = Math.min(cell.energy, 1);
+        var distNorm = Math.min(cell.distortion, 1);
 
-  // Draw initial grid
-  requestAnimationFrame((t) => {
-    drawGrid(t || 0);
-  });
-}
+        var r, g, b, alpha;
+        if (selfOscActive && distNorm > 0.1) {
+          // Red accent for self-osc distortion
+          r = Math.round(200 + 55 * distNorm);
+          g = Math.round(30 * (1 - distNorm));
+          b = Math.round(30 * (1 - distNorm));
+          alpha = 0.08 + energyNorm * 0.7;
+        } else {
+          // Subtle blue-gray for normal state, red tint at high energy
+          r = Math.round(80 + energyNorm * 140);
+          g = Math.round(80 + energyNorm * 40);
+          b = Math.round(110 + energyNorm * 60);
+          alpha = 0.05 + energyNorm * 0.5;
+        }
 
-init();
+        ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+
+        // Distortion offset
+        var dx = (Math.sin(timestamp * 0.003 + col2 * 0.5) * distNorm * 4) | 0;
+        var dy = (Math.cos(timestamp * 0.004 + row2 * 0.4) * distNorm * 3) | 0;
+
+        ctx.fillRect(x + dx, y + dy, w, h);
+
+        // Grid lines
+        ctx.strokeStyle = "rgba(148, 163, 184, " + (0.06 + energyNorm * 0.12) + ")";
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, w, h);
+      }
+    }
+
+    // Draw cutoff position indicator
+    if (engineStarted) {
+      var cutoffX = (Math.log(currentCutoff / CUTOFF_MIN) /
+        Math.log(CUTOFF_MAX / CUTOFF_MIN)) * cw;
+
+      ctx.strokeStyle = selfOscActive ? "rgba(220, 38, 38, 0.8)" : "rgba(220, 38, 38, 0.5)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cutoffX, 0);
+      ctx.lineTo(cutoffX, ch);
+      ctx.stroke();
+
+      // Glow effect at cutoff position
+      var gradient = ctx.createLinearGradient(cutoffX - 20, 0, cutoffX + 20, 0);
+      if (selfOscActive) {
+        gradient.addColorStop(0, "rgba(220, 38, 38, 0)");
+        gradient.addColorStop(0.5, "rgba(220, 38, 38, " + (0.15 + amp * 0.3) + ")");
+        gradient.addColorStop(1, "rgba(220, 38, 38, 0)");
+      } else {
+        gradient.addColorStop(0, "rgba(220, 38, 38, 0)");
+        gradient.addColorStop(0.5, "rgba(220, 38, 38, 0.08)");
+        gradient.addColorStop(1, "rgba(220, 38, 38, 0)");
+      }
+      ctx.fillStyle = gradient;
+      ctx.fillRect(cutoffX - 20, 0, 40, ch);
+    }
+
+    // Dragging highlight
+    if (dragging && engineStarted) {
+      var dragCutoffX =
+        (Math.log(currentCutoff / CUTOFF_MIN) / Math.log(CUTOFF_MAX / CUTOFF_MIN)) * cw;
+
+      ctx.fillStyle = "rgba(220, 38, 38, 0.08)";
+      ctx.fillRect(0, 0, dragCutoffX, ch);
+    }
+
+    updateDisplays();
+  }
+
+  // ─── Render Loop ───────────────────────────────────────────
+  function startRenderLoop() {
+    if (frameId) cancelAnimationFrame(frameId);
+    frameId = requestAnimationFrame(renderFrame);
+  }
+
+  // Initial render
+  function initialRender() {
+    var cw = canvas.width / dpr;
+    var ch = canvas.height / dpr;
+    ctx.fillStyle = "#111827";
+    ctx.fillRect(0, 0, cw, ch);
+
+    var cellW = cw / GRID_COLS;
+    var cellH = ch / GRID_ROWS;
+    var padding = 1;
+
+    for (var i = 0; i < GRID_ROWS; i++) {
+      for (var j = 0; j < GRID_COLS; j++) {
+        var x = j * cellW + padding;
+        var y = i * cellH + padding;
+        var w = cellW - padding * 2;
+        var h = cellH - padding * 2;
+
+        ctx.fillStyle = "rgba(80, 80, 100, 0.06)";
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.06)";
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, w, h);
+      }
+    }
+
+    // Draw initial cutoff indicator
+    var initXCutoff =
+      (Math.log(DEFAULT_CUTOFF / CUTOFF_MIN) / Math.log(CUTOFF_MAX / CUTOFF_MIN)) * cw;
+    ctx.strokeStyle = "rgba(220, 38, 38, 0.3)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(initXCutoff, 0);
+    ctx.lineTo(initXCutoff, ch);
+    ctx.stroke();
+  }
+  initialRender();
+})();

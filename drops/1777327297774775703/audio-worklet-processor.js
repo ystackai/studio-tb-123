@@ -49,11 +49,10 @@ class SoftclampProcessor extends AudioWorkletProcessor {
           this.clipState *= 0.95;
          }
 
-        // Anti-aliasing: simple low-pass to tame high-frequency spikes
-        this.softKneeState = this.softKneeState * 0.3 + sample * 0.7;
-        sample = this.softKneeState;
-
-        outputBuffer[i] = sample;
+        // Anti-aliasing: gentle decimation low-pass (1-pole, ~8kHz cutoff at 48kHz SR)
+        const aaCoeff = 0.85;
+        this.softKneeState = this.softKneeState * aaCoeff + sample * (1 - aaCoeff);
+        outputBuffer[i] = this.softKneeState;
       }
    }
 
