@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decay Grid — TB-123</title>
+    <style>
+        :root {
+            --bg: #050507;
+            --accent: #00FF41;
+            --accent-dim: rgba(0, 255, 65, 0.12);
+            --accent-glow: rgba(0, 255, 65, 0.4);
+            --grid-line: #151518;
+            --cell-empty: rgba(255, 255, 255, 0.025);
+            --cell-border: rgba(255, 255, 255, 0.06);
+            --text: #f0f0f0;
+            --muted: #555;
+            --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--mono);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        #header {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--grid-line);
+        }
+
+        #brand {
+            font-size: 11px;
+            letter-spacing: 3px;
+            color: var(--muted);
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        #title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            user-select: none;
+        }
+
+        #mute-btn {
+            background: none;
+            border: 1px solid var(--cell-border);
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 9px;
+            letter-spacing: 1px;
+            padding: 4px 8px;
+            cursor: pointer;
+            transition: all 0.1s;
+            user-select: none;
+        }
+
+        #mute-btn:hover {
+            color: var(--text);
+            border-color: var(--text);
+        }
+
+        #mute-btn.active {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        #stage {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            aspect-ratio: 16 / 10;
+        }
+
+        #grid {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 2px;
+        }
+
+        .cell {
+            background: var(--cell-empty);
+            border: 1px solid var(--cell-border);
+            cursor: pointer;
+            transition: background 0.03s, border-color 0.03s, box-shadow 0.03s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .cell:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .cell.hit {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow), inset 0 0 4px rgba(0, 0, 0, 0.3);
+        }
+
+        #waveform {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        #waveform.visible {
+            opacity: 1;
+        }
+
+        #status-bar {
+            width: 100%;
+            max-width: 700px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--grid-line);
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            letter-spacing: 1px;
+            color: var(--muted);
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        #signal-indicator {
+            transition: color 0.1s;
+        }
+
+        #signal-indicator.active {
+            color: var(--accent);
+        }
+
+        #latency-display {
+            color: var(--muted);
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            opacity: 0.6;
+            user-select: none;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 600px) {
+            #grid { gap: 1px; }
+            #brand { font-size: 9px; }
+            #title { font-size: 11px; }
+            body { padding: 8px; }
+            #instructions { font-size: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <span id="brand">TB-123</span>
+        <span id="title">Decay Grid</span>
+        <button id="mute-btn">MUTE</button>
+    </div>
+
+    <div id="stage">
+        <div id="grid"></div>
+        <canvas id="waveform"></canvas>
+    </div>
+
+    <div id="status-bar">
+        <span id="signal-indicator">SIGNAL: IDLE</span>
+        <span id="latency-display">LATENCY: --ms</span>
+        <span id="voices-display">VOICES: 0</span>
+    </div>
+
+    <div id="instructions">TAP OR CLICK TO TRIGGER — WATCH THE DECAY</div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            /* --- Constants --- */
+            const COLS = 16, ROWS = 8;
+            const CELL_DURATION_BASE = 800;
+            const CELL_DURATION_MAX = 2400;
+
+            /* Pentatonic major across rows, chromatic across columns */
+            const PENTATONIC = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+            const CHROMATIC_OFFSETS = [];
+            for (let i = 0; i < COLS; i++) {
+                CHROMATIC_OFFSETS.push(2 ** (i / 12));
+            }
+
+            /* --- State --- */
+            let audioCtx = null;
+            let masterGain = null;
+            let isMuted = false;
+            let activeVoices = [];
+            let analyser = null;
+            let waveformData = new Uint8Array(0);
+
+            /* --- DOM --- */
+            const grid = document.getElementById('grid');
+            const waveformCanvas = document.getElementById('waveform');
+            const waveformCtx = waveformCanvas.getContext('2d');
+            const signalIndicator = document.getElementById('signal-indicator');
+            const latencyDisplay = document.getElementById('latency-display');
+            const voicesDisplay = document.getElementById('voices-display');
+            const muteBtn = document.getElementById('mute-btn');
+            const instructions = document.getElementById('instructions');
+
+            /* --- Audio Init --- */
+            function ensureAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    masterGain = audioCtx.createGain();
+                    masterGain.gain.value = 0.35;
+                    analyser = audioCtx.createAnalyser();
+                    analyser.fftSize = 2048;
+                    waveformData = new Uint8Array(analyser.frequencyBinCount);
+                    masterGain.connect(analyser);
+                    analyser.connect(audioCtx.destination);
+                    drawWaveform();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            }
+
+            /* --- Voice --- */
+            function freqAt(row, col) {
+                const octaveRow = Math.floor(row / 2);
+                const base = PENTATONIC[row];
+                const noteFreq = base * (0.5 ** octaveRow) * CHROMATIC_OFFSETS[col];
+                return noteFreq;
+            }
+
+            function playVoice(row, col) {
+                ensureAudio();
+                if (isMuted) return;
+
+                const freq = freqAt(row, col);
+                const t = audioCtx.currentTime;
+
+                /* Oscillator 1: sawtooth fundamental */
+                const osc1 = audioCtx.createOscillator();
+                osc1.type = 'sawtooth';
+                osc1.frequency.value = freq;
+
+                /* Oscillator 2: sine an octave up for shimmer */
+                const osc2 = audioCtx.createOscillator();
+                osc2.type = 'sine';
+                osc2.frequency.value = freq * 2;
+
+                /* Lowpass filter with decay */
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.Q.value = 2 + (row / ROWS) * 6;
+                filter.frequency.value = freq * 8;
+                filter.frequency.exponentialRampToValueAtTime(
+                    Math.max(freq * 0.8, 40), t + 1.8
+                );
+
+                /* Envelope */
+                const env = audioCtx.createGain();
+                env.gain.setValueAtTime(0, t);
+                env.gain.linearRampToValueAtTime(0.3, t + 0.008);
+                env.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+
+                /* Shimmer is quieter */
+                const env2 = audioCtx.createGain();
+                env2.gain.setValueAtTime(0, t);
+                env2.gain.linearRampToValueAtTime(0.08, t + 0.008);
+                env2.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+
+                osc1.connect(filter);
+                filter.connect(env);
+                osc2.connect(env2);
+
+                /* Subtle feedback: feed 15% of env back through a delay */
+                const delay = audioCtx.createDelay();
+                delay.delayTime.value = 0.12;
+                const fbGain = audioCtx.createGain();
+                fbGain.gain.value = 0.15;
+
+                env.connect(masterGain);
+                env2.connect(masterGain);
+                env.connect(delay);
+                delay.connect(fbGain);
+                fbGain.connect(env);
+
+                env2.connect(delay);
+
+                osc1.start(t);
+                osc2.start(t);
+                osc1.stop(t + 2.2);
+                osc2.stop(t + 1.8);
+
+                const voice = { osc1, osc2, env, env2, filter, endAt: t + 2 };
+                activeVoices.push(voice);
+
+                setTimeout(() => {
+                    const idx = activeVoices.indexOf(voice);
+                    if (idx >= 0) activeVoices.splice(idx, 1);
+                    voicesDisplay.textContent = 'VOICES: ' + activeVoices.length;
+                }, 2200);
+
+                voicesDisplay.textContent = 'VOICES: ' + activeVoices.length;
+            }
+
+            /* --- Waveform Drawing --- */
+            function drawWaveform() {
+                if (!analyser) { requestAnimationFrame(drawWaveform); return; }
+
+                analyser.getByteTimeDomainData(waveformData);
+
+                const w = waveformCanvas.width;
+                const h = waveformCanvas.height;
+
+                waveformCtx.clearRect(0, 0, w, h);
+
+                /* Gradient bleed */
+                const grad = waveformCtx.createLinearGradient(0, 0, w, 0);
+                grad.addColorStop(0, 'rgba(0, 255, 65, 0)');
+                grad.addColorStop(0.3, 'rgba(0, 255, 65, 0.25)');
+                grad.addColorStop(0.7, 'rgba(0, 255, 65, 0.2)');
+                grad.addColorStop(1, 'rgba(0, 255, 65, 0)');
+
+                waveformCtx.strokeStyle = grad;
+                waveformCtx.lineWidth = 2;
+                waveformCtx.shadowColor = 'rgba(0, 255, 65, 0.6)';
+                waveformCtx.shadowBlur = 8;
+                waveformCtx.beginPath();
+
+                const sliceW = w / waveformData.length;
+                let x = 0;
+                for (let i = 0; i < waveformData.length; i++) {
+                    const v = waveformData[i] / 128.0;
+                    const y = (v * h) / 2;
+                    if (i === 0) waveformCtx.moveTo(x, y);
+                    else waveformCtx.lineTo(x, y);
+                    x += sliceW;
+                }
+                waveformCtx.stroke();
+                waveformCtx.shadowBlur = 0;
+
+                requestAnimationFrame(drawWaveform);
+            }
+
+            /* --- Grid Setup --- */
+            const cellMap = [];
+
+            function buildGrid() {
+                grid.innerHTML = '';
+                cellMap.length = 0;
+
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.row = r;
+                        cell.dataset.col = c;
+
+                        cell.addEventListener('pointerdown', onCellTrigger);
+                        grid.appendChild(cell);
+                        cellMap.push({ el: cell, row: r, col: c });
+                    }
+                }
+            }
+
+            function onCellTrigger(e) {
+                e.preventDefault();
+                const row = parseInt(this.dataset.row, 10);
+                const col = parseInt(this.dataset.col, 10);
+
+                const triggerTime = performance.now();
+
+                playVoice(row, col);
+
+                /* Hide instructional text on first trigger */
+                if (instructions.style.opacity !== '0') {
+                    instructions.style.opacity = '0';
+                    instructions.style.transition = 'opacity 0.5s';
+                }
+
+                /* Visual: cell flash + fade */
+                const cellEl = this;
+                cellEl.classList.add('hit');
+
+                /* Show waveform overlay */
+                waveformCanvas.classList.add('visible');
+
+                signalIndicator.className = 'active';
+                signalIndicator.textContent = 'SIGNAL: ACTIVE';
+
+                /* Decay duration varies by row — higher rows decay longer */
+                const decayMs = CELL_DURATION_BASE + (ROWS - 1 - row) * 150;
+
+                /* Fade out the cell */
+                const fadeStart = Date.now();
+                const fadeOut = () => {
+                    const elapsed = Date.now() - fadeStart;
+                    const progress = Math.min(elapsed / decayMs, 1);
+
+                    if (progress < 1) {
+                        const alpha = (1 - progress) * 0.85;
+                        cellEl.style.background = `rgba(0, 255, 65, ${alpha})`;
+                        cellEl.style.boxShadow = `0 0 ${8 * (1 - progress)}px rgba(0, 255, 65, ${alpha * 0.5})`;
+                        requestAnimationFrame(fadeOut);
+                    } else {
+                        cellEl.classList.remove('hit');
+                        cellEl.style.background = '';
+                        cellEl.style.boxShadow = '';
+                    }
+                };
+                requestAnimationFrame(fadeOut);
+
+                /* Latency measurement */
+                const latency = performance.now() - triggerTime;
+                latencyDisplay.textContent = 'LATENCY: ' + latency.toFixed(1) + 'ms';
+
+                /* Check if all cells are off */
+                setTimeout(() => {
+                    const anyActive = document.querySelector('.cell.hit');
+                    if (!anyActive) {
+                        signalIndicator.className = '';
+                        signalIndicator.textContent = 'SIGNAL: IDLE';
+                        waveformCanvas.classList.remove('visible');
+                        voicesDisplay.textContent = 'VOICES: ' + activeVoices.length;
+                    }
+                }, decayMs + 100);
+            }
+
+            /* --- Mute --- */
+            muteBtn.addEventListener('click', () => {
+                ensureAudio();
+                isMuted = !isMuted;
+                masterGain.gain.value = isMuted ? 0 : 0.35;
+                muteBtn.className = isMuted ? 'active' : '';
+                muteBtn.textContent = isMuted ? 'UNMUTE' : 'MUTE';
+            });
+
+            /* --- Resize --- */
+            function resize() {
+                const stage = document.getElementById('stage');
+                waveformCanvas.width = stage.clientWidth * (window.devicePixelRatio || 1);
+                waveformCanvas.height = stage.clientHeight * (window.devicePixelRatio || 1);
+                waveformCanvas.style.width = stage.clientWidth + 'px';
+                waveformCanvas.style.height = stage.clientHeight + 'px';
+            }
+
+            window.addEventListener('resize', resize);
+
+            /* --- Boot --- */
+            buildGrid();
+            resize();
+        })();
+    </script>
+</body>
+</html>
