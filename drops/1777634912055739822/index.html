@@ -388,11 +388,18 @@
        PRE_DELAY_MS: 1.5,
        LFO_FREQ_HZ: 0.2,
        LFO_DEPTH_FACTOR: 0.5,
-       MAX_Q: 3.8,
-       MIN_Q: 1.0,
-       PITCH_BEND_SEMITONES: 1,
-       FILTER_CUTOFF_MOD_DEPTH: 3,
-       BUILD_SHA: 'open-circuit-v3-sequencer',
+        MAX_Q: 3.8,
+        MIN_Q: 1.0,
+        PITCH_BEND_SEMITONES: 1,
+        FILTER_CUTOFF_MOD_DEPTH: 3,
+        RESONANCE_DRIFT_GUARD_Q_BASE: 3.8,
+        RESONANCE_DRIFT_GUARD_Q_MIN: 1.0,
+        RESONANCE_DRIFT_GUARD_Q_MAX: 3.8,
+        RESONANCE_DRIFT_GUARD_THRESHOLD_DB: -18,
+        RESONANCE_DRIFT_GUARD_DECAY_MS: 150,
+        SINGING_HARMONIC_RING_THRESHOLD: 0.65,
+        SINGING_HARMONIC_STABILIZE_DECAY_MS: 80,
+        BUILD_SHA: 'open-circuit-v3-sequencer',
         DROP_ID: '1777634912055739822',
         AESTHETIC: 'Dark Stage, Bright Performer',
         COVER_LOOK: 'v1-locked',
@@ -504,7 +511,25 @@
 
     let audioCtx = null, masterGain = null, preDelayNode = null;
     let analyser = null, analyserData = null, limiter = null, compressor = null;
+    let guardMaster = null;
     const activeVoices = {};
+
+        // ========================================
+        //  Active Touch Registry — tracks which voices have live touch
+        // ========================================
+     var activeTouchVoices = {};
+
+     function voiceHasActiveTouch(voiceKey) {
+       return !!activeTouchVoices[voiceKey];
+      }
+
+     function registerActiveTouch(voiceKey) {
+       activeTouchVoices[voiceKey] = true;
+      }
+
+     function unregisterActiveTouch(voiceKey) {
+       delete activeTouchVoices[voiceKey];
+      }
 
        // ========================================
        //  Touch Gesture State Persistence Registry
@@ -800,11 +825,14 @@
         audioCtxPromise = (function() {
           if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            masterGain = audioCtx.createGain();
-            masterGain.gain.value = 0.28;
+             guardMaster = audioCtx.createGain();
+             guardMaster.gain.value = 1;
 
-            preDelayNode = audioCtx.createDelay(0.02);
-            preDelayNode.delayTime.value = 0.0015;
+             masterGain = audioCtx.createGain();
+             masterGain.gain.value = 0.28;
+
+             preDelayNode = audioCtx.createDelay(0.02);
+             preDelayNode.delayTime.value = 0.0015;
 
             limiter = audioCtx.createWaveShaper();
             limiter.curve = buildSoftClipCurve();
@@ -823,28 +851,116 @@
             analyserData = new Uint8Array(analyser.frequencyBinCount);
 
             // VCA → PreDelay (1.5ms) → masterGain → SoftClip → Compressor → Analyser → Destination
-            preDelayNode.connect(masterGain);
-            masterGain.connect(limiter);
+             preDelayNode.connect(guardMaster);
+             guardMaster.connect(masterGain);
             limiter.connect(compressor);
             compressor.connect(analyser);
             analyser.connect(audioCtx.destination);
            }
           var resumePromise = (audioCtx.state === 'suspended') ? audioCtx.resume() : Promise.resolve();
-          return resumePromise.then(function() {
+           return resumePromise.then(function() {
             audioCtxReady = true;
             audioCtxPromise = null;
             return audioCtx;
-           }).catch(function() {
+            }).catch(function() {
             audioCtxReady = true;
             audioCtxPromise = null;
             return audioCtx;
-           });
-         })();
+            });
+          });
         }
        return audioCtxPromise;
-      }
+       }
 
-    function launch() {
+           // ========================================
+           //  Resonance Drift Guard — computes safe Q given LFO cutoff modulation
+           // ========================================
+     function computeDriftGuardedQ(freq, currentCutoff, lfoDepth) {
+       var nyquist = audioCtx.sampleRate * 0.5;
+       var freqRatio = freq / nyquist;
+       var cutoffRatio = currentCutoff / nyquist;
+
+       var maxQ = 3.8, minQ = 1.0, q;
+
+       if (freqRatio > 0.12) {
+         var t = Math.min(1, (freqRatio - 0.12) / 0.13);
+         q = maxQ - (maxQ - minQ) * t;
+          } else {
+         q = maxQ;
+          }
+       q = Math.max(q, 0.5);
+
+       var lfoModulationIndex = (lfoDepth / Math.max(currentCutoff, 1));
+       if (lfoModulationIndex > 0.4) {
+         var clampFactor = 1 - (lfoModulationIndex - 0.4) * 0.5;
+         q = q * Math.max(0.3, clampFactor);
+          }
+
+       if (cutoffRatio > 0.1) {
+         var cutoffClamp = 1 - ((cutoffRatio - 0.1) / 0.4) * 0.5;
+         q = q * Math.max(0.3, cutoffClamp);
+          }
+
+       return { q: Math.max(q, minQ), safe: q < 3.0 };
+        }
+
+           // ========================================
+           //  Singing Harmonic Stabilizer — detects ringing and hard-stops decay tails
+           // ========================================
+     var stabilizerState = {
+       lastRingEnergy: 0,
+       ringCount: 0,
+       lastRingTime: 0,
+       isStabilizing: false
+        };
+
+     function detectRinging(highLevel, signalLevel) {
+       var ringEnergy = highLevel * 100;
+       var now = performance.now();
+
+       if (ringEnergy > ENV.SINGING_HARMONIC_RING_THRESHOLD) {
+         stabilizerState.ringCount++;
+         if (now - stabilizerState.lastRingTime < 200) {
+           stabilizerState.ringCount++;
+             }
+         stabilizerState.lastRingTime = now;
+         stabilizerState.lastRingEnergy = ringEnergy;
+          } else {
+         stabilizerState.ringCount = Math.max(0, stabilizerState.ringCount - 0.5);
+          }
+
+       if (stabilizerState.ringCount > 3 && ringEnergy > ENV.SINGING_HARMONIC_RING_THRESHOLD) {
+         return { ringing: true, severity: ringEnergy, shouldMute: !hasActiveTouch() };
+          }
+       return { ringing: false, severity: ringEnergy, shouldMute: false };
+        }
+
+     function hasActiveTouch() {
+       var keys = Object.keys(activeTouchVoices);
+       return keys.length > 0;
+        }
+
+     function hardStopRinging() {
+       if (!guardMaster || !audioCtx) return;
+       var now = audioCtx.currentTime;
+       try {
+         guardMaster.gain.cancelScheduledValues(now);
+         guardMaster.gain.setValueAtTime(Math.max(guardMaster.gain.value, 0.001), now);
+         guardMaster.gain.exponentialRampToValueAtTime(0.0001, now + ENV.SINGING_HARMONIC_STABILIZE_DECAY_MS / 1000);
+          } catch(e) {}
+        }
+
+     function resumeFromHardStop() {
+       if (!guardMaster || !audioCtx) return;
+       var now = audioCtx.currentTime;
+       try {
+         guardMaster.gain.cancelScheduledValues(now);
+         guardMaster.gain.setValueAtTime(0.0001, now);
+         guardMaster.gain.linearRampToValueAtTime(1, now + 0.01);
+          } catch(e) {}
+        }
+
+     function launch() {
       if (launched) return;
       launched = true;
       overlay.classList.add('fade-out');
@@ -1158,31 +1274,37 @@
       var modCutoff = calcModulatedCutoff(baseFreq, yFrac);
       var aaParams = getAntiAliasedParams(bentFreq);
       var finalCutoff = Math.min(modCutoff, aaParams.cutoff);
+      var guardResult = computeDriftGuardedQ(bentFreq, finalCutoff, bentFreq * 0.5);
+      var safeQ = guardResult.q;
       var amp = calcAmplitude(row, col, force);
 
       voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
       voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
       voice.filter.frequency.setTargetAtTime(finalCutoff, now, 0.005);
-      voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
+      voice.filter.Q.setTargetAtTime(safeQ, now, 0.008);
       voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
       voice.vca.gain.setTargetAtTime(amp, now, 0.001);
-    }
+         }
 
     function updateVoice(voice, freq, amplitude) {
       if (!voice) return;
       var now = audioCtx.currentTime;
       var aaParams = getAntiAliasedParams(freq);
+      var cutoff = Math.min(freq * 3, aaParams.cutoff);
+      var guardResult = computeDriftGuardedQ(freq, cutoff, freq * 0.5);
       voice.osc.frequency.setTargetAtTime(freq, now, 0.003);
       voice.subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.003);
-      voice.filter.frequency.setTargetAtTime(Math.min(freq * 3, aaParams.cutoff), now, 0.005);
-      voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
+      voice.filter.frequency.setTargetAtTime(cutoff, now, 0.005);
+      voice.filter.Q.setTargetAtTime(guardResult.q, now, 0.008);
       voice.lfoGain.gain.setTargetAtTime(freq * 0.5, now, 0.005);
       voice.vca.gain.setTargetAtTime(amplitude, now, 0.001);
-    }
+          }
 
     function killVoice(cellIndex) {
       var v = activeVoices[cellIndex];
       if (!v) return;
+      var voiceKey = String(cellIndex);
+      unregisterActiveTouch(voiceKey);
       var now = audioCtx.currentTime;
       try {
         v.vca.gain.cancelScheduledValues(now);
@@ -1192,9 +1314,9 @@
         v.osc.disconnect(); v.subOsc.disconnect(); v.subGain.disconnect();
         v.filter.disconnect(); v.vca.disconnect(); v.lfo.disconnect(); v.lfoGain.disconnect();
         v.osc.stop(stopT); v.subOsc.stop(stopT); v.lfo.stop(stopT);
-       } catch(e) {}
+          } catch(e) {}
       delete activeVoices[cellIndex];
-    }
+      }
 
      // ========================================
      //  Grid UI
@@ -1337,14 +1459,19 @@
       seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
     }
 
-    function stopSequence() {
+     function stopSequence() {
       sequencerRunning = false;
       if (seqScheduleTimer) { clearInterval(seqScheduleTimer); seqScheduleTimer = null; }
+
+         // Hard-stop any ringing decay tails from sequencer voices
+      if (guardMaster && audioCtx) {
+        hardStopRinging();
+          }
 
       var toKill = [];
       for (var key in activeVoices) {
         if (activeVoices[key].isSeq && key.indexOf('seq_') === 0) toKill.push(key);
-       }
+        }
       for (var i = 0; i < toKill.length; i++) {
         var v = activeVoices[toKill[i]];
         if (v) {
@@ -1357,15 +1484,15 @@
             v.osc.disconnect(); v.subOsc.disconnect(); v.subGain.disconnect();
             v.filter.disconnect(); v.vca.disconnect(); v.lfo.disconnect(); v.lfoGain.disconnect();
             v.osc.stop(stopT); v.subOsc.stop(stopT); v.lfo.stop(stopT);
-           } catch(e) {}
-         }
+             } catch(e) {}
+          }
         delete activeVoices[toKill[i]];
-       }
-      // Clear step indicators
+        }
+        // Clear step indicators
       for (var di = 0; di < stepDots.length; di++) {
         stepDots[di].classList.remove('current', 'playing');
+        }
        }
-    }
 
        // ========================================
        //  Touch-Driven Input Handling — Multi-Touch with State Persistence
@@ -1457,12 +1584,13 @@
 
       var modCutoff = calcModulatedCutoff(freq, yFrac);
       var finalCutoff = Math.min(modCutoff, aaParams.cutoff);
+      var guardResult = computeDriftGuardedQ(bentFreq, finalCutoff, bentFreq * 0.5);
       voice.filter.frequency.setTargetAtTime(finalCutoff, now, 0.005);
-      voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
+      voice.filter.Q.setTargetAtTime(guardResult.q, now, 0.008);
       voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
       voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
       voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
-     }
+      }
 
          // Legacy single-drag start (used by mouse fallback)
     function startDrag(cell, clientX, clientY, force) {
@@ -1480,14 +1608,15 @@
       cell.classList.add('active');
       LatencyProfiler.recordDown(performance.now());
 
-      if (activeVoices[idx] && !activeVoices[idx].isSeq) {
-        dragVoice = activeVoices[idx];
-        var fracs = getTouchFracInCell(cell, clientX, clientY);
-        retriggerVoice(dragVoice, baseFreq, amp, r, c, fracs.xFrac, fracs.yFrac, force);
-         } else {
-        dragVoice = createVoice(baseFreq, amp, false, r, c);
-        activeVoices[idx] = dragVoice;
-         }
+         if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+         dragVoice = activeVoices[idx];
+         var fracs = getTouchFracInCell(cell, clientX, clientY);
+         retriggerVoice(dragVoice, baseFreq, amp, r, c, fracs.xFrac, fracs.yFrac, force);
+           } else {
+         dragVoice = createVoice(baseFreq, amp, false, r, c);
+         activeVoices[idx] = dragVoice;
+           }
+       registerActiveTouch(idx);
 
       var audioT = performance.now();
       LatencyProfiler.recordMove(performance.now(), audioT);
@@ -1513,10 +1642,10 @@
         voice = activeVoices[voiceKey];
         retriggerVoice(voice, baseFreq, amp, r, c, fracs.xFrac, fracs.yFrac, force);
         } else {
-        voice = createVoice(baseFreq, amp, false, r, c);
-        activeVoices[voiceKey] = voice;
-        }
-
+         voice = createVoice(baseFreq, amp, false, r, c);
+         activeVoices[voiceKey] = voice;
+          }
+       registerActiveTouch(voiceKey);
       registerGesture(gId, r, c, cell, voice, baseFreq, clientX, clientY);
 
         // For single-touch pointer events, also set the legacy drag state
@@ -2020,6 +2149,22 @@
       var smoothing = signalLevel > prevSignalLevel ? 0.5 : 0.75;
       prevSignalLevel = prevSignalLevel * (1 - smoothing) + signalLevel * smoothing;
       smoothedHigh = smoothedHigh * 0.8 + highLevel * 0.2;
+
+        // Singing Harmonic Stabilizer — detect ringing and hard-stop decay tails
+      if (signalLevel > 0.001 || highLevel > 0.001) {
+        var ringCheck = detectRinging(highLevel, signalLevel);
+        if (ringCheck.ringing && ringCheck.shouldMute) {
+          stabilizerState.isStabilizing = true;
+          hardStopRinging();
+          console.log('[Stabilizer] Ringing detected, severity=' + ringCheck.severity.toFixed(2) + ' — hard-stop engaged');
+           } else {
+          if (stabilizerState.isStabilizing && hasActiveTouch()) {
+            resumeFromHardStop();
+            stabilizerState.isStabilizing = false;
+             }
+          stabilizerState.isStabilizing = false;
+           }
+         }
 
       var glowIntensity = Math.min(1, prevSignalLevel * 3.5);
 
