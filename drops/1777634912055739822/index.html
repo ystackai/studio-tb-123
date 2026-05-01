@@ -35,9 +35,9 @@ html, body {
   background: rgba(6,6,15,0.95);
   border: var(--grid-border, 1px) solid rgba(99,102,241,0.08);
   box-shadow:
-     0 0 60px rgba(99,102,241,0.04),
-     0 0 120px rgba(99,102,241,0.025),
-     0 0 200px rgba(99,102,241,0.015),
+      0 0 60px rgba(99,102,241,0.04),
+      0 0 120px rgba(99,102,241,0.025),
+      0 0 200px rgba(99,102,241,0.015),
     inset 0 0 40px rgba(0,0,10,0.5);
   will-change: transform, box-shadow;
   transition: box-shadow 0.15s ease-out;
@@ -62,8 +62,7 @@ html, body {
   #grid { --grid-gap: 8px; --grid-pad: 16px; --grid-radius: 18px; }
 }
 
-/* Cell min-touch-target: 44px physical minimum for finger accuracy */
-/* On narrow screens we scale via transform, cells never shrink below min-target */
+/* Cell min-touch-target: 44px minimum for finger accuracy */
 .cell {
   position: relative; border-radius: 6px;
   background: rgba(10,10,22,0.95);
@@ -82,10 +81,10 @@ html, body {
   background: rgba(99,102,241,0.6);
   border-color: rgba(168,85,247,1);
   box-shadow:
-     0 0 24px rgba(99,102,241,0.9),
-     0 0 55px rgba(99,102,241,0.5),
-     0 0 95px rgba(168,85,247,0.3),
-     0 0 130px rgba(168,85,247,0.12),
+      0 0 24px rgba(99,102,241,0.9),
+      0 0 55px rgba(99,102,241,0.5),
+      0 0 95px rgba(168,85,247,0.3),
+      0 0 130px rgba(168,85,247,0.12),
     inset 0 0 14px rgba(192,132,255,0.6),
     inset 0 0 35px rgba(168,85,247,0.3);
 }
@@ -93,19 +92,19 @@ html, body {
   box-shadow: inset 0 0 10px rgba(255,255,255,0.15);
 }
 @keyframes cellGlow {
- 0%, 100% {
+  0%, 100% {
     box-shadow:
-       0 0 18px rgba(99,102,241,0.8),
-       0 0 48px rgba(99,102,241,0.4),
-       0 0 80px rgba(168,85,247,0.2),
+        0 0 18px rgba(99,102,241,0.8),
+        0 0 48px rgba(99,102,241,0.4),
+        0 0 80px rgba(168,85,247,0.2),
       inset 0 0 10px rgba(168,85,247,0.35);
   }
   50% {
     box-shadow:
-       0 0 32px rgba(99,102,241,1),
-       0 0 75px rgba(99,102,241,0.7),
-       0 0 120px rgba(168,85,247,0.35),
-       0 0 160px rgba(168,85,247,0.15),
+        0 0 32px rgba(99,102,241,1),
+        0 0 75px rgba(99,102,241,0.7),
+        0 0 120px rgba(168,85,247,0.35),
+        0 0 160px rgba(168,85,247,0.15),
       inset 0 0 20px rgba(192,132,255,0.7),
       inset 0 0 45px rgba(168,85,247,0.4);
   }
@@ -128,8 +127,8 @@ html, body {
   text-transform: uppercase;
   color: rgba(255,255,255,0.75);
   text-shadow:
-     0 0 30px rgba(99,102,241,0.6),
-     0 0 60px rgba(99,102,241,0.25);
+      0 0 30px rgba(99,102,241,0.6),
+      0 0 60px rgba(99,102,241,0.25);
   user-select: none;
 }
 #launch-prompt {
@@ -141,7 +140,7 @@ html, body {
   animation: promptPulse 2.5s ease-in-out infinite;
 }
 @keyframes promptPulse {
- 0%, 100% { opacity: 0.4; }
+  0%, 100% { opacity: 0.4; }
   50% { opacity: 0.9; }
 }
 </style>
@@ -153,7 +152,7 @@ html, body {
 </div>
 
 <div id="stage">
-   <div id="grid-wrap"><div id="grid"></div></div>
+  <div id="grid-wrap"><div id="grid"></div></div>
 </div>
 
 <script>
@@ -168,34 +167,52 @@ html, body {
 
   let audioCtx = null;
   let masterGain = null;
+  let preDelay = null;
   let analyser = null;
   let analyserData = null;
   let limiter = null;
+  let compressor = null;
   const activeVoices = {};
 
+  // ========================================
+  //  Sequencer State
+  // ========================================
   let sequencerRunning = false;
   let seqStep = 0;
-  let seqStartTime = 0;
-  let seqIntervalMs = 380;
+  let nextStepTime = 0;
+  let seqIntervalMs = 0.38;
   let seqScheduleTimer = null;
-  const LOOKAHEAD = 0.1;
-  const SCHEDULE_INTERVAL = 25;
+  const LOOKAHEAD = 0.08;
+  const SCHEDULE_INTERVAL = 20;
 
-  const seqPattern = [
-    { r: 2, c: 0 }, { r: 2, c: 2 }, { r: 2, c: 3 }, { r: 2, c: 4 },
-    { r: 2, c: 3 }, { r: 2, c: 2 }, { r: 2, c: 0 }, { r: 2, c: 2 },
-    { r: 2, c: 3 }, { r: 1, c: 0 }, { r: 2, c: 0 }, { r: 2, c: 2 },
+  // Harmony-resolving 16-step pattern with chord voicings.
+  // Each step is an array of {r, c} positions for simultaneous notes.
+  // The pattern is a C-major triad that ascends, resolves, descends, and returns.
+  const seqSteps = [
+    [{ r: 2, c: 0 }],           // C  — root
+    [{ r: 2, c: 2 }],           // E  — third
+    [{ r: 2, c: 3 }],           // G  — fifth
+    [{ r: 2, c: 4 }, { r: 3, c: 0 }], // A + C5 — ascending resolution
+    [{ r: 2, c: 3 }],           // G  — step down
+    [{ r: 2, c: 2 }],           // E  — third
+    [{ r: 2, c: 0 }],           // C  — root return
+    [{ r: 2, c: 2 }, { r: 2, c: 3 }], // E + G — triad
+    [{ r: 2, c: 3 }],           // G  — fifth
+    [{ r: 1, c: 0 }, { r: 2, c: 4 }], // E3 + A4 — lower register bridge
+    [{ r: 2, c: 0 }],           // C  — root
+    [{ r: 2, c: 2 }],           // E  — third
+    [{ r: 2, c: 4 }],           // A  — dominant
+    [{ r: 3, c: 0 }],           // C5 — octave resolution
+    [{ r: 2, c: 3 }],           // G  — fifth
+    [{ r: 2, c: 0 }, { r: 2, c: 2 }, { r: 2, c: 3 }], // C + E + G — full triad cadence
   ];
 
   // ========================================
   //  Launch Sequence
   // ========================================
-
   const overlay = document.getElementById('launch-overlay');
   const stage = document.getElementById('stage');
   let launched = false;
-
-  // Audio context initialization promise — resolved exactly once on first user gesture
   let audioCtxPromise = null;
   let audioCtxReady = false;
 
@@ -207,13 +224,17 @@ html, body {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
           masterGain = audioCtx.createGain();
-          masterGain.gain.value = 0.28;
+          masterGain.gain.value = 0.25;
+
+          // Tight pre-delay — 1.5ms protective cushion to prevent scheduler conflation
+          preDelay = audioCtx.createDelay(0.02);
+          preDelay.delayTime.value = 0.0015;
 
           limiter = audioCtx.createWaveShaper();
           limiter.curve = buildSoftClipCurve();
           limiter.oversample = '4x';
 
-          const compressor = audioCtx.createDynamicsCompressor();
+          compressor = audioCtx.createDynamicsCompressor();
           compressor.threshold.value = -8;
           compressor.knee.value = 10;
           compressor.ratio.value = 8;
@@ -225,20 +246,19 @@ html, body {
           analyser.smoothingTimeConstant = 0.75;
           analyserData = new Uint8Array(analyser.frequencyBinCount);
 
+          // Signal chain: VCA → preDelay → masterGain → SoftClip → Compressor → Analyser → Destination
+          preDelay.connect(masterGain);
           masterGain.connect(limiter);
           limiter.connect(compressor);
           compressor.connect(analyser);
           analyser.connect(audioCtx.destination);
         }
-        // Resume must be awaited — browsers require user gesture for audio
         var resumePromise = (audioCtx.state === 'suspended') ? audioCtx.resume() : Promise.resolve();
         return resumePromise.then(function() {
           audioCtxReady = true;
-          audioCtxPromise = null; // allow re-use on next session
+          audioCtxPromise = null;
           return audioCtx;
         }).catch(function() {
-          // If resume fails (e.g., interrupted gesture), still mark ready
-          // to avoid blocking the UI. Audio will be silent but visuals still fire.
           audioCtxReady = true;
           audioCtxPromise = null;
           return audioCtx;
@@ -254,16 +274,14 @@ html, body {
 
     overlay.classList.add('fade-out');
 
-    // Await audio context activation on the user gesture — satisfies autoplay policy
     getAudioCtxPromise().then(function() {
-      // Audio is live — reveal stage and start sequence immediately
       stage.classList.add('visible');
       startSequence();
     });
 
     setTimeout(function() {
       overlay.style.display = 'none';
-      }, 1000);
+    }, 1000);
   }
 
   document.addEventListener('pointerdown', launch, { passive: true });
@@ -296,18 +314,18 @@ html, body {
   function getAntiAliasedParams(freq) {
     const nyquist = audioCtx.sampleRate * 0.5;
     const freqRatio = freq / nyquist;
-    const maxQ = 3.8;
-    const minQ = 1.2;
+    const maxQ = 3.5;
+    const minQ = 1.0;
     let q;
-    if (freqRatio > 0.12) {
-      const t = Math.min(1, (freqRatio - 0.12) / 0.13);
+    if (freqRatio > 0.1) {
+      const t = Math.min(1, (freqRatio - 0.1) / 0.15);
       q = maxQ - (maxQ - minQ) * t;
     } else {
       q = maxQ;
     }
-    const cutoffCeiling = nyquist * 0.4;
-    let cutoff = Math.min(freq * 5, 10000, cutoffCeiling);
-    return { q, cutoff };
+    const cutoffCeiling = nyquist * 0.38;
+    let cutoff = Math.min(freq * 4.5, 9500, cutoffCeiling);
+    return { q: Math.max(q, 0.5), cutoff };
   }
 
   // ========================================
@@ -316,7 +334,7 @@ html, body {
 
   function ensureAudio() {
     return audioCtx && audioCtxReady;
-   }
+  }
 
   function buildSoftClipCurve() {
     const n = audioCtx.sampleRate * 2;
@@ -337,13 +355,93 @@ html, body {
   }
 
   // ========================================
-  //  Voice: Oscillator → Filter → VCA → Master
+  //  Voice: Oscillator → Filter → VCA → PreDelay → Master
   // ========================================
 
   function createVoice(freq, amplitude, isSeq) {
     if (!ensureAudio()) return null;
     const now = audioCtx.currentTime;
-    const seqVol = isSeq ? 0.55 : 1;
+    const seqVol = isSeq ? 0.5 : 1;
+    const vol = amplitude * seqVol;
+
+    const aaParams = getAntiAliasedParams(freq);
+
+    // Primary oscillator — sawtooth for dense harmonics
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+    osc.detune.value = -3;
+
+    // Sub oscillator — triangle one octave below for warmth
+    const subOsc = audioCtx.createOscillator();
+    subOsc.type = 'triangle';
+    subOsc.frequency.value = freq * 0.5;
+    subOsc.detune.value = 0;
+
+    const subGain = audioCtx.createGain();
+    subGain.gain.value = 0.08;
+    subOsc.connect(subGain);
+
+    // Lowpass filter — the creative engine
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.Q.value = aaParams.q;
+    filter.frequency.value = Math.min(freq * 3, aaParams.cutoff);
+
+    // Slow LFO modulates cutoff for singing harmonic movement
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.18;
+
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = freq * 0.3;
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+
+    // VCA with woody, breathing decay envelope
+    const vca = audioCtx.createGain();
+
+    // Phase 1: attack — 2ms linear ramp (tight, key-strike feel)
+    vca.gain.setValueAtTime(0, now);
+    vca.gain.linearRampToValueAtTime(vol, now + 0.002);
+    // Phase 2: percussive drop — 65ms exponential to 40% (fast energy release, mallet-on-wood)
+    vca.gain.setValueAtTime(vol, now + 0.002);
+    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.40, 0.001), now + 0.067);
+    // Phase 3: breath — 400ms exponential to 12% (organic dissipation, no flat sustain)
+    const p3Start = now + 0.067;
+    vca.gain.setValueAtTime(Math.max(vol * 0.40, 0.001), p3Start);
+    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.12, 0.001), p3Start + 0.4);
+    // Phase 4: tail — 700ms exponential to silence (loose, bendable, no ring)
+    const p4Start = p3Start + 0.4;
+    vca.gain.setValueAtTime(Math.max(vol * 0.12, 0.001), p4Start);
+    vca.gain.exponentialRampToValueAtTime(0.0005, p4Start + 0.7);
+
+    // Signal chain: osc + sub → filter → vca → preDelay (shared) → master chain
+    osc.connect(filter);
+    subGain.connect(filter);
+    filter.connect(vca);
+    vca.connect(preDelay);
+
+    osc.start(now);
+    subOsc.start(now);
+    lfo.start(now);
+
+    const stopTime = p4Start + 0.75;
+    osc.stop(stopTime);
+    subOsc.stop(stopTime);
+    lfo.stop(stopTime);
+
+    return {
+      osc, subOsc, subGain, filter, vca, lfo, lfoGain,
+      stopTime, isSeq: !!isSeq
+    };
+  }
+
+  // Schedule a voice for a future play time. Oscillators start/stop at schedule time.
+  function createScheduledVoice(freq, amplitude, isSeq, playTime) {
+    if (!ensureAudio()) return null;
+    const t0 = Math.max(playTime, audioCtx.currentTime);
+    const seqVol = isSeq ? 0.5 : 1;
     const vol = amplitude * seqVol;
 
     const aaParams = getAntiAliasedParams(freq);
@@ -359,50 +457,45 @@ html, body {
     subOsc.detune.value = 0;
 
     const subGain = audioCtx.createGain();
-    subGain.gain.value = 0.1;
+    subGain.gain.value = 0.08;
     subOsc.connect(subGain);
 
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.Q.value = aaParams.q;
-    filter.frequency.value = aaParams.cutoff;
+    filter.frequency.value = Math.min(freq * 3, aaParams.cutoff);
 
     const lfo = audioCtx.createOscillator();
     lfo.type = 'sine';
-    lfo.frequency.value = 0.2;
+    lfo.frequency.value = 0.18;
 
     const lfoGain = audioCtx.createGain();
-    lfoGain.gain.value = freq * 0.35;
+    lfoGain.gain.value = freq * 0.3;
     lfo.connect(lfoGain);
     lfoGain.connect(filter.frequency);
 
     const vca = audioCtx.createGain();
 
-    // Phase 1: attack 2ms
-    vca.gain.setValueAtTime(0, now);
-    vca.gain.linearRampToValueAtTime(vol, now + 0.002);
-    // Phase 2: percussive decay 80ms to 45%
-    vca.gain.setValueAtTime(vol, now + 0.002);
-    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
-    // Phase 3: breath decay 520ms to 15%
-    const p3Start = now + 0.082;
-    vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
-    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
-    // Phase 4: tail release 1200ms to 2%
-    const p4Start = p3Start + 0.52;
-    vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
-    vca.gain.exponentialRampToValueAtTime(0.001, p4Start + 1.2);
+    // Woody envelope scheduled from play time
+    vca.gain.setValueAtTime(0, t0);
+    vca.gain.linearRampToValueAtTime(vol, t0 + 0.002);
+    vca.gain.setValueAtTime(vol, t0 + 0.002);
+    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.40, 0.001), t0 + 0.067);
+    vca.gain.setValueAtTime(Math.max(vol * 0.40, 0.001), t0 + 0.067);
+    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.12, 0.001), t0 + 0.467);
+    vca.gain.setValueAtTime(Math.max(vol * 0.12, 0.001), t0 + 0.467);
+    vca.gain.exponentialRampToValueAtTime(0.0005, t0 + 1.167);
 
     osc.connect(filter);
     subGain.connect(filter);
     filter.connect(vca);
-    vca.connect(masterGain);
+    vca.connect(preDelay);
 
-    osc.start(now);
-    subOsc.start(now);
-    lfo.start(now);
+    osc.start(t0);
+    subOsc.start(t0);
+    lfo.start(t0);
 
-    const stopTime = p4Start + 1.25;
+    const stopTime = t0 + 1.22;
     osc.stop(stopTime);
     subOsc.stop(stopTime);
     lfo.stop(stopTime);
@@ -420,9 +513,9 @@ html, body {
 
     voice.osc.frequency.setTargetAtTime(freq, now, 0.003);
     voice.subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.003);
-    voice.filter.frequency.setTargetAtTime(aaParams.cutoff, now, 0.005);
+    voice.filter.frequency.setTargetAtTime(Math.min(freq * 3, aaParams.cutoff), now, 0.005);
     voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
-    voice.lfoGain.gain.setTargetAtTime(freq * 0.35, now, 0.005);
+    voice.lfoGain.gain.setTargetAtTime(freq * 0.3, now, 0.005);
     voice.vca.gain.setTargetAtTime(amplitude, now, 0.001);
   }
 
@@ -433,14 +526,14 @@ html, body {
     try {
       v.vca.gain.cancelScheduledValues(now);
       v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
-      v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-      const stopT = now + 0.3;
-      v.osc.detach();
-      v.subOsc.detach();
+      v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      const stopT = now + 0.25;
+      v.osc.disconnect();
+      v.subOsc.disconnect();
       v.subGain.disconnect();
       v.filter.disconnect();
       v.vca.disconnect();
-      v.lfo.detach();
+      v.lfo.disconnect();
       v.lfoGain.disconnect();
       v.osc.stop(stopT);
       v.subOsc.stop(stopT);
@@ -514,9 +607,8 @@ html, body {
     const vh = window.innerHeight;
     const pad = getGridPadPx();
     const gap = getGridGapPx();
-    const borderW = 1;
 
-    const availW = Math.min(vw * 0.92, 680) - 2 * pad - 2 * borderW;
+    const availW = Math.min(vw * 0.92, 680) - 2 * pad;
     const gapTotalW = (COLS - 1) * gap;
     const rawCellW = (availW - gapTotalW) / COLS;
     const cellH = rawCellW * 0.78;
@@ -546,7 +638,6 @@ html, body {
     }
   }
 
-  // Add cell-label styles inline (no external CSS for it)
   (function injectCellLabelStyle() {
     const styleEl = document.createElement('style');
     styleEl.textContent =
@@ -561,92 +652,77 @@ html, body {
       '.cell.active .cell-label { ' +
       '  color: rgba(255,255,255,0.9); ' +
       '  text-shadow: ' +
-      '    0 0 8px rgba(192,132,255,0.8), ' +
-      '    0 0 20px rgba(99,102,241,0.4); ' +
+      '     0 0 8px rgba(192,132,255,0.8), ' +
+      '     0 0 20px rgba(99,102,241,0.4); ' +
       '}';
     document.head.appendChild(styleEl);
   })();
 
   // ========================================
-  //  Lookahead Sequencer
+  //  Lookahead Sequencer — Optimized
   // ========================================
+  // Uses a strict schedule-ahead pattern. nextStepTime tracks the scheduled
+  // time for the next step. Each scheduler tick schedules all notes ahead
+  // that fall within the look-ahead window.
 
-  let seqScheduleQueue = [];
+  function scheduleStep(stepIdx, playTime) {
+    const notes = seqSteps[stepIdx % seqSteps.length];
+    const visualDelays = [];
 
-  function scheduleNote(step, time) {
-    const s = seqPattern[step % seqPattern.length];
-    const idx = s.r * COLS + s.c;
-    const cell = allCells[idx];
-    const freq = getFrequency(s.r, s.c);
-    const amp = getAmplitudeFromPosition(s.r, s.c);
+    for (let n = 0; n < notes.length; n++) {
+      const note = notes[n];
+      const idx = note.r * COLS + note.c;
+      const cell = allCells[idx];
+      const freq = getFrequency(note.r, note.c);
+      const amp = getAmplitudeFromPosition(note.r, note.c);
 
-    const voice = createVoice(freq, amp, true);
-    if (!voice) return;
+      const voice = createScheduledVoice(freq, amp, true, playTime);
+      if (voice) {
+        activeVoices['seq_' + stepIdx + '_' + n] = voice;
+        // Auto-cleanup after sound ends
+        const cleanupDelay = (voice.stopTime - audioCtx.currentTime) * 1000 + 50;
+        setTimeout(function() {
+          delete activeVoices['seq_' + stepIdx + '_' + n];
+        }, cleanupDelay);
+      }
 
-    voice.osc.stop(voice.stopTime);
-    voice.subOsc.stop(voice.stopTime);
-    voice.lfo.stop(voice.stopTime);
+      const delayUntil = Math.max(0, (playTime - audioCtx.currentTime)) * 1000;
+      visualDelays.push({ cell: cell, delay: delayUntil });
+    }
 
-    const now = audioCtx.currentTime;
-    const delayUntil = Math.max(0, time - now);
-
-    const vol = amp * 0.55;
-    voice.vca.gain.cancelScheduledValues(now);
-    voice.vca.gain.setValueAtTime(0, time);
-    voice.vca.gain.linearRampToValueAtTime(vol, time + 0.002);
-    voice.vca.gain.setValueAtTime(vol, time + 0.002);
-    voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), time + 0.082);
-    voice.vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), time + 0.082);
-    voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), time + 0.602);
-    voice.vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), time + 0.602);
-    voice.vca.gain.exponentialRampToValueAtTime(0.001, time + 1.802);
-
-    voice.osc.start(time);
-    voice.subOsc.start(time);
-    voice.lfo.start(time);
-
-    const visualDelayMs = delayUntil * 1000;
-    setTimeout(function() {
-      if (cell) cell.classList.add('active');
-    }, visualDelayMs);
-    setTimeout(function() {
-      if (cell) cell.classList.remove('active');
-    }, visualDelayMs + 850);
+    // Schedule visual feedback in sync with audio
+    for (let d = 0; d < visualDelays.length; d++) {
+      (function(cd) {
+        setTimeout(function() {
+          if (cd.cell) cd.cell.classList.add('active');
+        }, cd.delay);
+        setTimeout(function() {
+          if (cd.cell) cd.cell.classList.remove('active');
+        }, cd.delay + 550);
+      })(visualDelays[d]);
+    }
   }
 
   function seqScheduler() {
     if (!sequencerRunning) return;
 
     const now = audioCtx.currentTime;
-    const elapsed = now - seqStartTime;
-    const currentStep = Math.floor(elapsed / (seqIntervalMs / 1000));
 
-    while (seqScheduleQueue.length === 0 ||
-            seqScheduleQueue[seqScheduleQueue.length - 1].step <= currentStep) {
-      const nextStep = seqScheduleQueue.length > 0
-          ? Math.max(currentStep, seqScheduleQueue[seqScheduleQueue.length - 1].step + 1)
-          : currentStep;
-      const playTime = seqStartTime + nextStep * (seqIntervalMs / 1000);
-      if (playTime <= now + LOOKAHEAD) {
-        seqScheduleQueue.push({ step: nextStep, time: playTime });
-        scheduleNote(nextStep, playTime);
-      } else {
-        break;
-      }
+    // Schedule all notes within the look-ahead window
+    while (nextStepTime < now + LOOKAHEAD) {
+      scheduleStep(seqStep, nextStepTime);
+      seqStep++;
+      nextStepTime += seqIntervalMs;
     }
-
-    seqScheduleQueue = seqScheduleQueue.filter(function(entry) {
-      return entry.time > now - 2;
-    });
   }
 
   function startSequence() {
     if (!ensureAudio()) return;
     sequencerRunning = true;
     seqStep = 0;
-    seqStartTime = audioCtx.currentTime + 0.05;
-    seqScheduleQueue = [];
+    nextStepTime = audioCtx.currentTime + 0.05;
 
+    if (seqScheduleTimer) clearInterval(seqScheduleTimer);
     seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
   }
 
@@ -656,25 +732,46 @@ html, body {
       clearInterval(seqScheduleTimer);
       seqScheduleTimer = null;
     }
-    seqScheduleQueue = [];
-    seqStep = 0;
 
+    // Kill all sequencer voices
     const toKill = [];
-    for (const idx in activeVoices) {
-      if (activeVoices[idx].isSeq) toKill.push(parseInt(idx));
+    for (const key in activeVoices) {
+      if (activeVoices[key].isSeq && key.startsWith('seq_')) {
+        toKill.push(key);
+      }
     }
-    toKill.forEach(function(idx) { killVoice(idx); });
+    for (let i = 0; i < toKill.length; i++) {
+      const v = activeVoices[toKill[i]];
+      if (v) {
+        const now = audioCtx.currentTime;
+        try {
+          v.vca.gain.cancelScheduledValues(now);
+          v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
+          v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+          const stopT = now + 0.2;
+          v.osc.disconnect();
+          v.subOsc.disconnect();
+          v.subGain.disconnect();
+          v.filter.disconnect();
+          v.vca.disconnect();
+          v.lfo.disconnect();
+          v.lfoGain.disconnect();
+          v.osc.stop(stopT);
+          v.subOsc.stop(stopT);
+          v.lfo.stop(stopT);
+        } catch(e) {}
+      }
+      delete activeVoices[toKill[i]];
+    }
   }
 
   // ========================================
   //  Touch / Mouse Input
   // ========================================
 
-  let firstTouch = true;
   let dragVoice = null;
   let dragCellIndex = -1;
   let mouseDown = false;
-  let userHasPlayed = false;
   let touchStartX = 0;
   let touchStartY = 0;
   let touchMoved = false;
@@ -693,10 +790,6 @@ html, body {
     const idx = parseInt(cell.dataset.index);
     const freq = getFrequency(r, c);
     const amp = getAmplitudeFromPosition(r, c);
-
-    if (firstTouch) {
-      firstTouch = false;
-    }
 
     if (dragVoice) {
       if (idx !== dragCellIndex) {
@@ -732,8 +825,8 @@ html, body {
         try {
           v.vca.gain.cancelScheduledValues(now);
           v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
-          v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-          const stopT = now + 0.4;
+          v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+          const stopT = now + 0.35;
           v.osc.stop(stopT);
           v.subOsc.stop(stopT);
           v.lfo.stop(stopT);
@@ -746,7 +839,6 @@ html, body {
   if (window.PointerEvent) {
     gridEl.addEventListener('pointerdown', function(e) {
       e.preventDefault();
-      userHasPlayed = true;
       touchStartX = e.clientX;
       touchStartY = e.clientY;
       touchMoved = false;
@@ -758,45 +850,45 @@ html, body {
       cell.classList.add('active');
       gridEl.setPointerCapture(e.pointerId);
 
-      // Wait for audio context to be live before creating/updating voice
       getAudioCtxPromise().then(function() {
         if (!ensureAudio()) return;
+        const r = parseInt(cell.dataset.row);
+        const c = parseInt(cell.dataset.col);
+        const freq = getFrequency(r, c);
+        const amp = getAmplitudeFromPosition(r, c);
+
         if (activeVoices[idx] && !activeVoices[idx].isSeq) {
           dragVoice = activeVoices[idx];
           dragCellIndex = idx;
-          updateVoice(dragVoice, getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)), getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)));
+          updateVoice(dragVoice, freq, amp);
         } else {
-          dragVoice = createVoice(
-            getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-            getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-            false
-            );
+          dragVoice = createVoice(freq, amp, false);
           dragCellIndex = idx;
+          activeVoices[idx] = dragVoice;
         }
       });
-      });
+    });
 
     gridEl.addEventListener('pointermove', function(e) {
       if (!touchMoved && Math.abs(e.clientX - touchStartX) < TOUCH_DEADZONE && Math.abs(e.clientY - touchStartY) < TOUCH_DEADZONE) return;
       touchMoved = true;
       const cell = e.target.closest && e.target.closest('.cell');
       if (cell) hitCell(cell);
-      });
+    });
 
     gridEl.addEventListener('pointerup', function(e) {
       releaseCell();
       try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-      });
+    });
 
     gridEl.addEventListener('pointercancel', function(e) {
       releaseCell();
       try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-      });
-    } else {
+    });
+  } else {
     function handleTouchStart(e) {
       e.preventDefault();
-      ensureAudio();
-      userHasPlayed = true;
+      getAudioCtxPromise();
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i];
         touchStartX = t.clientX;
@@ -815,19 +907,19 @@ html, body {
           dragVoice = null;
           dragCellIndex = -1;
 
+          const r = parseInt(cell.dataset.row);
+          const c = parseInt(cell.dataset.col);
+          const freq = getFrequency(r, c);
+          const amp = getAmplitudeFromPosition(r, c);
+
           if (activeVoices[idx] && !activeVoices[idx].isSeq) {
             dragVoice = activeVoices[idx];
             dragCellIndex = idx;
-            const r = parseInt(cell.dataset.row);
-            const c = parseInt(cell.dataset.col);
-            updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
+            updateVoice(dragVoice, freq, amp);
           } else {
-            dragVoice = createVoice(
-              getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-              getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-              false
-            );
+            dragVoice = createVoice(freq, amp, false);
             dragCellIndex = idx;
+            activeVoices[idx] = dragVoice;
           }
           cell.classList.add('active');
         }
@@ -843,8 +935,8 @@ html, body {
         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         const cell = el && el.closest && el.closest('.cell');
         if (cell) hitCell(cell);
-       }
-       }
+      }
+    }
 
     function handleTouchEnd(e) {
       e.preventDefault();
@@ -858,28 +950,27 @@ html, body {
 
     gridEl.addEventListener('mousedown', function(e) {
       e.preventDefault();
-      ensureAudio();
-      userHasPlayed = true;
+      getAudioCtxPromise();
       mouseDown = true;
       const cell = getCellFromEvent(e);
       if (cell) {
         const idx = parseInt(cell.dataset.index);
+        const r = parseInt(cell.dataset.row);
+        const c = parseInt(cell.dataset.col);
+        const freq = getFrequency(r, c);
+        const amp = getAmplitudeFromPosition(r, c);
+
         dragVoice = null;
         dragCellIndex = -1;
 
         if (activeVoices[idx] && !activeVoices[idx].isSeq) {
           dragVoice = activeVoices[idx];
           dragCellIndex = idx;
-          const r = parseInt(cell.dataset.row);
-          const c = parseInt(cell.dataset.col);
-          updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
+          updateVoice(dragVoice, freq, amp);
         } else {
-          dragVoice = createVoice(
-            getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-            getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-            false
-          );
+          dragVoice = createVoice(freq, amp, false);
           dragCellIndex = idx;
+          activeVoices[idx] = dragVoice;
         }
         cell.classList.add('active');
       }
@@ -984,11 +1075,11 @@ html, body {
     window.addEventListener('resize', function() {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(resizeGrid, 80);
-     });
+    });
     if (window.matchMedia) {
       window.matchMedia('(orientation: portrait)').addEventListener('change', resizeGrid);
       window.matchMedia('(orientation: landscape)').addEventListener('change', resizeGrid);
-     }
+    }
 
     if (!Element.prototype.closest) {
       Element.prototype.closest = function(s) {
@@ -997,11 +1088,11 @@ html, body {
         do {
           if (matchesFn.call(el, s)) return el;
           el = el.parentElement || el.parentNode;
-         } while (el !== null && el.nodeType === 1);
+        } while (el !== null && el.nodeType === 1);
         return null;
-       };
-     }
-   }
+      };
+    }
+  }
 
   init();
 })();
