@@ -1296,34 +1296,34 @@
            // ========================================
            //  Resonance Drift Guard — computes safe Q given LFO cutoff modulation
            // ========================================
-     function computeDriftGuardedQ(freq, currentCutoff, lfoDepth) {
-       var nyquist = audioCtx.sampleRate * 0.5;
-       var freqRatio = freq / nyquist;
-       var cutoffRatio = currentCutoff / nyquist;
+      function computeDriftGuardedQ(freq, currentCutoff, lfoDepth) {
+        var nyquist = audioCtx.sampleRate * 0.5;
+        var freqRatio = freq / nyquist;
+        var cutoffRatio = currentCutoff / nyquist;
 
-       var maxQ = 3.8, minQ = 1.0, q;
+        var maxQ = 3.6, minQ = 1.4, q;
 
-       if (freqRatio > 0.12) {
-         var t = Math.min(1, (freqRatio - 0.12) / 0.13);
-         q = maxQ - (maxQ - minQ) * t;
-          } else {
-         q = maxQ;
-          }
-       q = Math.max(q, 0.5);
-
-       var lfoModulationIndex = (lfoDepth / Math.max(currentCutoff, 1));
-       if (lfoModulationIndex > 0.4) {
-         var clampFactor = 1 - (lfoModulationIndex - 0.4) * 0.5;
-         q = q * Math.max(0.3, clampFactor);
-          }
-
-       if (cutoffRatio > 0.1) {
-         var cutoffClamp = 1 - ((cutoffRatio - 0.1) / 0.4) * 0.5;
-         q = q * Math.max(0.3, cutoffClamp);
-          }
-
-       return { q: Math.max(q, minQ), safe: q < 3.0 };
+        if (freqRatio > 0.1) {
+          var t = Math.min(1, (freqRatio - 0.1) / 0.15);
+          q = maxQ - (maxQ - minQ) * t;
+        } else {
+          q = maxQ;
         }
+        q = Math.max(q, minQ);
+
+        var lfoModulationIndex = (lfoDepth / Math.max(currentCutoff, 1));
+        if (lfoModulationIndex > 0.35) {
+          var clampFactor = 1 - (lfoModulationIndex - 0.35) * 0.4;
+          q = q * Math.max(0.4, clampFactor);
+        }
+
+        if (cutoffRatio > 0.08) {
+          var cutoffClamp = 1 - ((cutoffRatio - 0.08) / 0.5) * 0.35;
+          q = q * Math.max(0.4, cutoffClamp);
+        }
+
+        return { q: Math.max(Math.min(q, ENV.RESONANCE_DRIFT_GUARD_Q_MAX), minQ), safe: q < 3.4 };
+          }
 
            // ========================================
            //  Singing Harmonic Stabilizer — detects ringing and hard-stops decay tails
@@ -1739,17 +1739,17 @@
     function getAntiAliasedParams(freq) {
       var nyquist = audioCtx.sampleRate * 0.5;
       var freqRatio = freq / nyquist;
-      var maxQ = 3.8, minQ = 1.0, q;
-      if (freqRatio > 0.12) {
-        var t = Math.min(1, (freqRatio - 0.12) / 0.13);
+      var maxQ = 3.6, minQ = 1.4, q;
+      if (freqRatio > 0.1) {
+        var t = Math.min(1, (freqRatio - 0.1) / 0.15);
         q = maxQ - (maxQ - minQ) * t;
        } else {
         q = maxQ;
        }
       var cutoffCeiling = nyquist * 0.38;
       var cutoff = Math.min(freq * 5, 10000, cutoffCeiling);
-      return { q: Math.max(q, 0.5), cutoff: cutoff };
-    }
+      return { q: Math.max(q, minQ), cutoff: cutoff };
+     }
 
      // ========================================
      //  Audio Context
@@ -1863,11 +1863,13 @@
       vca.gain.setValueAtTime(0, t0);
       vca.gain.linearRampToValueAtTime(vol, t0 + 0.002);
       vca.gain.setValueAtTime(vol, t0 + 0.002);
-      vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.40, 0.001), t0 + 0.067);
-      vca.gain.setValueAtTime(Math.max(vol * 0.40, 0.001), t0 + 0.067);
-      vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.12, 0.001), t0 + 0.467);
-      vca.gain.setValueAtTime(Math.max(vol * 0.12, 0.001), t0 + 0.467);
-      vca.gain.exponentialRampToValueAtTime(0.0005, t0 + 1.167);
+      vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), t0 + 0.082);
+      var p3Start = t0 + 0.082;
+      vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
+      vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
+      var p4Start = p3Start + 0.52;
+      vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
+      vca.gain.exponentialRampToValueAtTime(0.0001, p4Start + 1.2);
 
       osc.connect(filter);
       subGain.connect(filter);
@@ -1875,7 +1877,7 @@
       vca.connect(preDelayNode);
 
       osc.start(t0); subOsc.start(t0); lfo.start(t0);
-      var stopTime = t0 + 1.22;
+      var stopTime = p4Start + 0.75;
       osc.stop(stopTime); subOsc.stop(stopTime); lfo.stop(stopTime);
 
       return {
@@ -2105,13 +2107,13 @@
         if (v) {
           var now = audioCtx.currentTime;
           try {
-            v.vca.gain.cancelScheduledValues(now);
-            v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
-            v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-            var stopT = now + 0.2;
-            v.osc.disconnect(); v.subOsc.disconnect(); v.subGain.disconnect();
-            v.filter.disconnect(); v.vca.disconnect(); v.lfo.disconnect(); v.lfoGain.disconnect();
-            v.osc.stop(stopT); v.subOsc.stop(stopT); v.lfo.stop(stopT);
+          v.vca.gain.cancelScheduledValues(now);
+          v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
+          v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+          var stopT = now + 0.25;
+          v.osc.disconnect(); v.subOsc.disconnect(); v.subGain.disconnect();
+          v.filter.disconnect(); v.vca.disconnect(); v.lfo.disconnect(); v.lfoGain.disconnect();
+          v.osc.stop(stopT); v.subOsc.stop(stopT); v.lfo.stop(stopT);
              } catch(e) {}
           }
         delete activeVoices[toKill[i]];
