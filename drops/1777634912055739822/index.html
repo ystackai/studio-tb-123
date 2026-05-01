@@ -8,18 +8,18 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html, body {
+     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
-      background: #05050a;
+      background: #010108;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
+       -webkit-touch-callout: none;
+       -webkit-user-select: none;
       user-select: none;
       touch-action: none;
-    }
+     }
 
-    #stage {
+     #stage {
       position: relative;
       width: 100%; height: 100%;
       display: flex;
@@ -27,9 +27,9 @@
       align-items: center;
       justify-content: center;
       background:
-        radial-gradient(ellipse 30% 50% at 50% 30%, rgba(99,102,241,0.06) 0%, transparent 80%),
-        radial-gradient(ellipse 50% 80% at 50% 50%, rgba(15,15,25,1) 0%, rgba(5,5,10,1) 100%);
-    }
+        radial-gradient(ellipse 25% 40% at 50% 25%, rgba(99,102,241,0.03) 0%, transparent 70%),
+        radial-gradient(ellipse 80% 100% at 50% 50%, #010108 0%, #000005 100%);
+     }
 
     #header {
       position: absolute;
@@ -60,45 +60,61 @@
       z-index: 5;
     }
 
-    #grid {
+      #grid {
       display: grid;
-      gap: 4px;
-      padding: 8px;
-      border-radius: 12px;
-      background: rgba(15,15,30,0.8);
-      border: 1px solid rgba(99,102,241,0.1);
+      gap: 5px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(8,8,18,0.9);
+      border: 1px solid rgba(99,102,241,0.06);
       box-shadow:
-        0 0 60px rgba(99,102,241,0.05),
-        inset 0 0 40px rgba(10,10,20,0.5);
+         0 0 80px rgba(99,102,241,0.03),
+         0 0 200px rgba(99,102,241,0.02),
+        inset 0 0 60px rgba(0,0,10,0.6);
       will-change: transform;
-    }
+      }
 
-    .cell {
+      .cell {
       position: relative;
-      border-radius: 6px;
-      background: rgba(30,30,50,0.6);
-      border: 1px solid rgba(99,102,241,0.08);
-      transition: background 0.08s, border-color 0.08s, box-shadow 0.08s;
+      border-radius: 7px;
+      background: rgba(12,12,24,0.9);
+      border: 1px solid rgba(99,102,241,0.04);
+      transition: background 0.04s, border-color 0.04s, box-shadow 0.04s;
       cursor: pointer;
       will-change: background, box-shadow;
-    }
+      }
 
-    .cell:active, .cell.active {
-      background: rgba(99,102,241,0.35);
-      border-color: rgba(99,102,241,0.7);
+      .cell:active, .cell.active {
+      background: rgba(99,102,241,0.55);
+      border-color: rgba(168,85,247,0.9);
       box-shadow:
-        0 0 16px rgba(99,102,241,0.5),
-        inset 0 0 8px rgba(168,85,247,0.3);
-    }
+         0 0 20px rgba(99,102,241,0.8),
+         0 0 50px rgba(99,102,241,0.4),
+         0 0 90px rgba(168,85,247,0.2),
+        inset 0 0 12px rgba(192,132,255,0.5),
+        inset 0 0 30px rgba(168,85,247,0.25);
+      }
 
-    @keyframes cellGlow {
-      0%, 100% { box-shadow: 0 0 12px rgba(99,102,241,0.4), inset 0 0 6px rgba(168,85,247,0.2); }
-      50% { box-shadow: 0 0 24px rgba(99,102,241,0.7), inset 0 0 12px rgba(168,85,247,0.4); }
-    }
+      @keyframes cellGlow {
+        0%, 100% {
+          box-shadow:
+            0 0 14px rgba(99,102,241,0.6),
+            0 0 40px rgba(99,102,241,0.3),
+            inset 0 0 8px rgba(168,85,247,0.3);
+        }
+        50% {
+          box-shadow:
+            0 0 28px rgba(99,102,241,1),
+            0 0 70px rgba(99,102,241,0.6),
+            0 0 110px rgba(168,85,247,0.3),
+            inset 0 0 16px rgba(192,132,255,0.6),
+            inset 0 0 40px rgba(168,85,247,0.35);
+        }
+      }
 
-    .cell.active {
-      animation: cellGlow 1.2s ease-in-out infinite;
-    }
+      .cell.active {
+      animation: cellGlow 0.9s ease-in-out infinite;
+      }
 
     .cell-label {
       position: absolute;
@@ -159,9 +175,16 @@
       box-shadow: 0 0 6px rgba(99,102,241,0.6);
     }
 
-    @media (max-width: 600px) {
-      #grid { gap: 3px; padding: 6px; }
-    }
+      @media (max-width: 600px) {
+        #grid { gap: 3px; padding: 6px; }
+      }
+
+      .cell.signal-glow {
+      background: rgba(99,102,241,0.2);
+      box-shadow:
+          0 0 8px rgba(99,102,241,0.3),
+        inset 0 0 4px rgba(168,85,247,0.15);
+      }
   </style>
 </head>
 <body>
@@ -189,11 +212,13 @@
   //  Audio Context & Signal Chain
   // ========================================
 
-  let audioCtx = null;
-  let masterGain = null;
+   let audioCtx = null;
+   let masterGain = null;
+   let analyser = null;
+   let analyserData = null;
 
-  // Active voice map: cellIndex -> { osc, filter, vca, lfo, lfoGain }
-  const activeVoices = {};
+    // Active voice map: cellIndex -> { osc, filter, vca, lfo, lfoGain }
+   const activeVoices = {};
 
   // Note grid configuration — pentatonic / triad-friendly mapping
   // 5 rows (octaves/frets), 8 cols (scale degrees)
@@ -242,12 +267,18 @@
       limiter.attack.value = 0.001;
       limiter.release.value = 0.05;
 
-      preDelay.connect(masterGain);
-      masterGain.connect(limiter);
-      limiter.connect(audioCtx.destination);
+       analyser = audioCtx.createAnalyser();
+       analyser.fftSize = 256;
+       analyser.smoothingTimeConstant = 0.75;
+       analyserData = new Uint8Array(analyser.frequencyBinCount);
 
-      window._preDelay = preDelay;
-      window._limiter = limiter;
+       preDelay.connect(masterGain);
+       masterGain.connect(limiter);
+       limiter.connect(analyser);
+       analyser.connect(audioCtx.destination);
+
+       window._preDelay = preDelay;
+       window._limiter = limiter;
     }
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
@@ -618,21 +649,69 @@
   gridEl.addEventListener('touchend', handleTouchEnd, { passive: false });
   gridEl.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
-  // ========================================
-  //  LFO Visualization (visual feedback for LFO speed)
-  // ========================================
+    // ========================================
+    //  Audio-Reactive Visual Loop
+    // ========================================
 
-  let lfoPhase = 0;
-  function lfoVisualLoop() {
-    lfoPhase += 0.03;
-    const brightness = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(lfoPhase));
-    const dotLfo = document.getElementById('dot-lfo');
-    if (dotLfo && dotLfo.classList.contains('live')) {
-      dotLfo.style.opacity = brightness.toFixed(2);
+   let lfoPhase = 0;
+   let prevSignalLevel = 0;
+
+   function audioVisualLoop() {
+     lfoPhase += 0.03;
+
+     let signalLevel = 0;
+     if (analyser && analyserData) {
+       analyser.getByteFrequencyData(analyserData);
+       let sum = 0;
+       for (let i = 0; i < analyserData.length; i++) {
+         sum += analyserData[i];
+        }
+       signalLevel = sum / (analyserData.length * 255);
+      }
+
+      // Smooth signal level for visual stability
+     prevSignalLevel = prevSignalLevel * 0.7 + signalLevel * 0.3;
+
+     // LFO dot brightness
+     const lfoBrightness = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(lfoPhase));
+     const dotLfo = document.getElementById('dot-lfo');
+     if (dotLfo && dotLfo.classList.contains('live')) {
+       dotLfo.style.opacity = lfoBrightness.toFixed(2);
+      }
+
+     // Decay dot pulses with signal
+     const dotDecay = document.getElementById('dot-decay');
+     if (dotDecay && dotDecay.classList.contains('live')) {
+       const decayPulse = Math.min(1, prevSignalLevel * 4);
+       dotDecay.style.transform = `scale(${0.8 + decayPulse * 0.4})`;
+       dotDecay.style.filter = `brightness(${0.8 + decayPulse})`;
+      }
+
+     // Filter dot responds to harmonic content (higher freq bins)
+     const dotFilter = document.getElementById('dot-filter');
+     if (dotFilter && dotFilter.classList.contains('live')) {
+       let highSum = 0;
+       const startBin = Math.floor(analyserData.length * 0.5);
+       for (let i = startBin; i < analyserData.length; i++) {
+         highSum += analyserData[i];
+        }
+       const highLevel = highSum / ((analyserData.length - startBin) * 255);
+       dotFilter.style.transform = `scale(${0.8 + highLevel * 3})`;
+      }
+
+     // Grid ambient glow reacts to signal intensity
+     if (prevSignalLevel > 0.02) {
+       const glowIntensity = Math.min(1, prevSignalLevel * 3);
+       const glowAlpha = glowIntensity.toFixed(3);
+       gridEl.style.boxShadow =
+         `0 0 ${60 + glowIntensity * 40}px rgba(99,102,241,${(0.03 + glowIntensity * 0.07).toFixed(3)}),` +
+         `0 0 ${150 + glowIntensity * 80}px rgba(99,102,241,${(0.02 + glowIntensity * 0.05).toFixed(3)}),` +
+         `inset 0 0 ${40 + glowIntensity * 30}px rgba(168,85,247,${(glowIntensity * 0.15).toFixed(3)})`;
+      }
+
+     requestAnimationFrame(audioVisualLoop);
     }
-    requestAnimationFrame(lfoVisualLoop);
-  }
-  lfoVisualLoop();
+   audioVisualLoop();
 
   // ========================================
   //  Sequence (auto-play triad pattern)
