@@ -14,18 +14,18 @@
 
     /* -- Palette -- */
     :root {
-       --cover-stage: #000000;
-       --cover-stage-vignette: #050510;
-       --cover-stage-haze: rgba(99,102,241,0.04);
-       --cover-stage-haze-deep: rgba(168,85,247,0.012);
+        --cover-stage: #000000;
+         --cover-stage-vignette: #020208;
+         --cover-stage-haze: rgba(99,102,241,0.035);
+         --cover-stage-haze-deep: rgba(168,85,247,0.01);
 
-       --cover-frame-bg: rgba(4,4,10,0.97);
-       --cover-frame-border: rgba(99,102,241,0.06);
-       --cover-frame-radius: 2px;
+       --cover-frame-bg: rgba(3,3,8,0.98);
+          --cover-frame-border: rgba(99,102,241,0.08);
+          --cover-frame-radius: 3px;
 
-       --cover-cell-idle-bg: rgba(6,6,14,0.98);
-       --cover-cell-idle-border: rgba(99,102,241,0.04);
-       --cover-cell-radius: 1px;
+          --cover-cell-idle-bg: rgba(4,4,10,0.99);
+          --cover-cell-idle-border: rgba(99,102,241,0.05);
+          --cover-cell-radius: 2px;
 
        --cover-cell-active-bg-1: 99,102,241;
        --cover-cell-active-bg-2: 168,85,247;
@@ -63,10 +63,10 @@
        opacity: 0;
        transition: opacity 0.8s ease-out;
        will-change: opacity;
-       background:
-         radial-gradient(ellipse 32% 42% at 50% 15%, rgba(99,102,241,0.05) 0%, rgba(99,102,241,0.015) 35%, transparent 65%),
-         radial-gradient(ellipse 65% 75% at 50% 55%, rgba(168,85,247,0.01) 0%, transparent 55%),
-         radial-gradient(ellipse 90% 100% at 50% 50%, var(--cover-stage) 0%, var(--cover-stage-vignette) 100%);
+        background:
+          radial-gradient(ellipse 28% 38% at 50% 12%, rgba(99,102,241,0.045) 0%, rgba(99,102,241,0.012) 30%, transparent 60%),
+          radial-gradient(ellipse 55% 65% at 50% 50%, rgba(168,85,247,0.008) 0%, transparent 50%),
+          radial-gradient(ellipse 85% 95% at 50% 48%, var(--cover-stage) 0%, var(--cover-stage-vignette) 100%);
     }
     #stage.visible { opacity: 1; }
 
