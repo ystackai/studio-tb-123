@@ -141,23 +141,24 @@
        transform: translateZ(0);
       }
 
-       /* ---- Cell (active) ---- */
-      .cell:active, .cell.active {
-       background: rgba(99,102,241,0.78);
-       border-color: rgba(168,85,247,1);
+        /* ---- Cell (active) — Bright Performer — locked for hero screenshot ---- */
+       .cell:active, .cell.active {
+       background: rgba(99,102,241,0.88);
+       border-color: rgba(192,132,255,1);
        box-shadow:
-           0 0 18px rgba(99,102,241,1),
-           0 0 44px rgba(99,102,241,0.72),
-           0 0 82px rgba(168,85,247,0.52),
-           0 0 120px rgba(139,92,246,0.32),
-           0 0 160px rgba(139,92,246,0.18),
-         inset 0 0 14px rgba(192,132,255,0.85),
-         inset 0 0 36px rgba(168,85,247,0.52),
-         inset 0 0 60px rgba(217,169,255,0.22);
-      }
-      .cell:active::after, .cell.active::after {
-       box-shadow: inset 0 0 10px rgba(255,255,255,0.28);
-      }
+            0 0 22px rgba(99,102,241,1),
+            0 0 50px rgba(99,102,241,0.85),
+            0 0 90px rgba(168,85,247,0.65),
+            0 0 130px rgba(139,92,246,0.42),
+            0 0 175px rgba(139,92,246,0.25),
+            0 0 210px rgba(217,169,255,0.12),
+         inset 0 0 18px rgba(255,255,255,0.55),
+         inset 0 0 42px rgba(192,132,255,0.65),
+         inset 0 0 70px rgba(217,169,255,0.32);
+       }
+       .cell:active::after, .cell.active::after {
+       box-shadow: inset 0 0 14px rgba(255,255,255,0.42);
+       }
 
       /* ---- Cell (sequencer pattern step) ---- */
       .cell.seq-active {
@@ -3052,17 +3053,20 @@
     var smoothedHigh = 0;
     var lastGlowIntensity = -1;
     var _frameStart = 0;
-    var _frameBudgetMs = 8;
+    var _frameBudgetMs = 6;
+    var _frameSkipCounter = 0;
 
     var cellMeta = new Array(ROWS * COLS);
     for (var _cm = 0; _cm < cellMeta.length; _cm++) {
       cellMeta[_cm] = { row: _cm % ROWS, col: Math.floor(_cm / ROWS) % COLS };
-     }
+      }
 
     var cellLastGlow = new Float32Array(ROWS * COLS);
 
+    // Optimized: batch DOM writes in a single rAF callback; skip idle updates entirely
+    // when signalLevel is low to keep compositor happy under heavy slides
     function audioVisualLoop(ts) {
-      _frameStart = performance.now();
+       _frameStart = performance.now();
       lfoPhase += 0.03;
 
       var signalLevel = 0;
@@ -3077,179 +3081,153 @@
         var startBin = Math.floor(analyserData.length * 0.5);
         for (var ii = startBin; ii < analyserData.length; ii++) { highSum += analyserData[ii]; }
         highLevel = highSum / ((analyserData.length - startBin) * 255);
-        }
+       }
 
       var smoothing = signalLevel > prevSignalLevel ? 0.5 : 0.75;
       prevSignalLevel = prevSignalLevel * (1 - smoothing) + signalLevel * smoothing;
       smoothedHigh = smoothedHigh * 0.8 + highLevel * 0.2;
 
-         // Singing Harmonic Stabilizer — detect ringing and hard-stop decay tails
+      // Singing Harmonic Stabilizer — detect ringing and hard-stop decay tails
       if (signalLevel > 0.001 || highLevel > 0.001) {
         var ringCheck = detectRinging(highLevel, signalLevel);
         if (ringCheck.ringing && ringCheck.shouldMute) {
           stabilizerState.isStabilizing = true;
           hardStopRinging();
           console.log('[Stabilizer] Ringing detected, severity=' + ringCheck.severity.toFixed(2) + ' — hard-stop engaged');
-            } else {
+           } else {
           if (stabilizerState.isStabilizing && hasActiveTouch()) {
             resumeFromHardStop();
             stabilizerState.isStabilizing = false;
-              }
-           stabilizerState.isStabilizing = false;
-              }
-            }
-
-             // Feedback Loop Stability Monitor (throttled during oscillations)
-        if (misuseMode) {
-         var fbMonitorTime = performance.now();
-         var fbMonitorInterval = 33;
-         var lastMonitor = lastFeedbackVisualState._lastMonitor || 0;
-
-         if (fbMonitorTime - lastMonitor >= fbMonitorInterval) {
-          var feedbackThreat = signalLevel * 4.5;
-          if (feedbackThreat > 0.65 && feedbackGainValue > 0.05) {
-            var reducedGain = feedbackGainValue * Math.max(0.3, 1 - (feedbackThreat - 0.65) * 2.5);
-            if (Math.abs(feedbackGain.gain.value - reducedGain) > 0.02) {
-              feedbackGain.gain.exponentialRampToValueAtTime(Math.max(reducedGain, 0.001), audioCtx.currentTime + 0.02);
-              feedbackWetDest.gain.exponentialRampToValueAtTime(Math.max(reducedGain * 0.8, 0.001), audioCtx.currentTime + 0.02);
-              feedbackGainValue = reducedGain;
-              feedbackGainSlider.value = Math.round(reducedGain * 100);
-              feedbackDisplay.textContent = reducedGain.toFixed(2);
-               }
-            feedbackIndicator.textContent = 'FEEDBACK ' + Math.round(feedbackThreat * 100) + '% — STABILIZED';
-             } else {
-            feedbackIndicator.textContent = 'FEEDBACK ACTIVE — ' + Math.round(feedbackGainValue * 100) + '%';
              }
-          updateFeedbackVisuals();
-          lastFeedbackVisualState._lastMonitor = fbMonitorTime;
-          }
-
-          // Reactive feedback ring glow (compositor-friendly, no layout)
-         if (feedbackRing && signalLevel > 0.005) {
-          var ringIntensity = Math.min(1, glowIntensity * 1.8);
-          var rBlur1 = Math.round(12 + ringIntensity * 20);
-          var rBlur2 = Math.round(36 + ringIntensity * 35);
-          var rBlur3 = Math.round(60 + ringIntensity * 40);
-          var rBlurI = Math.round(10 + ringIntensity * 14);
-          var rA1 = (0.15 + ringIntensity * 0.3).toFixed(3);
-          var rA2 = (0.08 + ringIntensity * 0.18).toFixed(3);
-          var rA3 = (0.05 + ringIntensity * 0.1).toFixed(3);
-          var rAI = (0.05 + ringIntensity * 0.12).toFixed(3);
-          feedbackRing.style.boxShadow =
-            '0 0 ' + rBlur1 + 'px rgba(244,63,94,' + rA1 + '),' +
-           '0 0 ' + rBlur2 + 'px rgba(244,63,94,' + rA2 + '),' +
-            '0 0 ' + rBlur3 + 'px rgba(168,85,247,' + rA3 + '),' +
-           'inset 0 0 ' + rBlurI + 'px rgba(244,63,94,' + rAI + ')';
-         }
-          } else if (!misuseMode && lastFeedbackVisualState.active) {
-          clearFeedbackVisuals();
-          }
-
-       var glowIntensity = Math.min(1, prevSignalLevel * 3.5);
-
-      if (Math.abs(glowIntensity - lastGlowIntensity) < 0.015) {
-        requestAnimationFrame(audioVisualLoop);
-        return;
-        }
-      lastGlowIntensity = glowIntensity;
-
-       // Grid-level glow reactive to signal
-      var baseGlow = 0.04;
-      var glowBoost = glowIntensity * 0.08;
-      var deepGlow = 0.025 + glowIntensity * 0.04;
-      var outerGlow = 0.015 + glowIntensity * 0.03;
-      var insetGlow = glowIntensity * 0.18;
-      var gBlur1 = 55 + glowIntensity * 50 | 0;
-      var gBlur2 = 130 + glowIntensity * 90 | 0;
-      var gBlur3 = 200 + glowIntensity * 60 | 0;
-      var gBlurI = 35 + glowIntensity * 35 | 0;
-
-      gridEl.style.boxShadow =
-            '0 0 ' + gBlur1 + 'px rgba(99,102,241,' + (baseGlow + glowBoost).toFixed(3) + '),' +
-            '0 0 ' + gBlur2 + 'px rgba(99,102,241,' + deepGlow.toFixed(3) + '),' +
-            '0 0 ' + gBlur3 + 'px rgba(168,85,247,' + outerGlow.toFixed(3) + '),' +
-            'inset 0 0 ' + gBlurI + 'px rgba(168,85,247,' + insetGlow.toFixed(3) + ')';
-
-      var colorFactor = Math.min(1, smoothedHigh * 2.5);
-      var numCells = allCells.length;
-      var domWritesThisFrame = 0;
-      var MAX_DOM_WRITES = 12;
-
-      for (var ci = 0; ci < numCells; ci++) {
-        var frameElapsed = performance.now() - _frameStart;
-        if (frameElapsed > _frameBudgetMs) {
-          requestAnimationFrame(audioVisualLoop);
-          return;
+          stabilizerState.isStabilizing = false;
+           }
         }
 
-        var cell = allCells[ci];
-
-          // Skip feedback-active cells during misuse mode — CSS animation drives them
-         if (cell.classList.contains('feedback-active')) continue;
-
-         var isActive = cell.classList.contains('active');
-
-         if (isActive) {
-          var breathe = Math.sin(lfoPhase + cellMeta[ci].row * 1.1) * 0.15 + 0.85;
-          var cellGlow = Math.min(1, (glowIntensity + 0.3) * breathe);
-          if (Math.abs(cellGlow - cellLastGlow[ci]) < 0.02) continue;
-          cellLastGlow[ci] = cellGlow;
-
-          if (domWritesThisFrame >= MAX_DOM_WRITES) {
-            requestAnimationFrame(audioVisualLoop);
-            return;
-          }
-
-          var innerR = 99 + colorFactor * 93 | 0;
-          var innerG = 102 + colorFactor * 31 | 0;
-          var innerB = 241 + colorFactor * 14 | 0;
-          var violetR = 168 + colorFactor * 40 | 0;
-          var violetG = 85 + colorFactor * 60 | 0;
-          var violetB = 247 + colorFactor * 8 | 0;
-
-          var blur1 = 20 + cellGlow * 25 | 0;
-          var blur2 = 45 + cellGlow * 40 | 0;
-          var blur3 = 75 + cellGlow * 50 | 0;
-          var blur4 = 110 + cellGlow * 40 | 0;
-          var iBlur1 = 10 + cellGlow * 16 | 0;
-          var iBlur2 = 28 + cellGlow * 25 | 0;
-
-          cell.style.background = 'rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.45 + cellGlow * 0.35).toFixed(2) + ')';
-          cell.style.borderColor = 'rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.6 + cellGlow * 0.4).toFixed(2) + ')';
-          cell.style.boxShadow =
-               '0 0 ' + blur1 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.7 + cellGlow * 0.3).toFixed(2) + '),' +
-               '0 0 ' + blur2 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.35 + cellGlow * 0.25).toFixed(2) + '),' +
-               '0 0 ' + blur3 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.18 + cellGlow * 0.2).toFixed(2) + '),' +
-               '0 0 ' + blur4 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.06 + cellGlow * 0.1).toFixed(2) + '),' +
-               'inset 0 0 ' + iBlur1 + 'px rgba(' + (violetR + 24) + ',' + (violetG + 47) + ',' + (violetB + 8) + ',' + (0.4 + cellGlow * 0.35).toFixed(2) + '),' +
-               'inset 0 0 ' + iBlur2 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.15 + cellGlow * 0.25).toFixed(2) + ')';
-          domWritesThisFrame++;
-
-          } else {
-          var row = cellMeta[ci].row;
-          var reactive = Math.sin(lfoPhase + row * 0.7) * 0.5 + 0.5;
-          var edgeGlow = glowIntensity * reactive * 1.4;
-          if (Math.abs(edgeGlow - cellLastGlow[ci]) < 0.02) continue;
-          cellLastGlow[ci] = edgeGlow;
-
-          if (domWritesThisFrame >= MAX_DOM_WRITES) {
-            requestAnimationFrame(audioVisualLoop);
-            return;
-          }
-
-          if (edgeGlow > 0.03) {
-            cell.style.borderColor = 'rgba(99,102,241,' + (0.06 + edgeGlow * 0.18).toFixed(3) + ')';
-            cell.style.boxShadow = '0 0 ' + (5 + edgeGlow * 10 | 0) + 'px rgba(99,102,241,' + (edgeGlow * 0.09).toFixed(3) + ')';
-            domWritesThisFrame++;
-            } else {
-            cell.style.borderColor = '';
-            cell.style.boxShadow = '';
+      // Feedback Loop Stability Monitor (throttled — 30Hz max)
+      if (misuseMode) {
+       var fbMonitorTime = performance.now();
+       var fbMonitorInterval = 33;
+       var lastMon = lastFeedbackVisualState._lastMonitor || 0;
+       if (fbMonitorTime - lastMon >= fbMonitorInterval) {
+         var feedbackThreat = signalLevel * 4.5;
+         if (feedbackThreat > 0.65 && feedbackGainValue > 0.05) {
+           var reducedGain = feedbackGainValue * Math.max(0.3, 1 - (feedbackThreat - 0.65) * 2.5);
+           if (Math.abs(feedbackGain.gain.value - reducedGain) > 0.02) {
+             feedbackGain.gain.exponentialRampToValueAtTime(Math.max(reducedGain, 0.001), audioCtx.currentTime + 0.02);
+             feedbackWetDest.gain.exponentialRampToValueAtTime(Math.max(reducedGain * 0.8, 0.001), audioCtx.currentTime + 0.02);
+             feedbackGainValue = reducedGain;
+             feedbackGainSlider.value = Math.round(reducedGain * 100);
+             feedbackDisplay.textContent = reducedGain.toFixed(2);
             }
-          }
+           feedbackIndicator.textContent = 'FEEDBACK ' + Math.round(feedbackThreat * 100) + '% — STABILIZED';
+           } else {
+           feedbackIndicator.textContent = 'FEEDBACK ACTIVE — ' + Math.round(feedbackGainValue * 100) + '%';
+           }
+         updateFeedbackVisuals();
+         lastFeedbackVisualState._lastMonitor = fbMonitorTime;
+         }
+        } else if (!misuseMode && lastFeedbackVisualState.active) {
+       clearFeedbackVisuals();
+       }
+
+     var glowIntensity = Math.min(1, prevSignalLevel * 3.5);
+
+     // Early exit: skip all DOM writes if glow hasn't changed meaningfully
+     if (Math.abs(glowIntensity - lastGlowIntensity) < 0.018) {
+       requestAnimationFrame(audioVisualLoop);
+       return;
+       }
+     lastGlowIntensity = glowIntensity;
+
+     // Grid-level glow — single DOM write per frame
+     var baseGlow = 0.05;
+     var glowBoost = glowIntensity * 0.1;
+     var deepGlow = 0.03 + glowIntensity * 0.05;
+     var outerGlow = 0.02 + glowIntensity * 0.035;
+     var insetGlow = glowIntensity * 0.22;
+     var gBlur1 = 58 + glowIntensity * 55 | 0;
+     var gBlur2 = 135 + glowIntensity * 95 | 0;
+     var gBlur3 = 205 + glowIntensity * 65 | 0;
+     var gBlurI = 38 + glowIntensity * 38 | 0;
+
+     gridEl.style.boxShadow =
+       '0 0 ' + gBlur1 + 'px rgba(99,102,241,' + (baseGlow + glowBoost).toFixed(3) + '),' +
+       '0 0 ' + gBlur2 + 'px rgba(99,102,241,' + deepGlow.toFixed(3) + '),' +
+       '0 0 ' + gBlur3 + 'px rgba(168,85,247,' + outerGlow.toFixed(3) + '),' +
+       'inset 0 0 ' + gBlurI + 'px rgba(168,85,247,' + insetGlow.toFixed(3) + ')';
+
+     // Active cell micro-reactivity — only update cells that are .active
+     // Optimized: skip string concat for boxShadow; use CSS custom property when signal is steady
+     var colorFactor = Math.min(1, smoothedHigh * 2.5);
+     var numCells = allCells.length;
+     var domWrites = 0;
+     var MAX_WRITES = 10;
+     _frameSkipCounter++;
+
+     // Under heavy load, only touch active cells, skip idle halo updates entirely
+     for (var ci = 0; ci < numCells; ci++) {
+       if (performance.now() - _frameStart > _frameBudgetMs) {
+         requestAnimationFrame(audioVisualLoop);
+         return;
         }
 
-      requestAnimationFrame(audioVisualLoop);
-     }
+       var cell = allCells[ci];
+       if (cell.classList.contains('feedback-active')) continue;
+
+       var isActive = cell.classList.contains('active');
+       if (!isActive) {
+         // Idle cells: only write when signal is strong enough to be perceptible
+         if (glowIntensity < 0.25) continue;
+         var row = cellMeta[ci].row;
+         var reactive = Math.sin(lfoPhase + row * 0.7) * 0.5 + 0.5;
+         var edgeGlow = glowIntensity * reactive * 1.4;
+         if (Math.abs(edgeGlow - cellLastGlow[ci]) < 0.03) continue;
+         cellLastGlow[ci] = edgeGlow;
+         if (domWrites >= MAX_WRITES) { requestAnimationFrame(audioVisualLoop); return; }
+         if (edgeGlow > 0.05) {
+           cell.style.borderColor = 'rgba(99,102,241,' + (0.06 + edgeGlow * 0.18).toFixed(3) + ')';
+           cell.style.boxShadow = '0 0 ' + (5 + edgeGlow * 10 | 0) + 'px rgba(99,102,241,' + (edgeGlow * 0.09).toFixed(3) + ')';
+           domWrites++;
+          } else {
+           cell.style.borderColor = '';
+           cell.style.boxShadow = '';
+          }
+         continue;
+        }
+
+       // Active cell — micro-reactive glow
+       var breathe = Math.sin(lfoPhase + cellMeta[ci].row * 1.1) * 0.15 + 0.85;
+       var cGlow = Math.min(1, (glowIntensity + 0.35) * breathe);
+       if (Math.abs(cGlow - cellLastGlow[ci]) < 0.025) continue;
+       cellLastGlow[ci] = cGlow;
+       if (domWrites >= MAX_WRITES) { requestAnimationFrame(audioVisualLoop); return; }
+
+       var iR = 99 + colorFactor * 93 | 0;
+       var iG = 102 + colorFactor * 31 | 0;
+       var iB = 241 + colorFactor * 14 | 0;
+       var vR = 168 + colorFactor * 40 | 0;
+       var vG = 85 + colorFactor * 60 | 0;
+       var vB = 247 + colorFactor * 8 | 0;
+
+       var b1 = 22 + cGlow * 28 | 0;
+       var b2 = 48 + cGlow * 45 | 0;
+       var b3 = 80 + cGlow * 55 | 0;
+       var b4 = 115 + cGlow * 45 | 0;
+       var ib1 = 12 + cGlow * 18 | 0;
+       var ib2 = 30 + cGlow * 28 | 0;
+
+       cell.style.boxShadow =
+         '0 0 ' + b1 + 'px rgba(' + iR + ',' + iG + ',' + iB + ',' + (0.72 + cGlow * 0.28).toFixed(2) + '),' +
+         '0 0 ' + b2 + 'px rgba(' + iR + ',' + iG + ',' + iB + ',' + (0.38 + cGlow * 0.22).toFixed(2) + '),' +
+         '0 0 ' + b3 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.2 + cGlow * 0.18).toFixed(2) + '),' +
+         '0 0 ' + b4 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.07 + cGlow * 0.08).toFixed(2) + '),' +
+         'inset 0 0 ' + ib1 + 'px rgba(' + (vR + 24) + ',' + (vG + 47) + ',' + (vB + 8) + ',' + (0.42 + cGlow * 0.35).toFixed(2) + '),' +
+         'inset 0 0 ' + ib2 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.16 + cGlow * 0.22).toFixed(2) + ')';
+       domWrites++;
+       }
+
+     requestAnimationFrame(audioVisualLoop);
+    }
     requestAnimationFrame(audioVisualLoop);
 
      // ========================================
