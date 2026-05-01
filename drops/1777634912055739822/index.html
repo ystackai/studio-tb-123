@@ -182,26 +182,89 @@
         animation: feedbackPulse 0.6s ease-in-out infinite;
       }
 
-      /* ---- Feedback Loop Visual Indicator ---- */
-      #feedback-indicator {
-        position: fixed;
-        bottom: 14px; left: 50%; transform: translateX(-50%);
-        font-family: var(--cover-type-mono);
-        font-size: 0.5rem; font-weight: 600;
-        letter-spacing: 0.25em;
-        text-transform: uppercase;
-        color: rgba(244,63,94,0.3);
-        transition: color 0.3s, text-shadow 0.3s;
-        pointer-events: none;
-        text-rendering: geometricPrecision;
-        text-align: center;
-        white-space: nowrap;
-        z-index: 100;
-      }
-      #feedback-indicator.live {
-        color: rgba(244,63,94,0.9);
-        text-shadow: 0 0 10px rgba(244,63,94,0.7), 0 0 25px rgba(168,85,247,0.4);
-      }
+        /* ---- Feedback Loop Visual Indicator ---- */
+        #feedback-indicator {
+         position: fixed;
+         bottom: 14px; left: 50%; transform: translateX(-50%);
+         font-family: var(--cover-type-mono);
+         font-size: 0.55rem; font-weight: 700;
+         letter-spacing: 0.3em;
+         text-transform: uppercase;
+         color: rgba(244,63,94,0.25);
+         transition: color 0.2s, text-shadow 0.2s, transform 0.2s;
+         pointer-events: none;
+         text-rendering: geometricPrecision;
+         text-align: center;
+         white-space: nowrap;
+         z-index: 100;
+        }
+        #feedback-indicator.live {
+         color: rgba(244,63,94,0.95);
+         text-shadow:
+           0 0 8px rgba(244,63,94,0.9),
+           0 0 22px rgba(244,63,94,0.6),
+           0 0 40px rgba(168,85,247,0.35),
+           0 0 64px rgba(99,102,241,0.18);
+         animation: indicatorPulse 0.5s ease-in-out infinite;
+        }
+        @keyframes indicatorPulse {
+         0%, 100% { transform: translateX(-50%) translateY(0); }
+         50% { transform: translateX(-50%) translateY(-1px); }
+        }
+
+        /* ---- Feedback Energy Ring (wraps grid) ---- */
+        #feedback-ring {
+         position: absolute;
+         inset: -6px;
+         border-radius: 14px;
+         border: 1px solid rgba(244,63,94,0);
+         box-shadow: none;
+         pointer-events: none;
+         transition: border-color 0.3s, box-shadow 0.3s, opacity 0.3s;
+         opacity: 0;
+         z-index: 5;
+        }
+        #feedback-ring.live {
+         opacity: 1;
+         border-color: rgba(244,63,94,0.25);
+         box-shadow:
+           0 0 12px rgba(244,63,94,0.15),
+           0 0 36px rgba(244,63,94,0.08),
+           0 0 60px rgba(168,85,247,0.05),
+           inset 0 0 10px rgba(244,63,94,0.05);
+         animation: ringBreathe 1.2s ease-in-out infinite;
+        }
+        @keyframes ringBreathe {
+         0%, 100% { box-shadow: 0 0 12px rgba(244,63,94,0.15), 0 0 36px rgba(244,63,94,0.08), 0 0 60px rgba(168,85,247,0.05), inset 0 0 10px rgba(244,63,94,0.05); }
+         50% { box-shadow: 0 0 18px rgba(244,63,94,0.35), 0 0 50px rgba(244,63,94,0.2), 0 0 85px rgba(168,85,247,0.12), inset 0 0 16px rgba(244,63,94,0.12); }
+        }
+
+        /* ---- Misuse mode grid override (highest specificity) ---- */
+        .misuse-mode {
+         box-shadow:
+           0 0 55px rgba(244,63,94,0.06),
+           0 0 100px rgba(168,85,247,0.04),
+           0 0 180px rgba(99,102,241,0.02),
+           0 0 50px rgba(99,102,241,0.03),
+           0 0 100px rgba(99,102,241,0.02),
+           0 0 180px rgba(99,102,241,0.012),
+           inset 0 0 30px rgba(0,0,0,0.6);
+         transition: box-shadow 0.25s ease-out;
+        }
+
+        /* ---- Misuse-mode cell feedback-active overrides (highest specificity) ---- */
+        #grid.misuse-mode .cell.feedback-active {
+         background: rgba(244,63,94,0.38) !important;
+         border-color: rgba(244,63,94,0.92) !important;
+         animation: feedbackPulse 0.6s ease-in-out infinite !important;
+        }
+        #grid.misuse-mode .cell.feedback-active .cell-label {
+         color: rgba(255,220,220,0.95) !important;
+         text-shadow:
+           0 0 6px rgba(244,63,94,0.9),
+           0 0 16px rgba(244,63,94,0.5),
+           0 0 28px rgba(168,85,247,0.25) !important;
+        }
 
       /* ---- Feedback Gain Slider ---- */
       #feedback-wrap {
@@ -451,7 +514,11 @@
 <div id="stage">
      <div id="grid-container">
         <div id="step-indicators"></div>
-        <div id="grid-wrap"><div id="grid"></div></div>
+          <div id="grid-wrap">
+            <div id="grid">
+              <div id="feedback-ring"></div>
+            </div>
+          </div>
           <div id="seq-controls">
              <button class="seq-btn" id="btn-loop" data-mode="loop">LOOP ON</button>
              <button class="seq-btn" id="btn-misuse" data-mode="misuse">MISUSE</button>
@@ -1183,38 +1250,41 @@
 
      // Misuse mode toggle — enables feedback loop (output patched back into input)
      var btnMisuse = document.getElementById('btn-misuse');
-     var feedbackIndicator = document.getElementById('feedback-indicator');
-     var feedbackLabel = document.getElementById('feedback-label');
-     var feedbackDisplay = document.getElementById('feedback-display');
-     var feedbackGainSlider = document.getElementById('feedback-gain-slider');
+      var feedbackIndicator = document.getElementById('feedback-indicator');
+      var feedbackLabel = document.getElementById('feedback-label');
+      var feedbackDisplay = document.getElementById('feedback-display');
+      var feedbackGainSlider = document.getElementById('feedback-gain-slider');
+      var feedbackRing = document.getElementById('feedback-ring');
 
-     btnMisuse.addEventListener('pointerdown', function(e) {
-       e.preventDefault(); e.stopPropagation();
-       if (!ensureAudio()) getAudioCtxPromise();
-       misuseMode = !misuseMode;
-       btnMisuse.classList.toggle('active', misuseMode);
-       btnMisuse.textContent = misuseMode ? 'MISUSE ON' : 'MISUSE';
+      btnMisuse.addEventListener('pointerdown', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        if (!ensureAudio()) getAudioCtxPromise();
+        misuseMode = !misuseMode;
+        btnMisuse.classList.toggle('active', misuseMode);
+        btnMisuse.textContent = misuseMode ? 'MISUSE ON' : 'MISUSE';
+        gridEl.classList.toggle('misuse-mode', misuseMode);
+        feedbackRing.classList.toggle('live', misuseMode);
 
-       if (feedbackGain) {
-        var now = audioCtx.currentTime;
-        if (misuseMode) {
-          feedbackGain.gain.setTargetAtTime(feedbackGainValue, now, 0.02);
-          feedbackWetDest.gain.setTargetAtTime(feedbackGainValue * 0.8, now, 0.02);
-          feedbackIndicator.textContent = 'FEEDBACK ACTIVE';
-          feedbackIndicator.classList.add('live');
-          feedbackLabel.classList.add('live');
-          feedbackDisplay.classList.add('live');
+        if (feedbackGain) {
+         var now = audioCtx.currentTime;
+         if (misuseMode) {
+           feedbackGain.gain.setTargetAtTime(feedbackGainValue, now, 0.02);
+           feedbackWetDest.gain.setTargetAtTime(feedbackGainValue * 0.8, now, 0.02);
+           feedbackIndicator.textContent = 'FEEDBACK ACTIVE';
+           feedbackIndicator.classList.add('live');
+           feedbackLabel.classList.add('live');
+           feedbackDisplay.classList.add('live');
         } else {
-          feedbackGain.gain.setTargetAtTime(0, now, 0.05);
-          feedbackWetDest.gain.setTargetAtTime(0, now, 0.05);
-          feedbackIndicator.textContent = 'FEEDBACK OFF';
-          feedbackIndicator.classList.remove('live');
-          feedbackLabel.classList.remove('live');
-          feedbackDisplay.classList.remove('live');
-          clearFeedbackVisuals();
-        }
-       }
-       updateFeedbackVisuals();
+         feedbackGain.gain.setTargetAtTime(0, now, 0.05);
+         feedbackWetDest.gain.setTargetAtTime(0, now, 0.05);
+         feedbackIndicator.textContent = 'FEEDBACK OFF';
+         feedbackIndicator.classList.remove('live');
+         feedbackLabel.classList.remove('live');
+         feedbackDisplay.classList.remove('live');
+         clearFeedbackVisuals();
+         }
+     }
+      updateFeedbackVisuals();
       });
 
      // Feedback gain slider — continuously adjusts loop gain to prevent clipping
@@ -1281,62 +1351,137 @@
             }
          }
 
-       // ========================================
-       //  Misuse Mode — Feedback Loop Visuals
-       // ========================================
-     var lastFeedbackVisualState = { active: false, gain: 0, cells: [] };
+         // ========================================
+         //  Misuse Mode — Feedback Loop Visuals (Batched)
+         // ========================================
+      var lastFeedbackVisualState = { active: false, gain: 0, cells: [] };
+      var _feedbackVisualsTimer = null;
+      var _feedbackVisualsPending = false;
+      var _feedbackVisualsFrameBudget = 6;
+      var _feedbackVisualsThrottleMs = 16;
+      var _lastFeedbackVisualUpdate = 0;
 
-     function updateFeedbackVisuals() {
-       if (!misuseMode) return;
+      function updateFeedbackVisuals() {
+        if (!misuseMode) return;
 
-       var snap = getAllActiveVoicesSnapshot();
-       var keys = Object.keys(snap);
-       var activeIndices = [];
+        var now = performance.now();
+        if (now - _lastFeedbackVisualUpdate < _feedbackVisualsThrottleMs) {
+          _feedbackVisualsPending = true;
+          return;
+          }
+        _lastFeedbackVisualUpdate = now;
 
-       for (var i = 0; i < keys.length; i++) {
-         var s = snap[keys[i]];
-         if (s && s.row !== undefined) {
-           var ci = s.row * COLS + s.col;
-           activeIndices.push(ci);
-           var cel = allCells[ci];
-           if (cel && !cel.classList.contains('feedback-active')) cel.classList.add('feedback-active');
-           }
+        var frameStart = now;
+        var snap = getAllActiveVoicesSnapshot();
+        var keys = Object.keys(snap);
+        var activeIndices = [];
+
+        for (var i = 0; i < keys.length; i++) {
+          var s = snap[keys[i]];
+          if (s && s.row !== undefined) {
+            var ci = s.row * COLS + s.col;
+            activeIndices.push(ci);
+          }
          }
 
-       var gainChanged = Math.abs(feedbackGainValue - lastFeedbackVisualState.gain) > 0.02;
-       var prev = [];
-       for (var j = 0; j < lastFeedbackVisualState.cells.length; j++) prev.push(lastFeedbackVisualState.cells[j]);
-       var cellsChanged = (activeIndices.length !== prev.length) || (function() {
-         activeIndices.sort(function(a, b) { return a - b; });
-         for (var k = 0; k < activeIndices.length; k++) if (activeIndices[k] !== prev[k]) return true;
-         return false;
+        var gainChanged = Math.abs(feedbackGainValue - lastFeedbackVisualState.gain) > 0.02;
+        var prev = lastFeedbackVisualState.cells.slice();
+        var cellsChanged = (activeIndices.length !== prev.length) || (function() {
+          var sorted = activeIndices.slice().sort(function(a, b) { return a - b; });
+          for (var k = 0; k < sorted.length; k++) if (sorted[k] !== prev[k]) return true;
+          return false;
          })();
 
-       if (!gainChanged && !cellsChanged) return;
+        if (!gainChanged && !cellsChanged) {
+          if (_feedbackVisualsPending) {
+            _feedbackVisualsPending = false;
+            scheduleBatchedFeedbackUpdate();
+            }
+          return;
+          }
 
-       for (var m = 0; m < activeIndices.length; m++) {
-         var cel2 = allCells[activeIndices[m]];
-         if (cel2) {
-           var intensity = Math.min(1, 0.4 + feedbackGainValue * 0.6);
-           cel2.style.boxShadow =
-             '0 0 ' + (22 + intensity * 20) + 'px rgba(244,63,94,' + (0.6 + intensity * 0.4).toFixed(2) + '),' +
-             '0 0 ' + (40 + intensity * 40) + ' rgba(168,85,247,' + (0.3 + intensity * 0.4).toFixed(2) + '),' +
-             '0 0 ' + (75 + intensity * 35) + 'px rgba(99,102,241,' + (0.15 + intensity * 0.2).toFixed(2) + '),' +
-             'inset 0 0 ' + (12 + intensity * 18) + 'px rgba(244,63,94,' + (0.2 + intensity * 0.3).toFixed(2) + ')';
+        scheduleBatchedFeedbackUpdate();
+       }
+
+      function scheduleBatchedFeedbackUpdate() {
+        if (_feedbackVisualsTimer) return;
+        _feedbackVisualsTimer = requestAnimationFrame(applyBatchedFeedbackVisuals);
+      }
+
+      function applyBatchedFeedbackVisuals() {
+        _feedbackVisualsTimer = null;
+        _feedbackVisualsPending = false;
+
+        var frameStart = performance.now();
+        var snap = getAllActiveVoicesSnapshot();
+        var keys = Object.keys(snap);
+        var newIndices = [];
+
+        for (var i = 0; i < keys.length; i++) {
+          var s = snap[keys[i]];
+          if (s && s.row !== undefined) {
+            newIndices.push(s.row * COLS + s.col);
+            }
+          }
+
+        var oldCells = lastFeedbackVisualState.cells.slice();
+        newIndices.sort(function(a, b) { return a - b; });
+
+        for (var r = 0; r < oldCells.length; r++) {
+          var idx = oldCells[r];
+          var found = false;
+          for (var f = 0; f < newIndices.length; f++) if (newIndices[f] === idx) { found = true; break; }
+          if (!found && allCells[idx]) {
+            allCells[idx].classList.remove('feedback-active');
+            allCells[idx].style.boxShadow = '';
            }
           }
 
-       lastFeedbackVisualState = { active: true, gain: feedbackGainValue, cells: activeIndices.slice() };
+        var intensity = Math.min(1, 0.4 + feedbackGainValue * 0.6);
+        var domWrites = 0;
+        var MAX_FB_WRITES = 10;
+
+        for (var m = 0; m < newIndices.length; m++) {
+          if (performance.now() - frameStart > _feedbackVisualsFrameBudget) {
+            _feedbackVisualsTimer = requestAnimationFrame(applyBatchedFeedbackVisuals);
+            return;
+            }
+          if (domWrites >= MAX_FB_WRITES) {
+            _feedbackVisualsTimer = requestAnimationFrame(applyBatchedFeedbackVisuals);
+            return;
+            }
+
+          var ci = newIndices[m];
+          var cel = allCells[ci];
+          if (!cel) continue;
+
+          if (!cel.classList.contains('feedback-active')) cel.classList.add('feedback-active');
+          cel.style.boxShadow =
+             '0 0 ' + (22 + intensity * 20 | 0) + 'px rgba(244,63,94,' + (0.6 + intensity * 0.4).toFixed(2) + '),' +
+             '0 0 ' + (40 + intensity * 40 | 0) + 'px rgba(168,85,247,' + (0.3 + intensity * 0.4).toFixed(2) + '),' +
+             '0 0 ' + (75 + intensity * 35 | 0) + 'px rgba(99,102,241,' + (0.15 + intensity * 0.2).toFixed(2) + '),' +
+             'inset 0 0 ' + (12 + intensity * 18 | 0) + 'px rgba(244,63,94,' + (0.2 + intensity * 0.3).toFixed(2) + ')';
+          domWrites++;
+           }
+
+        lastFeedbackVisualState = { active: true, gain: feedbackGainValue, cells: newIndices.slice() };
+
+        if (_feedbackVisualsPending) {
+          _feedbackVisualsPending = false;
+          scheduleBatchedFeedbackUpdate();
+          }
        }
 
-     function clearFeedbackVisuals() {
-       for (var i = 0; i < allCells.length; i++) {
-         allCells[i].classList.remove('feedback-active');
-         allCells[i].style.boxShadow = '';
-          }
-       lastFeedbackVisualState = { active: false, gain: 0, cells: [] };
-       feedbackIndicator.textContent = 'FEEDBACK OFF';
-       feedbackIndicator.classList.remove('live');
+      function clearFeedbackVisuals() {
+        for (var i = 0; i < allCells.length; i++) {
+          allCells[i].classList.remove('feedback-active');
+          allCells[i].style.boxShadow = '';
+        }
+        lastFeedbackVisualState = { active: false, gain: 0, cells: [] };
+        feedbackIndicator.textContent = 'FEEDBACK OFF';
+        feedbackIndicator.classList.remove('live');
+        gridEl.classList.remove('misuse-mode');
+        feedbackRing.classList.remove('live');
        }
 
        // ========================================
@@ -2434,26 +2579,51 @@
               }
             }
 
-           // Feedback Loop Stability Monitor
-       if (misuseMode) {
-        var feedbackThreat = signalLevel * 4.5;
-        if (feedbackThreat > 0.65 && feedbackGainValue > 0.05) {
-          var reducedGain = feedbackGainValue * Math.max(0.3, 1 - (feedbackThreat - 0.65) * 2.5);
-          if (Math.abs(feedbackGain.gain.value - reducedGain) > 0.02) {
-            feedbackGain.gain.exponentialRampToValueAtTime(Math.max(reducedGain, 0.001), audioCtx.currentTime + 0.02);
-            feedbackWetDest.gain.exponentialRampToValueAtTime(Math.max(reducedGain * 0.8, 0.001), audioCtx.currentTime + 0.02);
-            feedbackGainValue = reducedGain;
-            feedbackGainSlider.value = Math.round(reducedGain * 100);
-            feedbackDisplay.textContent = reducedGain.toFixed(2);
-            }
-          feedbackIndicator.textContent = 'FEEDBACK ' + Math.round(feedbackThreat * 100) + '% — STABILIZED';
-           } else {
-          feedbackIndicator.textContent = 'FEEDBACK ACTIVE — ' + Math.round(feedbackGainValue * 100) + '%';
-           }
-         updateFeedbackVisuals();
-        } else if (!misuseMode && lastFeedbackVisualState.active) {
-         clearFeedbackVisuals();
-        }
+             // Feedback Loop Stability Monitor (throttled during oscillations)
+        if (misuseMode) {
+         var fbMonitorTime = performance.now();
+         var fbMonitorInterval = 33;
+         var lastMonitor = lastFeedbackVisualState._lastMonitor || 0;
+
+         if (fbMonitorTime - lastMonitor >= fbMonitorInterval) {
+          var feedbackThreat = signalLevel * 4.5;
+          if (feedbackThreat > 0.65 && feedbackGainValue > 0.05) {
+            var reducedGain = feedbackGainValue * Math.max(0.3, 1 - (feedbackThreat - 0.65) * 2.5);
+            if (Math.abs(feedbackGain.gain.value - reducedGain) > 0.02) {
+              feedbackGain.gain.exponentialRampToValueAtTime(Math.max(reducedGain, 0.001), audioCtx.currentTime + 0.02);
+              feedbackWetDest.gain.exponentialRampToValueAtTime(Math.max(reducedGain * 0.8, 0.001), audioCtx.currentTime + 0.02);
+              feedbackGainValue = reducedGain;
+              feedbackGainSlider.value = Math.round(reducedGain * 100);
+              feedbackDisplay.textContent = reducedGain.toFixed(2);
+               }
+            feedbackIndicator.textContent = 'FEEDBACK ' + Math.round(feedbackThreat * 100) + '% — STABILIZED';
+             } else {
+            feedbackIndicator.textContent = 'FEEDBACK ACTIVE — ' + Math.round(feedbackGainValue * 100) + '%';
+             }
+          updateFeedbackVisuals();
+          lastFeedbackVisualState._lastMonitor = fbMonitorTime;
+          }
+
+          // Reactive feedback ring glow (compositor-friendly, no layout)
+         if (feedbackRing && signalLevel > 0.005) {
+          var ringIntensity = Math.min(1, glowIntensity * 1.8);
+          var rBlur1 = Math.round(12 + ringIntensity * 20);
+          var rBlur2 = Math.round(36 + ringIntensity * 35);
+          var rBlur3 = Math.round(60 + ringIntensity * 40);
+          var rBlurI = Math.round(10 + ringIntensity * 14);
+          var rA1 = (0.15 + ringIntensity * 0.3).toFixed(3);
+          var rA2 = (0.08 + ringIntensity * 0.18).toFixed(3);
+          var rA3 = (0.05 + ringIntensity * 0.1).toFixed(3);
+          var rAI = (0.05 + ringIntensity * 0.12).toFixed(3);
+          feedbackRing.style.boxShadow =
+            '0 0 ' + rBlur1 + 'px rgba(244,63,94,' + rA1 + '),' +
+           '0 0 ' + rBlur2 + 'px rgba(244,63,94,' + rA2 + '),' +
+            '0 0 ' + rBlur3 + 'px rgba(168,85,247,' + rA3 + '),' +
+           'inset 0 0 ' + rBlurI + 'px rgba(244,63,94,' + rAI + ')';
+         }
+          } else if (!misuseMode && lastFeedbackVisualState.active) {
+          clearFeedbackVisuals();
+          }
 
        var glowIntensity = Math.min(1, prevSignalLevel * 3.5);
 
@@ -2493,9 +2663,13 @@
         }
 
         var cell = allCells[ci];
-        var isActive = cell.classList.contains('active');
 
-        if (isActive) {
+          // Skip feedback-active cells during misuse mode — CSS animation drives them
+         if (cell.classList.contains('feedback-active')) continue;
+
+         var isActive = cell.classList.contains('active');
+
+         if (isActive) {
           var breathe = Math.sin(lfoPhase + cellMeta[ci].row * 1.1) * 0.15 + 0.85;
           var cellGlow = Math.min(1, (glowIntensity + 0.3) * breathe);
           if (Math.abs(cellGlow - cellLastGlow[ci]) < 0.02) continue;
