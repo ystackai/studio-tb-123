@@ -407,25 +407,27 @@
     const BEND_SEMITONES = ENV.PITCH_BEND_SEMITONES;
     const CUTOFF_MOD_DEPTH = ENV.FILTER_CUTOFF_MOD_DEPTH;
 
-     // ========================================
-     //  Drag Latency Profiler
-     // ========================================
+      // ========================================
+      //  Drag Latency Profiler
+      // ========================================
     const LatencyProfiler = (function() {
       const samples = [];
-      const MAX_SAMPLES = 500;
+      const MAX_SAMPLES = 1000;
       let lastDownTime = 0;
+      let globalSampleCounter = 0;
 
       function recordDown(ts) { lastDownTime = ts; }
       function recordMove(ts, audioCallTime) {
         const raw = ts - lastDownTime;
         const audioDelta = audioCallTime - ts;
-        samples.push({ touchToAudio: raw + audioDelta, touchDelta: raw, audioDelta: audioDelta });
+        samples.push({ touchToAudio: raw + audioDelta, touchDelta: raw, audioDelta: audioDelta, ts: ts });
+        globalSampleCounter++;
         if (samples.length > MAX_SAMPLES) samples.shift();
         lastDownTime = ts;
-       }
+        }
       function recordRelease(ts) { logBenchmark(); }
       function getBenchmarks() {
-        if (!samples.length) return { p50: 0, p95: 0, p99: 0, max: 0, min: 0, n: 0 };
+        if (!samples.length) return { p50: 0, p95: 0, p99: 0, max: 0, min: 0, n: 0, totalSamples: 0 };
         const sorted = samples.map(function(s) { return s.touchToAudio; }).sort(function(a, b) { return a - b; });
         return {
           p50: sorted[Math.floor(sorted.length * 0.5)],
@@ -433,24 +435,27 @@
           p99: sorted[Math.floor(sorted.length * 0.99)],
           max: sorted[sorted.length - 1],
           min: sorted[0],
-          n: sorted.length
-         };
-       }
-      function logBenchmark() {
+          n: sorted.length,
+          totalSamples: globalSampleCounter
+          };
+        }
+      function logBenchmark(label) {
         var b = getBenchmarks();
-        console.log('[LatencyProfiler] Benchmarks:',
-           'p50=' + b.p50.toFixed(2) + 'ms',
-           'p95=' + b.p95.toFixed(2) + 'ms',
-           'p99=' + b.p99.toFixed(2) + 'ms',
-           'max=' + b.max.toFixed(2) + 'ms',
-           'min=' + b.min.toFixed(2) + 'ms',
-           'samples=' + b.n);
-       }
-      function reset() { samples.length = 0; }
+        var tag = label ? ' [' + label + ']' : '';
+        console.log('[LatencyProfiler]' + tag + ' Benchmarks:',
+            'p50=' + b.p50.toFixed(2) + 'ms',
+            'p95=' + b.p95.toFixed(2) + 'ms',
+            'p99=' + b.p99.toFixed(2) + 'ms',
+            'max=' + b.max.toFixed(2) + 'ms',
+            'min=' + b.min.toFixed(2) + 'ms',
+            'samples=' + b.n,
+            'total=' + b.totalSamples);
+        }
+      function reset() { samples.length = 0; globalSampleCounter = 0; }
 
       return { recordDown: recordDown, recordMove: recordMove, recordRelease: recordRelease,
                getBenchmarks: getBenchmarks, logBenchmark: logBenchmark, reset: reset };
-    })();
+     })();
 
      // ========================================
      //  Performance Monitor
@@ -500,6 +505,247 @@
     let audioCtx = null, masterGain = null, preDelayNode = null;
     let analyser = null, analyserData = null, limiter = null, compressor = null;
     const activeVoices = {};
+
+       // ========================================
+       //  Touch Gesture State Persistence Registry
+       // ========================================
+    // Per-touch gesture state: maps touch identifier → { row, col, freq, amp, xFrac, yFrac, cellEl, voice, touchStartTime }
+    var gestureRegistry = {};
+    var gestureIdCounter = 0;
+
+    function allocGestureId() { return ++gestureIdCounter; }
+
+    function registerGesture(id, row, col, cellEl, voice, baseFreq, clientX, clientY) {
+      var rect = cellEl.getBoundingClientRect();
+      var xFrac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      var yFrac = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+
+      gestureRegistry[id] = {
+        row: row,
+        col: col,
+        baseFreq: baseFreq,
+        cellEl: cellEl,
+        voice: voice,
+        xFrac: xFrac,
+        yFrac: yFrac,
+        touchStartTime: performance.now(),
+        lastRect: rect
+      };
+    }
+
+    function getGesture(id) { return gestureRegistry[id] || null; }
+
+    function persistGestureState(id, row, col, clientX, clientY) {
+      var g = gestureRegistry[id];
+      if (!g) return;
+      if (g.cellEl !== getCellAt(row, col)) {
+        var newCell = getCellAt(row, col);
+        if (newCell) {
+          g.cellEl.classList.remove('active');
+          g.cellEl = newCell;
+          newCell.classList.add('active');
+          g.lastRect = null;
+        }
+      }
+      g.row = row;
+      g.col = col;
+      var rect = g.lastRect || (g.cellEl && g.cellEl.getBoundingClientRect());
+      if (rect) {
+        g.xFrac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        g.yFrac = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+        if (!g.lastRect) g.lastRect = rect;
+      }
+    }
+
+    function unbindGesture(id) {
+      var g = gestureRegistry[id];
+      if (!g) return;
+      if (g.cellEl) g.cellEl.classList.remove('active');
+      delete gestureRegistry[id];
+    }
+
+    function getCellAt(row, col) {
+      var idx = row * COLS + col;
+      return (idx >= 0 && idx < allCells.length) ? allCells[idx] : null;
+    }
+
+    function getAllActiveVoicesSnapshot() {
+      var snap = {};
+      for (var k in gestureRegistry) {
+        var g = gestureRegistry[k];
+        if (g && g.voice) {
+          snap[k] = { row: g.row, col: g.col, freq: g.baseFreq, xFrac: g.xFrac, yFrac: g.yFrac };
+        }
+      }
+      return snap;
+    }
+
+       // ========================================
+       //  Drag Latency Stress Test Harness
+       // ========================================
+    const StressTest = (function() {
+      var running = false;
+      var config = {
+        numTouches: 4,
+        durationMs: 5000,
+        moveIntervalMs: 16,
+        cellHopRate: 0.3,
+        reportIntervalMs: 1000
+      };
+      var lastReportTime = 0;
+      var moveTimer = null;
+      var activeStressTouches = [];
+
+      function init() {
+        if (typeof StressTestInput !== 'undefined') {
+          config = Object.assign(config, StressTestInput);
+        }
+      }
+
+      function randomCell() {
+        return {
+          row: Math.floor(Math.random() * ROWS),
+          col: Math.floor(Math.random() * COLS)
+        };
+      }
+
+      function getCellCoords(cell) {
+        var el = getCellAt(cell.row, cell.col);
+        if (!el) return null;
+        var rect = el.getBoundingClientRect();
+        return {
+          x: rect.left + Math.random() * rect.width,
+          y: rect.top + Math.random() * rect.height
+        };
+      }
+
+      function simulateTouchDown(cellId, coords, el) {
+        var r = cellId.row, c = cellId.col;
+        var freq = getFrequency(r, c);
+        var amp = calcAmplitude(r, c, 0.8);
+
+        var gId = allocGestureId();
+        LatencyProfiler.recordDown(performance.now());
+
+        var voice = null;
+        if (el) el.classList.add('active');
+
+        if (ensureAudio()) {
+          if (activeVoices[String(gId)] && !activeVoices[String(gId)].isSeq) {
+            voice = activeVoices[String(gId)];
+            var xF = Math.random(), yF = Math.random();
+            retriggerVoice(voice, freq, amp, r, c, xF, yF, 0.8);
+          } else {
+            voice = createVoice(freq, amp, false, r, c);
+            activeVoices[String(gId)] = voice;
+          }
+        }
+
+        registerGesture(gId, r, c, el, voice, freq, coords.x, coords.y);
+        activeStressTouches.push(gId);
+
+        var audioT = performance.now();
+        LatencyProfiler.recordMove(performance.now(), audioT);
+      }
+
+      function simulateTouchMove(gId, newCell) {
+        var g = getGesture(gId);
+        if (!g) return;
+        var coords = getCellCoords(newCell);
+        if (!coords) return;
+
+        if (ensureAudio() && g.voice) {
+          var audioT = performance.now();
+          LatencyProfiler.recordMove(audioT, performance.now());
+          updateVoiceWithTouch(g.voice, g.baseFreq, newCell.row, newCell.col,
+              coords.x - (g.lastRect ? g.lastRect.left : 0),
+              coords.y - (g.lastRect ? g.lastRect.top : 0), 0.8);
+        }
+        persistGestureState(gId, newCell.row, newCell.col, coords.x, coords.y);
+      }
+
+      function simulateTouchUp(gId) {
+        var g = getGesture(gId);
+        if (!g) return;
+        LatencyProfiler.recordRelease(performance.now());
+        if (ensureAudio() && g.voice) {
+          killVoice(String(gId));
+        }
+        unbindGesture(gId);
+        var idx = activeStressTouches.indexOf(gId);
+        if (idx >= 0) activeStressTouches.splice(idx, 1);
+      }
+
+      function tick() {
+        if (!running) return;
+        var now = performance.now();
+
+        if (activeStressTouches.length < config.numTouches) {
+          var cell = randomCell();
+          var coords = getCellCoords(cell);
+          if (coords) {
+            var el = getCellAt(cell.row, cell.col);
+            simulateTouchDown(cell, coords, el);
+          }
+        }
+
+        for (var i = 0; i < activeStressTouches.length; i++) {
+          var g = getGesture(activeStressTouches[i]);
+          if (!g) continue;
+          var cell = randomCell();
+          simulateTouchMove(activeStressTouches[i], cell);
+        }
+
+        if (Math.random() < config.cellHopRate * 0.1 && activeStressTouches.length) {
+          var killIdx = Math.floor(Math.random() * activeStressTouches.length);
+          simulateTouchUp(activeStressTouches[killIdx]);
+        }
+
+        if (now - lastReportTime >= config.reportIntervalMs) {
+          lastReportTime = now;
+          LatencyProfiler.logBenchmark('stress');
+          PerfMonitor.getStats();
+        }
+
+        moveTimer = setTimeout(tick, config.moveIntervalMs);
+      }
+
+      function start() {
+        if (running) return;
+        init();
+        running = true;
+        activeStressTouches.length = 0;
+        lastReportTime = performance.now();
+        console.log('[StressTest] Starting: numTouches=' + config.numTouches +
+                    ' duration=' + config.durationMs + 'ms interval=' + config.moveIntervalMs + 'ms');
+        tick();
+        setTimeout(stop, config.durationMs);
+      }
+
+      function stop() {
+        if (!running) return;
+        running = false;
+        if (moveTimer) { clearTimeout(moveTimer); moveTimer = null; }
+        for (var i = 0; i < activeStressTouches.length; i++) {
+          simulateTouchUp(activeStressTouches[i]);
+        }
+        activeStressTouches.length = 0;
+        console.log('[StressTest] Completed. Final benchmarks:');
+        LatencyProfiler.logBenchmark('final');
+        var stats = PerfMonitor.getStats();
+        console.log('[StressTest] Perf:', 'fps=' + stats.fps,
+                     'voices=' + stats.activeVoices,
+                     'nodes=' + stats.audioNodes);
+      }
+
+      return { start: start, stop: stop, getConfig: function() { return config; },
+               setConfig: function(c) { config = Object.assign(config, c); } };
+      // Exposed for injection: StressTestInput can override config
+    })();
+
+    if (typeof window.StressTestInput !== 'undefined') {
+      StressTest.setConfig(window.StressTestInput);
+    }
 
      // ========================================
      //  Sequencer State — Grid-Driven Pattern Matrix
@@ -611,11 +857,8 @@
       setTimeout(function() { overlay.style.display = 'none'; }, 1000);
     }
 
-    document.addEventListener('pointerdown', launch, { passive: true });
-    document.addEventListener('touchstart', launch, { passive: true });
-    document.addEventListener('keydown', function(e) {
-      if (e.key !== 'F5' && e.key !== 'F12') launch();
-    });
+     document.addEventListener('pointerdown', launch, { passive: true });
+     document.addEventListener('touchstart', launch, { passive: true });
 
      // ========================================
      //  Step Indicators
@@ -1124,17 +1367,29 @@
        }
     }
 
-     // ========================================
-     //  Touch-Driven Input Handling
-     // ========================================
+       // ========================================
+       //  Touch-Driven Input Handling — Multi-Touch with State Persistence
+       // ========================================
     var dragVoice = null;
     var dragCellIndex = -1;
     var dragBaseFreq = 0;
     var dragRow = 0, dragCol = 0;
     var dragCellEl = null;
     var mouseDown = false;
-    var _cachedRect = null;
-    var _cachedRectIdx = -1;
+
+        // Per-row cell-rect cache — avoids repeated getBoundingClientRect calls
+    var _rowRectCache = new Array(ROWS);
+    for (var _rc = 0; _rc < ROWS; _rc++) {
+      _rowRectCache[_rc] = new Array(COLS);
+     }
+    var _rectCacheDirty = true;
+
+    function invalidateRectCache() { _rectCacheDirty = true; }
+
+    function getCellRectCached(row, col) {
+      if (_rectCacheDirty) { _rowRectCache[row][col] = getCellAt(row, col).getBoundingClientRect(); }
+      return _rowRectCache[row][col];
+     }
 
     function getTouchFracInCell(cell, clientX, clientY) {
       var rect = cell.getBoundingClientRect();
@@ -1142,16 +1397,17 @@
       return {
         xFrac: Math.min(1, Math.max(0, x / rect.width)),
         yFrac: Math.min(1, Math.max(0, y / rect.height))
-       };
-    }
+        };
+     }
 
     function getCellFromCoords(clientX, clientY) {
       var el = document.elementFromPoint(clientX, clientY);
       if (!el) return null;
       var cell = el.classList && el.classList.contains('cell') ? el : (el.closest ? el.closest('.cell') : null);
       return (cell && cell.classList && cell.classList.contains('cell')) ? cell : null;
-    }
+     }
 
+        // Process a single touch/pointer update with state persistence
     function processTouchMove(clientX, clientY, force) {
       var touchTs = performance.now();
       var cell = getCellFromCoords(clientX, clientY);
@@ -1169,23 +1425,17 @@
         dragRow = r;
         dragCol = c;
         cell.classList.add('active');
-        _cachedRect = null;
-        _cachedRectIdx = -1;
-       }
+        _rectCacheDirty = true;
+        }
 
-      if (_cachedRectIdx !== idx) {
-        _cachedRect = cell.getBoundingClientRect();
-        _cachedRectIdx = idx;
-       }
-      var x = clientX - _cachedRect.left;
-      var y = clientY - _cachedRect.top;
-      var xFrac = Math.max(0, Math.min(1, x / _cachedRect.width));
-      var yFrac = Math.max(0, Math.min(1, y / _cachedRect.height));
+      var rect = getCellRectCached(r, c);
+      var xFrac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      var yFrac = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
 
       var audioT = performance.now();
       LatencyProfiler.recordMove(touchTs, audioT);
       updateVoiceWithTouch(dragVoice, dragBaseFreq, dragRow, dragCol, xFrac, yFrac, force);
-    }
+     }
 
     function retriggerVoice(voice, freq, amp, row, col, xFrac, yFrac, force) {
       var now = audioCtx.currentTime;
@@ -1212,8 +1462,9 @@
       voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
       voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
       voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
-    }
+     }
 
+         // Legacy single-drag start (used by mouse fallback)
     function startDrag(cell, clientX, clientY, force) {
       var idx = parseInt(cell.dataset.index);
       var r = parseInt(cell.dataset.row);
@@ -1233,11 +1484,73 @@
         dragVoice = activeVoices[idx];
         var fracs = getTouchFracInCell(cell, clientX, clientY);
         retriggerVoice(dragVoice, baseFreq, amp, r, c, fracs.xFrac, fracs.yFrac, force);
-       } else {
+         } else {
         dragVoice = createVoice(baseFreq, amp, false, r, c);
         activeVoices[idx] = dragVoice;
+         }
+
+      var audioT = performance.now();
+      LatencyProfiler.recordMove(performance.now(), audioT);
+      }
+
+         // Create or retrigger a voice for a pointer/touch (multi-touch aware)
+    function startVoiceForTouch(cell, clientX, clientY, force, pid) {
+      var idx = parseInt(cell.dataset.index);
+      var r = parseInt(cell.dataset.row);
+      var c = parseInt(cell.dataset.col);
+      var baseFreq = getFrequency(r, c);
+      var amp = calcAmplitude(r, c, force);
+      var gId = pid || allocGestureId();
+
+        // Update the gesture registry with the current state
+      var fracs = getTouchFracInCell(cell, clientX, clientY);
+      cell.classList.add('active');
+      LatencyProfiler.recordDown(performance.now());
+
+      var voice = null;
+      var voiceKey = String(gId);
+      if (activeVoices[voiceKey] && !activeVoices[voiceKey].isSeq) {
+        voice = activeVoices[voiceKey];
+        retriggerVoice(voice, baseFreq, amp, r, c, fracs.xFrac, fracs.yFrac, force);
+        } else {
+        voice = createVoice(baseFreq, amp, false, r, c);
+        activeVoices[voiceKey] = voice;
+        }
+
+      registerGesture(gId, r, c, cell, voice, baseFreq, clientX, clientY);
+
+        // For single-touch pointer events, also set the legacy drag state
+      if (!pid) {
+        dragBaseFreq = baseFreq;
+        dragRow = r;
+        dragCol = c;
+        dragCellIndex = idx;
+        dragCellEl = cell;
+        dragVoice = voice;
        }
-    }
+
+      var audioT = performance.now();
+      LatencyProfiler.recordMove(performance.now(), audioT);
+     }
+
+    function releaseCellById(gId) {
+      var g = getGesture(gId);
+      if (!g) return;
+      if (g.cellEl) g.cellEl.classList.remove('active');
+      LatencyProfiler.recordRelease(performance.now());
+      if (g.voice && audioCtx) {
+        var vk = String(gId);
+        killVoice(vk);
+        }
+      unbindGesture(gId);
+
+          // If this was the drag touch, clear legacy state
+      if (dragVoice === g.voice) {
+        dragVoice = null;
+        dragCellIndex = -1;
+        dragCellEl = null;
+        }
+      }
 
     function releaseCell() {
       if (dragVoice) {
@@ -1248,87 +1561,160 @@
         dragCellIndex = -1;
         dragCellEl = null;
         if (v && audioCtx) killVoice(releaseIdx);
-       }
-    }
+        }
+      LatencyProfiler.recordRelease(performance.now());
+     }
 
     var touchMoved = false;
 
-    // --- Pointer Event handlers ---
+        // Track pointer IDs for multi-touch
+    var activePointerIds = {};
+
+     // --- Pointer Event handlers (multi-touch aware) ---
     if (window.PointerEvent) {
        gridEl.addEventListener('pointerdown', function(e) {
          e.preventDefault();
          var cell = (e.target.closest && e.target.closest('.cell')) || null;
          if (!cell) return;
 
-         // In edit mode, toggling cell participation in the current step
          if (editMode) {
            editCellInPattern(e, cell);
            return;
-          }
+           }
 
          gridEl.setPointerCapture(e.pointerId);
+         activePointerIds[e.pointerId] = true;
          getAudioCtxPromise().then(function() {
            if (!ensureAudio()) return;
            var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
-           startDrag(cell, e.clientX, e.clientY, force);
-          });
-       });
+           startVoiceForTouch(cell, e.clientX, e.clientY, force, e.pointerId);
+           });
+        });
 
-      gridEl.addEventListener('pointermove', function(e) {
-        if (!dragVoice) return;
-        var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
-        processTouchMove(e.clientX, e.clientY, force);
-       });
+       gridEl.addEventListener('pointermove', function(e) {
+         if (!activePointerIds[e.pointerId]) return;
+         var g = getGesture(e.pointerId);
+         if (!g || !g.voice) return;
+         var cell = getCellFromCoords(e.clientX, e.clientY);
+         if (!cell) {
+           if (g.voice) {
+             var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
+             updateVoiceWithTouch(g.voice, g.baseFreq, g.row, g.col, g.xFrac, g.yFrac, force);
+            }
+           return;
+         }
+
+         var r = parseInt(cell.dataset.row);
+         var c = parseInt(cell.dataset.col);
+
+          // Update gesture state persistence
+        persistGestureState(e.pointerId, r, c, e.clientX, e.clientY);
+
+          // If moved to a new cell, update base frequency
+        if (r !== g.row || c !== g.col) {
+          if (g.cellEl && g.cellEl !== cell) g.cellEl.classList.remove('active');
+          g.cellEl = cell;
+          cell.classList.add('active');
+          _rectCacheDirty = true;
+          var newFreq = getFrequency(r, c);
+          g.baseFreq = newFreq;
+          if (g.voice) {
+            g.voice.osc.frequency.setTargetAtTime(newFreq, audioCtx.currentTime, 0.003);
+            g.voice.subOsc.frequency.setTargetAtTime(newFreq * 0.5, audioCtx.currentTime, 0.003);
+           }
+         }
+
+         var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
+         var rect = getCellRectCached(r, c);
+         var xFrac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+         var yFrac = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+         var touchTs = performance.now();
+         updateVoiceWithTouch(g.voice, g.baseFreq, r, c, xFrac, yFrac, force);
+         var audioT = performance.now();
+         LatencyProfiler.recordMove(touchTs, audioT);
+        });
 
       gridEl.addEventListener('pointerup', function(e) {
-        LatencyProfiler.recordRelease(performance.now());
-        releaseCell();
+        if (activePointerIds[e.pointerId]) {
+          releaseCellById(e.pointerId);
+          delete activePointerIds[e.pointerId];
+         }
         try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-       });
+        });
 
       gridEl.addEventListener('pointercancel', function(e) {
-        LatencyProfiler.recordRelease(performance.now());
-        releaseCell();
+        if (activePointerIds[e.pointerId]) {
+          releaseCellById(e.pointerId);
+          delete activePointerIds[e.pointerId];
+         }
         try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-       });
+        });
 
     } else {
-      // --- Touch fallback ---
+        // --- Touch fallback ---
+       var activeTouchIds = {};
+
       function handleTouchStart(e) {
         e.preventDefault();
         var touchTs = performance.now();
         LatencyProfiler.recordDown(touchTs);
         getAudioCtxPromise();
         for (var i = 0; i < e.changedTouches.length; i++) {
-          var t = e.changedTouches[i];
-          touchMoved = false;
-         }
-        for (var j = 0; j < e.changedTouches.length; j++) {
-          var touch = e.changedTouches[j];
+          var touch = e.changedTouches[i];
           if (touch.radiusX && touch.radiusX > 50) continue;
           if (touch.force !== undefined && touch.force < 0.01) continue;
           var cell = getCellFromCoords(touch.clientX, touch.clientY);
           if (cell) {
             var force = (touch.force !== undefined && touch.force > 0) ? touch.force : undefined;
-            startDrag(cell, touch.clientX, touch.clientY, force);
+            var tId = touch.identifier + '_' + touchTs;
+            activeTouchIds[tId] = true;
+            startVoiceForTouch(cell, touch.clientX, touch.clientY, force, tId);
            }
          }
        }
 
       function handleTouchMove(e) {
         e.preventDefault();
+        touchMoved = true;
         for (var i = 0; i < e.changedTouches.length; i++) {
           var touch = e.changedTouches[i];
-          touchMoved = true;
-          var force = (touch.force !== undefined && touch.force > 0) ? touch.force : undefined;
-          processTouchMove(touch.clientX, touch.clientY, force);
+          var tId = touch.identifier + '';
+          var g = getGesture(tId);
+          if (!g || !g.voice) {
+            var cell = getCellFromCoords(touch.clientX, touch.clientY);
+            if (cell) {
+              var force = (touch.force !== undefined && touch.force > 0) ? touch.force : undefined;
+              processTouchMove(touch.clientX, touch.clientY, force);
+             }
+            continue;
+           }
+
+          var cell = getCellFromCoords(touch.clientX, touch.clientY);
+          if (cell) {
+            var r = parseInt(cell.dataset.row);
+            var c = parseInt(cell.dataset.col);
+            persistGestureState(tId, r, c, touch.clientX, touch.clientY);
+            var force = (touch.force !== undefined && touch.force > 0) ? touch.force : undefined;
+            var rect = getCellRectCached(r, c);
+            var xF = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+            var yF = Math.max(0, Math.min(1, (touch.clientY - rect.top) / rect.height));
+            updateVoiceWithTouch(g.voice, g.baseFreq, r, c, xF, yF, force);
+           }
          }
        }
 
       function handleTouchEnd(e) {
         e.preventDefault();
-        LatencyProfiler.recordRelease(performance.now());
-        releaseCell();
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          var touch = e.changedTouches[i];
+          var tId = touch.identifier + '';
+          releaseCellById(tId);
+          delete activeTouchIds[tId];
+         }
+        if (!Object.keys(activeTouchIds).length) {
+          if (dragVoice) { releaseCell(); }
+         }
        }
 
       gridEl.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -1344,27 +1730,29 @@
       LatencyProfiler.recordDown(performance.now());
       getAudioCtxPromise();
       mouseDown = true;
+      _rectCacheDirty = true;
       var cell = getCellFromCoords(e.clientX, e.clientY);
       if (cell) startDrag(cell, e.clientX, e.clientY, undefined);
-    });
+     });
 
     gridEl.addEventListener('mousemove', function(e) {
       if (!mouseDown || window.PointerEvent) return;
+      _rectCacheDirty = true;
       processTouchMove(e.clientX, e.clientY, undefined);
-    });
+     });
 
     gridEl.addEventListener('mouseup', function() {
       if (window.PointerEvent) return;
       LatencyProfiler.recordRelease(performance.now());
       releaseCell();
       mouseDown = false;
-    });
+     });
 
     gridEl.addEventListener('mouseleave', function() {
       if (window.PointerEvent) return;
       if (mouseDown) { LatencyProfiler.recordRelease(performance.now()); releaseCell(); }
       mouseDown = false;
-    });
+     });
 
      // ========================================
      //  Edit Mode Logic — Pattern Matrix
@@ -1556,15 +1944,47 @@
       buildStepIndicators();
       PerfMonitor.start();
 
+         // Invalidate rect cache on resize
       var resizeTimer;
       window.addEventListener('resize', function() {
         clearTimeout(resizeTimer);
+        invalidateRectCache();
         resizeTimer = setTimeout(resizeGrid, 80);
-       });
+         }, { passive: true });
       if (window.matchMedia) {
-        window.matchMedia('(orientation: portrait)').addEventListener('change', resizeGrid);
-        window.matchMedia('(orientation: landscape)').addEventListener('change', resizeGrid);
-       }
+        window.matchMedia('(orientation: portrait)').addEventListener('change', function() {
+          invalidateRectCache(); resizeGrid();
+         });
+        window.matchMedia('(orientation: landscape)').addEventListener('change', function() {
+          invalidateRectCache(); resizeGrid();
+         });
+         }
+
+         // Stress test keyboard shortcut: Ctrl+Alt+S
+      document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.altKey && e.key === 's') {
+          e.preventDefault();
+          getAudioCtxPromise().then(function() {
+            if (ensureAudio()) StressTest.start();
+             });
+            return;
+           }
+         if (e.key === 'q' && e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('tempo-slider').focus();
+          return;
+          }
+         if (e.key !== 'F5' && e.key !== 'F12') launch();
+      });
+
+         // Dev-mode: expose stress test to console
+      if (window.location.hash.indexOf('stress') >= 0) {
+        setTimeout(function() {
+          getAudioCtxPromise().then(function() {
+            if (ensureAudio()) StressTest.start();
+             });
+          }, 2000);
+          }
 
       if (!Element.prototype.closest) {
         Element.prototype.closest = function(s) {
@@ -1573,11 +1993,11 @@
           do {
             if (matchesFn.call(el, s)) return el;
             el = el.parentElement || el.parentNode;
-           } while (el !== null && el.nodeType === 1);
+            } while (el !== null && el.nodeType === 1);
           return null;
-         };
-       }
-    }
+          };
+         }
+      }
 
     init();
 })();
