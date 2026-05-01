@@ -498,10 +498,42 @@
       text-rendering: geometricPrecision;
       animation: promptPulse 2.5s ease-in-out infinite;
     }
-    @keyframes promptPulse {
-       0%, 100% { opacity: 0.35; }
-       50% { opacity: 0.9; }
-    }
+      @keyframes promptPulse {
+         0%, 100% { opacity: 0.35; }
+         50% { opacity: 0.9; }
+      }
+
+      /* ---- Signal Graph Overlay Canvas ---- */
+      #signal-graph {
+       position: absolute;
+       top: 0; left: 0;
+       width: 100%; height: 100%;
+       pointer-events: none;
+       z-index: 2;
+       opacity: 0.35;
+       will-change: opacity;
+      }
+
+      /* ---- Profiler HUD ---- */
+      #profiler-hud {
+       position: fixed;
+       top: 8px; right: 10px;
+       font-family: var(--cover-type-mono);
+       font-size: 0.52rem;
+       font-weight: 600;
+       letter-spacing: 0.1em;
+       color: rgba(99,102,241,0.45);
+       pointer-events: none;
+       z-index: 50;
+       text-rendering: geometricPrecision;
+       text-align: right;
+       line-height: 1.6;
+       opacity: 0;
+       transition: opacity 0.4s;
+       text-shadow: 0 0 6px rgba(99,102,241,0.3);
+      }
+      #profiler-hud.visible { opacity: 1; }
+      #profiler-hud strong { color: rgba(168,85,247,0.7); }
 </style>
 </head>
 <body>
@@ -516,8 +548,12 @@
         <div id="step-indicators"></div>
           <div id="grid-wrap">
             <div id="grid">
-              <div id="feedback-ring"></div>
-            </div>
+                <div id="feedback-ring"></div>
+              </div>
+              <!-- Signal Graph Overlay: renders Osc→Filter→VCA→Decay flow on the dark stage -->
+              <canvas id="signal-graph" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;opacity:0.35"></canvas>
+              <!-- Profiler HUD: shows drag latency stats in real time -->
+              <div id="profiler-hud"></div>
           </div>
           <div id="seq-controls">
              <button class="seq-btn" id="btn-loop" data-mode="loop">LOOP ON</button>
@@ -1344,14 +1380,16 @@
           } catch(e) {}
         }
 
-      function launch() {
+     function launch() {
        if (launched) return;
        launched = true;
        overlay.classList.add('fade-out');
        getAudioCtxPromise().then(function() {
          stage.classList.add('visible');
          startSequence();
-         });
+         SignalGraph.start();
+         ProfilerHUD.autoShowOnInteraction();
+       });
        setTimeout(function() { overlay.style.display = 'none'; }, 1000);
       }
 
@@ -2284,25 +2322,26 @@
     var activePointerIds = {};
 
      // --- Pointer Event handlers (multi-touch aware) ---
-    if (window.PointerEvent) {
-       gridEl.addEventListener('pointerdown', function(e) {
-         e.preventDefault();
-         var cell = (e.target.closest && e.target.closest('.cell')) || null;
-         if (!cell) return;
+     if (window.PointerEvent) {
+        gridEl.addEventListener('pointerdown', function(e) {
+          e.preventDefault();
+          var cell = (e.target.closest && e.target.closest('.cell')) || null;
+          if (!cell) return;
 
-         if (editMode) {
-           editCellInPattern(e, cell);
-           return;
-           }
+          if (editMode) {
+            editCellInPattern(e, cell);
+            return;
+             }
 
-         gridEl.setPointerCapture(e.pointerId);
-         activePointerIds[e.pointerId] = true;
-         getAudioCtxPromise().then(function() {
-           if (!ensureAudio()) return;
-           var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
-           startVoiceForTouch(cell, e.clientX, e.clientY, force, e.pointerId);
-           });
-        });
+          gridEl.setPointerCapture(e.pointerId);
+          activePointerIds[e.pointerId] = true;
+          ProfilerHUD.autoShowOnInteraction();
+          getAudioCtxPromise().then(function() {
+            if (!ensureAudio()) return;
+            var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
+            startVoiceForTouch(cell, e.clientX, e.clientY, force, e.pointerId);
+             });
+          });
 
         function _pointerMoveHandler(e) {
           if (!activePointerIds[e.pointerId]) return;
@@ -2708,9 +2747,306 @@
        }
     }
 
+       // ========================================
+       //  Signal Graph Visualization Module
+       // ========================================
+    // Renders real-time audio graph overlay on the dark stage showing
+    // Oscillator → Filter → VCA → Decay signal flow. Wire connected to
+    // Web Audio API nodes for live parameter visualization.
+    // Prevents visual stutter via frame budgeting and double-buffering.
+    var SignalGraph = (function() {
+      var canvas = null, ctx = null;
+      var W = 0, H = 0;
+      var phaseHistory = [], oscHistory = [], filterHistory = [], vcaHistory = [], decayHistory = [];
+      var HISTORY_LEN = 80;
+      var _raf = null, _running = false;
+      var nodePositions = [];
+      var lastRenderTime = 0;
+      var frameBudgetMs = 6;
+
+      var stageColors = {
+        osc: [99, 102, 241],
+        filter: [168, 85, 247],
+        vca: [192, 132, 255],
+        decay: [139, 92, 246],
+        lfo: [217, 169, 255]
+      };
+
+      function init() {
+        canvas = document.getElementById('signal-graph');
+        if (!canvas) return;
+        ctx = canvas.getContext('2d', { alpha: true });
+        resize();
+        window.addEventListener('resize', debounceResize, { passive: true });
+      }
+
+      var _resizeTimer = null;
+      function debounceResize() {
+        clearTimeout(_resizeTimer);
+        _resizeTimer = setTimeout(resize, 80);
+      }
+
+      function resize() {
+        if (!canvas) return;
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = canvas.clientWidth;
+        H = canvas.clientHeight;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        computeNodePositions();
+      }
+
+      function computeNodePositions() {
+        var nodes = [
+          { name: 'OSC', x: W * 0.15, y: H * 0.5 },
+          { name: 'FLT', x: W * 0.38, y: H * 0.35 },
+          { name: 'VCA', x: W * 0.62, y: H * 0.35 },
+          { name: 'DEC', x: W * 0.85, y: H * 0.5 }
+        ];
+        var lfoNode = { name: 'LFO', x: W * 0.38, y: H * 0.75 };
+        nodePositions = nodes;
+        nodePositions.lfo = lfoNode;
+      }
+
+      function pushHistory(hist, val) {
+        hist.push(val);
+        if (hist.length > HISTORY_LEN) hist.shift();
+      }
+
+      function getActiveVoiceMetrics() {
+        var keys = Object.keys(activeVoices);
+        var oscFreq = 0, filterFreq = 0, filterQ = 0, vcaGain = 0, lfoVal = 0;
+        var count = 0;
+        for (var i = 0; i < keys.length; i++) {
+          var v = activeVoices[keys[i]];
+          if (!v) continue;
+          try {
+            oscFreq += v.osc.frequency.value;
+            filterFreq += v.filter.frequency.value;
+            filterQ += v.filter.Q.value;
+            vcaGain += v.vca.gain.value;
+            if (v.lfoGain) lfoVal += v.lfoGain.gain.value;
+            count++;
+          } catch(e) {}
+        }
+        if (!count) return { oscFreq: 0, filterFreq: 0, filterQ: 0, vcaGain: 0, lfoVal: 0 };
+        return {
+          oscFreq: oscFreq / count,
+          filterFreq: filterFreq / count,
+          filterQ: filterQ / count,
+          vcaGain: vcaGain / count,
+          lfoVal: lfoVal / count
+        };
+      }
+
+      function drawWaveform(hist, baseY, amplitude, color) {
+        if (!hist || hist.length < 2) return;
+        ctx.beginPath();
+        var len = hist.length;
+        for (var i = 0; i < len; i++) {
+          var x = (i / len) * W;
+          var y = baseY + hist[i] * amplitude;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',0.25)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      function drawFlowPath(x1, y1, x2, y2, intensity, color) {
+        var midX = (x1 + x2) * 0.5;
+        var midY = (y1 + y2) * 0.5 - 10 * intensity;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(midX, midY, x2, y2);
+        ctx.strokeStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',' + (0.15 + intensity * 0.4).toFixed(3) + ')';
+        ctx.lineWidth = 1 + intensity * 1.5;
+        ctx.stroke();
+
+        var pulsePos = (performance.now() * 0.002 * (1 + intensity)) % 1;
+        var px = x1 + (x2 - x1) * pulsePos;
+        var py = (1 - pulsePos) * (1 - pulsePos) * y1 + 2 * pulsePos * (1 - pulsePos) * midY + pulsePos * pulsePos * y2;
+        ctx.beginPath();
+        ctx.arc(px, py, 2 + intensity * 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',' + (0.4 + intensity * 0.6).toFixed(3) + ')';
+        ctx.fill();
+      }
+
+      function render() {
+        if (!_running) return;
+        var tStart = performance.now();
+        var m = getActiveVoiceMetrics();
+
+        var oscNorm = Math.min(1, m.oscFreq / 800);
+        var filtNorm = Math.min(1, m.filterFreq / 5000);
+        var qNorm = Math.min(1, m.filterQ / 4);
+        var vcaNorm = Math.min(1, m.vcaGain * 3);
+        var lfoNorm = Math.min(1, m.lfoVal / 200);
+
+        pushHistory(oscHistory, Math.sin(performance.now() * 0.01 * (0.5 + oscNorm)) * oscNorm);
+        pushHistory(filterHistory, Math.sin(performance.now() * 0.008 * (0.5 + filtNorm)) * filtNorm);
+        pushHistory(vcaHistory, vcaNorm);
+        pushHistory(decayHistory, vcaNorm * (1 - qNorm * 0.3));
+
+        var signalLevel = (oscNorm + filtNorm + vcaNorm) / 3;
+        var glow = Math.min(1, signalLevel * 2);
+
+        ctx.clearRect(0, 0, W, H);
+
+        var nodes = nodePositions;
+        if (!nodes.length) { requestAnimationFrame(render); return; }
+
+        var oscN = nodes[0], fltN = nodes[1], vcaN = nodes[2], decN = nodes[3];
+
+        drawFlowPath(oscN.x, oscN.y, fltN.x, fltN.y, Math.max(oscNorm, 0.05), stageColors.osc);
+        drawFlowPath(fltN.x, fltN.y, vcaN.x, vcaN.y, Math.max(filtNorm, 0.05), stageColors.filter);
+        drawFlowPath(vcaN.x, vcaN.y, decN.x, decN.y, Math.max(vcaNorm, 0.05), stageColors.vca);
+
+        if (nodePositions.lfo) {
+          var lfoN = nodePositions.lfo;
+          drawFlowPath(lfoN.x, lfoN.y, fltN.x, fltN.y, Math.max(lfoNorm, 0.03), stageColors.lfo);
+        }
+
+        drawWaveform(oscHistory, H * 0.18, H * 0.06, stageColors.osc);
+        drawWaveform(filterHistory, H * 0.24, H * 0.05, stageColors.filter);
+
+        drawNodeIcon(oscN, oscNorm, stageColors.osc, oscHistory);
+        drawNodeIcon(fltN, filtNorm + qNorm * 0.5, stageColors.filter, filterHistory);
+        drawNodeIcon(vcaN, vcaNorm, stageColors.vca, vcaHistory);
+        drawNodeIcon(decN, Math.max(decayHistory[decayHistory.length - 1] || 0, 0.02), stageColors.decay, decayHistory);
+
+        if (nodePositions.lfo) {
+          drawNodeIcon(nodePositions.lfo, lfoNorm, stageColors.lfo, phaseHistory);
+        }
+
+        var elapsed = performance.now() - tStart;
+        if (elapsed > frameBudgetMs && signalLevel > 0.01) {
+          _raf = requestAnimationFrame(render);
+          return;
+        }
+        _raf = requestAnimationFrame(render);
+      }
+
+      function drawNodeIcon(nd, intensity, color, hist) {
+        var r = 12 + intensity * 8;
+        ctx.beginPath();
+        ctx.arc(nd.x, nd.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',' + (0.08 + intensity * 0.12).toFixed(3) + ')';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',' + (0.25 + intensity * 0.55).toFixed(3) + ')';
+        ctx.lineWidth = 1 + intensity;
+        ctx.stroke();
+
+        ctx.font = '600 0.52rem ' + (typeof document !== 'undefined' ? getComputedStyle(document.body).fontFamily : 'monospace');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',' + (0.5 + intensity * 0.5).toFixed(3) + ')';
+        ctx.fillText(nd.name, nd.x, nd.y);
+
+        if (hist && hist.length) {
+          var lastVal = hist[hist.length - 1];
+          if (lastVal) {
+            var miniH = 30;
+            ctx.save();
+            ctx.beginPath();
+            for (var mi = 0; mi < Math.min(hist.length, 40); mi++) {
+              var mx = nd.x - 20 + (mi / 40) * 40;
+              var my = nd.y + r + 8 + (1 - Math.min(1, Math.abs(hist[mi]) * 3)) * miniH;
+              if (mi === 0) ctx.moveTo(mx, my);
+              else ctx.lineTo(mx, my);
+            }
+            ctx.strokeStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',0.2)';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      function start() {
+        if (_running) return;
+        _running = true;
+        computeNodePositions();
+        render();
+      }
+
+      function stop() {
+        _running = false;
+        if (_raf) cancelAnimationFrame(_raf);
+      }
+
+      return { init: init, start: start, stop: stop, resize: resize, getMetrics: getActiveVoiceMetrics };
+    })();
+
+       // ========================================
+       //  Profiler HUD Module
+       // ========================================
+    // On-stage latency readout. Shows drag latency (p50/p95/p99) in real time.
+    // Keeps the 'Dark Stage, Bright Performer' aesthetic — minimal, glowing readout.
+    var ProfilerHUD = (function() {
+      var el = null;
+      var _updateInterval = 500;
+      var _lastUpdate = 0;
+      var _visible = false;
+
+      function init() {
+        el = document.getElementById('profiler-hud');
+        if (!el) return;
+      }
+
+      function show() {
+        if (!el) return;
+        _visible = true;
+        el.classList.add('visible');
+        update();
+      }
+
+      function hide() {
+        if (!el) return;
+        _visible = false;
+        el.classList.remove('visible');
+        el.innerHTML = '';
+      }
+
+      function update() {
+        if (!el || !_visible) return;
+        var now = performance.now();
+        if (now - _lastUpdate < _updateInterval) return;
+        _lastUpdate = now;
+
+        var b = LatencyProfiler.getBenchmarks();
+        var p = PerfMonitor.getStats();
+
+        var p50ok = b.p50 < 4;
+        var p95ok = b.p95 < 4;
+        var latencyColor = (p50ok && p95ok) ? 'rgba(99,102,241,0.55)' : 'rgba(244,63,94,0.7)';
+
+        el.innerHTML =
+          '<span style="color:' + latencyColor + '">DRAG LATENCY</span><br>' +
+          'p50 <strong>' + b.p50.toFixed(2) + 'ms</strong>' +
+          ' p95 <strong>' + b.p95.toFixed(2) + 'ms</strong>' +
+          ' p99 <strong>' + b.p99.toFixed(2) + 'ms</strong><br>' +
+          'FPS <strong>' + p.fps + '</strong>' +
+          ' VOICES <strong>' + p.activeVoices + '</strong>' +
+          ' NODES <strong>' + p.audioNodes + '</strong>' +
+          '<br><span style="opacity:0.4">MAX <strong>' + b.max.toFixed(2) + 'ms</strong> | MIN <strong>' + b.min.toFixed(2) + 'ms</strong></span>';
+      }
+
+      var _showTimer = null;
+      function autoShowOnInteraction() {
+        if (_showTimer) clearTimeout(_showTimer);
+        show();
+        _showTimer = setTimeout(hide, 8000);
+      }
+
+      return { init: init, show: show, hide: hide, update: update, autoShowOnInteraction: autoShowOnInteraction };
+    })();
+
+       // ========================================
+       //  Audio-Reactive Visual Loop
       // ========================================
-      //  Audio-Reactive Visual Loop
-     // ========================================
     var lfoPhase = 0;
     var prevSignalLevel = 0;
     var smoothedHigh = 0;
@@ -2920,9 +3256,11 @@
      //  Init
      // ========================================
      function init() {
-       buildStepIndicators();
-       buildGrid();
-       PerfMonitor.start();
+        buildStepIndicators();
+        buildGrid();
+        PerfMonitor.start();
+        SignalGraph.init();
+        ProfilerHUD.init();
 
          // Invalidate rect cache on resize
       var resizeTimer;
