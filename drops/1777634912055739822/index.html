@@ -168,7 +168,6 @@ html, body {
 
   let audioCtx = null;
   let masterGain = null;
-  let preDelay = null;
   let analyser = null;
   let analyserData = null;
   let limiter = null;
@@ -225,13 +224,9 @@ html, body {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
           masterGain = audioCtx.createGain();
-          masterGain.gain.value = 0.25;
+          masterGain.gain.value = 0.28;
 
-          // Tight pre-delay — 1.5ms protective cushion to prevent scheduler conflation
-          preDelay = audioCtx.createDelay(0.02);
-          preDelay.delayTime.value = 0.0015;
-
-          limiter = audioCtx.createWaveShaper();
+         limiter = audioCtx.createWaveShaper();
           limiter.curve = buildSoftClipCurve();
           limiter.oversample = '4x';
 
@@ -247,9 +242,8 @@ html, body {
           analyser.smoothingTimeConstant = 0.75;
           analyserData = new Uint8Array(analyser.frequencyBinCount);
 
-          // Signal chain: VCA → preDelay → masterGain → SoftClip → Compressor → Analyser → Destination
-          preDelay.connect(masterGain);
-          masterGain.connect(limiter);
+         // Signal chain: VCA → masterGain → SoftClip → Compressor → Analyser → Destination
+         masterGain.connect(limiter);
           limiter.connect(compressor);
           compressor.connect(analyser);
           analyser.connect(audioCtx.destination);
@@ -312,22 +306,22 @@ html, body {
     return 0.32 * rowFactor * colFactor;
   }
 
-  function getAntiAliasedParams(freq) {
+   function getAntiAliasedParams(freq) {
     const nyquist = audioCtx.sampleRate * 0.5;
     const freqRatio = freq / nyquist;
-    const maxQ = 3.5;
+    const maxQ = 3.8;
     const minQ = 1.0;
     let q;
-    if (freqRatio > 0.1) {
-      const t = Math.min(1, (freqRatio - 0.1) / 0.15);
+    if (freqRatio > 0.12) {
+      const t = Math.min(1, (freqRatio - 0.12) / 0.13);
       q = maxQ - (maxQ - minQ) * t;
-    } else {
+     } else {
       q = maxQ;
-    }
+     }
     const cutoffCeiling = nyquist * 0.38;
-    let cutoff = Math.min(freq * 4.5, 9500, cutoffCeiling);
+    let cutoff = Math.min(freq * 5, 10000, cutoffCeiling);
     return { q: Math.max(q, 0.5), cutoff };
-  }
+   }
 
   // ========================================
   //  Initialize Audio Context
@@ -356,7 +350,7 @@ html, body {
   }
 
   // ========================================
-  //  Voice: Oscillator → Filter → VCA → PreDelay → Master
+    // Voice: Oscillator → Filter → VCA → Master
   // ========================================
 
   function createVoice(freq, amplitude, isSeq) {
@@ -402,26 +396,26 @@ html, body {
     // VCA with woody, breathing decay envelope
     const vca = audioCtx.createGain();
 
-    // Phase 1: attack — 2ms linear ramp (tight, key-strike feel)
+     // Phase 1: attack — 2ms linear ramp (tight, key-strike feel)
     vca.gain.setValueAtTime(0, now);
     vca.gain.linearRampToValueAtTime(vol, now + 0.002);
-    // Phase 2: percussive drop — 65ms exponential to 40% (fast energy release, mallet-on-wood)
+     // Phase 2: percussive drop — 80ms exponential to 45% (mallet-on-wood)
     vca.gain.setValueAtTime(vol, now + 0.002);
-    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.40, 0.001), now + 0.067);
-    // Phase 3: breath — 400ms exponential to 12% (organic dissipation, no flat sustain)
-    const p3Start = now + 0.067;
-    vca.gain.setValueAtTime(Math.max(vol * 0.40, 0.001), p3Start);
-    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.12, 0.001), p3Start + 0.4);
-    // Phase 4: tail — 700ms exponential to silence (loose, bendable, no ring)
-    const p4Start = p3Start + 0.4;
-    vca.gain.setValueAtTime(Math.max(vol * 0.12, 0.001), p4Start);
-    vca.gain.exponentialRampToValueAtTime(0.0005, p4Start + 0.7);
+    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
+     // Phase 3: breath — 520ms exponential to 15% (organic dissipation)
+    const p3Start = now + 0.082;
+    vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
+    vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
+     // Phase 4: tail — 1200ms exponential to ~0% (loose, bending, no ring)
+    const p4Start = p3Start + 0.52;
+    vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
+    vca.gain.exponentialRampToValueAtTime(0.0001, p4Start + 1.2);
 
-    // Signal chain: osc + sub → filter → vca → preDelay (shared) → master chain
+     // Signal chain: osc + sub → filter → vca → masterGain
     osc.connect(filter);
     subGain.connect(filter);
     filter.connect(vca);
-    vca.connect(preDelay);
+    vca.connect(masterGain);
 
     osc.start(now);
     subOsc.start(now);
@@ -487,12 +481,12 @@ html, body {
     vca.gain.setValueAtTime(Math.max(vol * 0.12, 0.001), t0 + 0.467);
     vca.gain.exponentialRampToValueAtTime(0.0005, t0 + 1.167);
 
-    osc.connect(filter);
-    subGain.connect(filter);
-    filter.connect(vca);
-    vca.connect(preDelay);
+     osc.connect(filter);
+     subGain.connect(filter);
+     filter.connect(vca);
+     vca.connect(masterGain);
 
-    osc.start(t0);
+     osc.start(t0);
     subOsc.start(t0);
     lfo.start(t0);
 
