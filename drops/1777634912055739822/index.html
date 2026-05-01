@@ -140,16 +140,50 @@ html, body {
 
 <script>
 (function() {
-  'use strict';
+   'use strict';
 
-  const ROWS = 5;
-  const COLS = 8;
-  const SCALE_DEGREES = [0, 2, 4, 7, 9];
-  const NOTE_NAMES = ['C', 'D', 'E', 'G', 'A'];
-  const ROW_FREQS = [130.81, 196.00, 261.63, 392.00, 523.25];
+   // ========================================
+   //  PRODUCTION ENV — LOCKED
+   // ========================================
+   const ENV = {
+      NODE: 'production',
+      SAMPLE_RATE_TARGET: 48000,
+      MAX_VOICES: 40,
+      LAUNCH_TIMEOUT_MS: 1000,
+      STAGE_BG: '#010108',
+      OVERLAY_BG: '#000003',
+      GRID_ROWS: 5,
+      GRID_COLS: 8,
+      MIN_TOUCH_TARGET: 44,
+      TOUCH_DEADZONE: 6,
+      LOOKAHEAD_SEC: 0.08,
+      SCHEDULE_INTERVAL_MS: 25,
+      SEQ_INTERVAL_SEC: 0.38,
+      MASTER_GAIN: 0.28,
+      SOFT_CLIP_THRESHOLD: 0.82,
+      COMPRESSOR_THRESHOLD_DB: -8,
+      COMPRESSOR_RATIO: 8,
+      PRE_DELAY_MS: 1.5,
+      LFO_FREQ_HZ: 0.2,
+      LFO_DEPTH_FACTOR: 0.5,
+      MAX_Q: 3.8,
+      MIN_Q: 1.0,
+      // BUILD LOCK: do not modify below this line
+      BUILD_SHA: 'open-circuit-v1-final',
+      DROP_ID: '1777634912055739822',
+      AESTHETIC: 'Dark Stage, Bright Performer',
+      LOCKED_AT: '2026-05-01T00:00:00Z'
+      };
+
+   const ROWS = ENV.GRID_ROWS;
+   const COLS = ENV.GRID_COLS;
+   const SCALE_DEGREES = [0, 2, 4, 7, 9];
+   const NOTE_NAMES = ['C', 'D', 'E', 'G', 'A'];
+   const ROW_FREQS = [130.81, 196.00, 261.63, 392.00, 523.25];
 
   let audioCtx = null;
   let masterGain = null;
+  let preDelayNode = null;
   let analyser = null;
   let analyserData = null;
   let limiter = null;
@@ -165,7 +199,7 @@ html, body {
   let seqIntervalMs = 0.38;
   let seqScheduleTimer = null;
   const LOOKAHEAD = 0.08;
-  const SCHEDULE_INTERVAL = 20;
+  const SCHEDULE_INTERVAL = 25;
 
   // Harmony-resolving 16-step pattern with chord voicings.
   // Each step is an array of {r, c} positions for simultaneous notes.
@@ -208,6 +242,10 @@ html, body {
           masterGain = audioCtx.createGain();
           masterGain.gain.value = 0.28;
 
+          // 1.5ms PreDelay — protective cushion between VCA and master processing
+         preDelayNode = audioCtx.createDelay(0.02);
+          preDelayNode.delayTime.value = 0.0015;
+
          limiter = audioCtx.createWaveShaper();
           limiter.curve = buildSoftClipCurve();
           limiter.oversample = '4x';
@@ -224,8 +262,9 @@ html, body {
           analyser.smoothingTimeConstant = 0.75;
           analyserData = new Uint8Array(analyser.frequencyBinCount);
 
-         // Signal chain: VCA → masterGain → SoftClip → Compressor → Analyser → Destination
-         masterGain.connect(limiter);
+          // Signal chain: VCA → PreDelay (1.5ms) → masterGain → SoftClip → Compressor → Analyser → Destination
+         preDelayNode.connect(masterGain);
+          masterGain.connect(limiter);
           limiter.connect(compressor);
           compressor.connect(analyser);
           analyser.connect(audioCtx.destination);
@@ -356,48 +395,48 @@ html, body {
     subOsc.detune.value = 0;
 
     const subGain = audioCtx.createGain();
-    subGain.gain.value = 0.08;
+    subGain.gain.value = 0.1;
     subOsc.connect(subGain);
 
-    // Lowpass filter — the creative engine
+     // Lowpass filter — the creative engine
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.Q.value = aaParams.q;
     filter.frequency.value = Math.min(freq * 3, aaParams.cutoff);
 
-    // Slow LFO modulates cutoff for singing harmonic movement
+     // Slow LFO modulates cutoff for singing harmonic movement (0.2 Hz = ~5s period)
     const lfo = audioCtx.createOscillator();
     lfo.type = 'sine';
-    lfo.frequency.value = 0.18;
+    lfo.frequency.value = 0.2;
 
     const lfoGain = audioCtx.createGain();
-    lfoGain.gain.value = freq * 0.3;
+    lfoGain.gain.value = freq * 0.5;
     lfo.connect(lfoGain);
     lfoGain.connect(filter.frequency);
 
-    // VCA with woody, breathing decay envelope
+     // VCA with woody, breathing decay envelope
     const vca = audioCtx.createGain();
 
-     // Phase 1: attack — 2ms linear ramp (tight, key-strike feel)
+      // Phase 1: attack — 2ms linear ramp (tight, key-strike feel)
     vca.gain.setValueAtTime(0, now);
     vca.gain.linearRampToValueAtTime(vol, now + 0.002);
-     // Phase 2: percussive drop — 80ms exponential to 45% (mallet-on-wood)
+      // Phase 2: percussive drop — 80ms exponential to 45% (mallet-on-wood)
     vca.gain.setValueAtTime(vol, now + 0.002);
     vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
-     // Phase 3: breath — 520ms exponential to 15% (organic dissipation)
+      // Phase 3: breath — 520ms exponential to 15% (organic dissipation)
     const p3Start = now + 0.082;
     vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
     vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
-     // Phase 4: tail — 1200ms exponential to ~0% (loose, bending, no ring)
+      // Phase 4: tail — 1200ms exponential to ~0% (loose, bending, no ring)
     const p4Start = p3Start + 0.52;
     vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
     vca.gain.exponentialRampToValueAtTime(0.0001, p4Start + 1.2);
 
-     // Signal chain: osc + sub → filter → vca → masterGain
+      // Signal chain: osc + sub → filter → vca → preDelay → masterGain
     osc.connect(filter);
     subGain.connect(filter);
     filter.connect(vca);
-    vca.connect(masterGain);
+    vca.connect(preDelayNode);
 
     osc.start(now);
     subOsc.start(now);
@@ -434,7 +473,7 @@ html, body {
     subOsc.detune.value = 0;
 
     const subGain = audioCtx.createGain();
-    subGain.gain.value = 0.08;
+    subGain.gain.value = 0.1;
     subOsc.connect(subGain);
 
     const filter = audioCtx.createBiquadFilter();
@@ -444,16 +483,16 @@ html, body {
 
     const lfo = audioCtx.createOscillator();
     lfo.type = 'sine';
-    lfo.frequency.value = 0.18;
+    lfo.frequency.value = 0.2;
 
     const lfoGain = audioCtx.createGain();
-    lfoGain.gain.value = freq * 0.3;
+    lfoGain.gain.value = freq * 0.5;
     lfo.connect(lfoGain);
     lfoGain.connect(filter.frequency);
 
     const vca = audioCtx.createGain();
 
-    // Woody envelope scheduled from play time
+     // Woody envelope scheduled from play time
     vca.gain.setValueAtTime(0, t0);
     vca.gain.linearRampToValueAtTime(vol, t0 + 0.002);
     vca.gain.setValueAtTime(vol, t0 + 0.002);
@@ -466,7 +505,7 @@ html, body {
      osc.connect(filter);
      subGain.connect(filter);
      filter.connect(vca);
-     vca.connect(masterGain);
+     vca.connect(preDelayNode);
 
      osc.start(t0);
     subOsc.start(t0);
@@ -492,7 +531,7 @@ html, body {
     voice.subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.003);
     voice.filter.frequency.setTargetAtTime(Math.min(freq * 3, aaParams.cutoff), now, 0.005);
     voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
-    voice.lfoGain.gain.setTargetAtTime(freq * 0.3, now, 0.005);
+    voice.lfoGain.gain.setTargetAtTime(freq * 0.5, now, 0.005);
     voice.vca.gain.setTargetAtTime(amplitude, now, 0.001);
   }
 
@@ -793,25 +832,17 @@ html, body {
     if (dragVoice) {
       if (dragCellIndex >= 0 && allCells[dragCellIndex]) {
         allCells[dragCellIndex].classList.remove('active');
+       }
+       const v = dragVoice;
+       dragVoice = null;
+       const releaseIdx = dragCellIndex;
+       dragCellIndex = -1;
+       if (v && audioCtx) {
+         killVoice(releaseIdx);
+        }
+       return;
       }
-      const v = dragVoice;
-      dragVoice = null;
-      dragCellIndex = -1;
-      if (v && audioCtx) {
-        const now = audioCtx.currentTime;
-        try {
-          v.vca.gain.cancelScheduledValues(now);
-          v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
-          v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
-          const stopT = now + 0.35;
-          v.osc.stop(stopT);
-          v.subOsc.stop(stopT);
-          v.lfo.stop(stopT);
-        } catch(e) {}
-      }
-      return;
     }
-  }
 
   if (window.PointerEvent) {
     gridEl.addEventListener('pointerdown', function(e) {
