@@ -1,810 +1,995 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-     <meta name="apple-mobile-web-app-capable" content="yes">
-     <title>Open Circuit — Dark Stage, Bright Performer</title>
-     <style>
-     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-     html, body {
-       width: 100%; height: 100%; overflow: hidden;
-       background: #010108;
-       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-       -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;
-     }
-     #stage {
-       position: relative; width: 100%; height: 100%;
-       display: flex; flex-direction: column; align-items: center; justify-content: center;
-       background:
-         radial-gradient(ellipse 25% 40% at 50% 25%, rgba(99,102,241,0.03) 0%, transparent 70%),
-         radial-gradient(ellipse 80% 100% at 50% 50%, #010108 0%, #000005 100%);
-     }
-     #header { position: absolute; top: 0; left: 0; right: 0; text-align: center; padding: 1rem 1rem 0.5rem; z-index: 10; }
-     #header h1 { font-size: clamp(1rem, 2.5vw, 1.4rem); font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(255,255,255,0.85); text-shadow: 0 0 20px rgba(99,102,241,0.6); }
-     #header p { font-size: 0.7rem; color: rgba(255,255,255,0.35); letter-spacing: 0.1em; margin-top: 0.15rem; }
-     #grid-container { position: relative; z-index: 5; }
-     #grid {
-       display: grid; gap: 5px; padding: 10px; border-radius: 14px;
-       background: rgba(8,8,18,0.9); border: 1px solid rgba(99,102,241,0.06);
-       box-shadow: 0 0 80px rgba(99,102,241,0.03), 0 0 200px rgba(99,102,241,0.02), inset 0 0 60px rgba(0,0,10,0.6);
-       will-change: transform;
-     }
-     .cell {
-       position: relative; border-radius: 7px;
-       background: rgba(12,12,24,0.9); border: 1px solid rgba(99,102,241,0.04);
-       transition: background 0.04s, border-color 0.04s, box-shadow 0.04s; cursor: pointer; will-change: background, box-shadow;
-     }
-     .cell:active, .cell.active {
-       background: rgba(99,102,241,0.55); border-color: rgba(168,85,247,0.9);
-       box-shadow: 0 0 20px rgba(99,102,241,0.8), 0 0 50px rgba(99,102,241,0.4), 0 0 90px rgba(168,85,247,0.2), inset 0 0 12px rgba(192,132,255,0.5), inset 0 0 30px rgba(168,85,247,0.25);
-     }
-     @keyframes cellGlow {
-       0%, 100% { box-shadow: 0 0 14px rgba(99,102,241,0.6), 0 0 40px rgba(99,102,241,0.3), inset 0 0 8px rgba(168,85,247,0.3); }
-       50% { box-shadow: 0 0 28px rgba(99,102,241,1), 0 0 70px rgba(99,102,241,0.6), 0 0 110px rgba(168,85,247,0.3), inset 0 0 16px rgba(192,132,255,0.6), inset 0 0 40px rgba(168,85,247,0.35); }
-     }
-     .cell.active { animation: cellGlow 0.9s ease-in-out infinite; }
-     .cell.signal-glow {
-       background: rgba(99,102,241,0.2);
-       box-shadow: 0 0 8px rgba(99,102,241,0.3), inset 0 0 4px rgba(168,85,247,0.15);
-     }
-     .cell-label {
-       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-       font-size: 0.55rem; font-weight: 600; color: rgba(255,255,255,0.15); pointer-events: none; transition: color 0.1s;
-     }
-     .cell.active .cell-label { color: rgba(255,255,255,0.8); }
-     #hint {
-       position: absolute; bottom: 12%; text-align: center; font-size: 0.75rem;
-       color: rgba(255,255,255,0.25); letter-spacing: 0.05em; z-index: 10; pointer-events: none; transition: opacity 0.5s;
-     }
-     #hint.hidden { opacity: 0; }
-     #params {
-       position: absolute; bottom: 2%; display: flex; gap: 1.5rem; z-index: 10;
-       color: rgba(255,255,255,0.3); font-size: 0.65rem; letter-spacing: 0.05em;
-     }
-     #params span { display: flex; align-items: center; gap: 0.3rem; }
-     #params .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(99,102,241,0.5); }
-     #params .dot.live { background: #6366f1; box-shadow: 0 0 6px rgba(99,102,241,0.6); }
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+      <meta name="apple-mobile-web-app-capable" content="yes">
+      <title>Open Circuit — Dark Stage, Bright Performer</title>
+      <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body {
+        width: 100%; height: 100%; overflow: hidden;
+        background: #010108;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;
+      }
+      #stage {
+        position: relative; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background:
+          radial-gradient(ellipse 35% 45% at 50% 20%, rgba(99,102,241,0.06) 0%, rgba(99,102,241,0.02) 40%, transparent 70%),
+          radial-gradient(ellipse 70% 80% at 50% 60%, rgba(168,85,247,0.015) 0%, transparent 60%),
+          radial-gradient(ellipse 90% 100% at 50% 50%, #010108 0%, #000003 100%);
+      }
+      #header { position: absolute; top: 0; left: 0; right: 0; text-align: center; padding: 1.2rem 1rem 0.4rem; z-index: 10; }
+      #header h1 {
+        font-size: clamp(1.3rem, 3.2vw, 1.8rem);
+        font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase;
+        color: rgba(255,255,255,0.92);
+        text-shadow:
+          0 0 30px rgba(99,102,241,0.7),
+          0 0 60px rgba(99,102,241,0.35),
+          0 0 100px rgba(168,85,247,0.15),
+          0 2px 4px rgba(0,0,0,0.8);
+        line-height: 1.1;
+      }
+      #header p {
+        font-size: clamp(0.6rem, 1.3vw, 0.75rem);
+        color: rgba(255,255,255,0.3);
+        letter-spacing: 0.14em; margin-top: 0.25rem;
+        text-transform: uppercase;
+      }
+      #grid-container { position: relative; z-index: 5; }
+      #grid {
+        display: grid; gap: 5px; padding: 12px; border-radius: 16px;
+        background: rgba(6,6,15,0.95);
+        border: 1px solid rgba(99,102,241,0.08);
+        box-shadow:
+          0 0 60px rgba(99,102,241,0.04),
+          0 0 120px rgba(99,102,241,0.025),
+          0 0 200px rgba(99,102,241,0.015),
+          inset 0 0 40px rgba(0,0,10,0.5);
+        will-change: transform, box-shadow;
+        transition: box-shadow 0.15s ease-out;
+      }
+      .cell {
+        position: relative; border-radius: 8px;
+        background: rgba(10,10,22,0.95);
+        border: 1px solid rgba(99,102,241,0.05);
+        transition: background 0.03s, border-color 0.03s, box-shadow 0.03s;
+        cursor: pointer; will-change: background, box-shadow;
+      }
+      /* Idle ambient glow on cells */
+      .cell::after {
+        content: '';
+        position: absolute; inset: 0; border-radius: 8px;
+        box-shadow: inset 0 0 6px rgba(99,102,241,0.03);
+        pointer-events: none; transition: box-shadow 0.1s;
+      }
+      .cell:active, .cell.active {
+        background: rgba(99,102,241,0.6);
+        border-color: rgba(168,85,247,1);
+        box-shadow:
+          0 0 24px rgba(99,102,241,0.9),
+          0 0 55px rgba(99,102,241,0.5),
+          0 0 95px rgba(168,85,247,0.3),
+          0 0 130px rgba(168,85,247,0.12),
+          inset 0 0 14px rgba(192,132,255,0.6),
+          inset 0 0 35px rgba(168,85,247,0.3);
+      }
+      .cell:active::after, .cell.active::after {
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.15);
+      }
+      @keyframes cellGlow {
+        0%, 100% {
+          box-shadow:
+            0 0 18px rgba(99,102,241,0.8),
+            0 0 48px rgba(99,102,241,0.4),
+            0 0 80px rgba(168,85,247,0.2),
+            inset 0 0 10px rgba(168,85,247,0.35);
+        }
+        50% {
+          box-shadow:
+            0 0 32px rgba(99,102,241,1),
+            0 0 75px rgba(99,102,241,0.7),
+            0 0 120px rgba(168,85,247,0.35),
+            0 0 160px rgba(168,85,247,0.15),
+            inset 0 0 20px rgba(192,132,255,0.7),
+            inset 0 0 45px rgba(168,85,247,0.4);
+        }
+      }
+      .cell.active { animation: cellGlow 0.85s ease-in-out infinite; }
+      .cell.signal-glow {
+        background: rgba(99,102,241,0.25);
+        border-color: rgba(99,102,241,0.15);
+        box-shadow:
+          0 0 12px rgba(99,102,241,0.4),
+          0 0 30px rgba(168,85,247,0.15),
+          inset 0 0 6px rgba(168,85,247,0.2);
+      }
+      .cell-label {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        font-size: clamp(0.5rem, 1.2vw, 0.65rem);
+        font-weight: 700; letter-spacing: 0.06em;
+        color: rgba(255,255,255,0.12);
+        pointer-events: none; transition: color 0.08s, text-shadow 0.08s;
+        text-transform: uppercase;
+      }
+      .cell.active .cell-label {
+        color: rgba(255,255,255,0.9);
+        text-shadow:
+          0 0 8px rgba(192,132,255,0.8),
+          0 0 20px rgba(99,102,241,0.4);
+      }
+      #hint {
+        position: absolute; bottom: 14%; text-align: center;
+        font-size: clamp(0.65rem, 1.4vw, 0.8rem);
+        color: rgba(255,255,255,0.2);
+        letter-spacing: 0.08em; z-index: 10; pointer-events: none;
+        transition: opacity 0.6s;
+        text-transform: uppercase;
+      }
+      #hint.hidden { opacity: 0; }
+      #params {
+        position: absolute; bottom: 3%; display: flex; gap: 1.8rem; z-index: 10;
+        color: rgba(255,255,255,0.25);
+        font-size: clamp(0.55rem, 1.1vw, 0.68rem);
+        letter-spacing: 0.08em; text-transform: uppercase;
+      }
+      #params span { display: flex; align-items: center; gap: 0.35rem; }
+      #params .dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: rgba(99,102,241,0.35);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+      }
+      #params .dot.live {
+        background: #6366f1;
+        box-shadow:
+          0 0 8px rgba(99,102,241,0.8),
+          0 0 20px rgba(168,85,247,0.3);
+      }
+      /* Stage ambient light bar at bottom */
+      #stage::after {
+        content: '';
+        position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(99,102,241,0.12), transparent);
+        pointer-events: none;
+      }
 
-     @media (max-width: 600px) {
-       #grid { gap: 3px; padding: 6px; }
-     }
-     </style>
+      @media (max-width: 600px) {
+        #grid { gap: 3px; padding: 7px; }
+        #header h1 { letter-spacing: 0.16em; }
+      }
+      @media (max-width: 380px) {
+        #grid { gap: 2px; padding: 5px; }
+      }
+      </style>
 </head>
 <body>
-     <div id="stage">
-       <div id="header">
-         <h1>Open Circuit</h1>
-         <p>Browser as stage · Grid as instrument</p>
-       </div>
-       <div id="grid-container">
-         <div id="grid"></div>
-       </div>
-       <div id="hint">Touch the grid to play</div>
-       <div id="params">
-         <span><div class="dot" id="dot-lfo"></div> LFO</span>
-         <span><div class="dot" id="dot-decay"></div> Decay</span>
-         <span><div class="dot" id="dot-filter"></div> Filter</span>
-       </div>
-     </div>
+      <div id="stage">
+        <div id="header">
+          <h1>Open Circuit</h1>
+          <p>Browser as stage · Grid as instrument</p>
+        </div>
+        <div id="grid-container">
+          <div id="grid"></div>
+        </div>
+        <div id="hint">Touch the grid to play</div>
+        <div id="params">
+          <span><div class="dot" id="dot-lfo"></div> LFO</span>
+          <span><div class="dot" id="dot-decay"></div> Decay</span>
+          <span><div class="dot" id="dot-filter"></div> Filter</span>
+        </div>
+      </div>
 
-     <script>
+      <script>
 (function() {
-     'use strict';
+      'use strict';
 
-     // ========================================
-     //  Constants & State
-     // ========================================
+      // ========================================
+      //  Constants & State
+      // ========================================
 
-     const ROWS = 5;
-     const COLS = 8;
-     const SCALE_DEGREES = [0, 2, 4, 7, 9];
-     const NOTE_NAMES = ['C', 'D', 'E', 'G', 'A'];
-     const ROW_FREQS = [130.81, 196.00, 261.63, 392.00, 523.25];
+      const ROWS = 5;
+      const COLS = 8;
+      const SCALE_DEGREES = [0, 2, 4, 7, 9];
+      const NOTE_NAMES = ['C', 'D', 'E', 'G', 'A'];
+      const ROW_FREQS = [130.81, 196.00, 261.63, 392.00, 523.25];
 
-     let audioCtx = null;
-     let masterGain = null;
-     let analyser = null;
-     let analyserData = null;
-     let limiter = null;
-     const activeVoices = {};
+      let audioCtx = null;
+      let masterGain = null;
+      let analyser = null;
+      let analyserData = null;
+      let limiter = null;
+      const activeVoices = {};
 
-     // Sequencer state
-     let sequencerRunning = false;
-     let seqStep = 0;
-     let seqStartTime = 0;
-     let seqIntervalMs = 380;
-     let seqScheduleTimer = null;
-     const LOOKAHEAD = 0.1;
-     const SCHEDULE_INTERVAL = 25;
+       // Sequencer state
+      let sequencerRunning = false;
+      let seqStep = 0;
+      let seqStartTime = 0;
+      let seqIntervalMs = 380;
+      let seqScheduleTimer = null;
+      const LOOKAHEAD = 0.1;
+      const SCHEDULE_INTERVAL = 25;
 
-     // Sequence pattern: major triad passing with resolving harmony
-     const seqPattern = [
-       { r: 2, c: 0 },
-       { r: 2, c: 2 },
-       { r: 2, c: 3 },
-       { r: 2, c: 4 },
-       { r: 2, c: 3 },
-       { r: 2, c: 2 },
-       { r: 2, c: 0 },
-       { r: 2, c: 2 },
-       { r: 2, c: 3 },
-       { r: 1, c: 0 },
-       { r: 2, c: 0 },
-       { r: 2, c: 2 },
-     ];
+       // Sequence pattern: major triad passing with resolving harmony
+      const seqPattern = [
+        { r: 2, c: 0 },
+        { r: 2, c: 2 },
+        { r: 2, c: 3 },
+        { r: 2, c: 4 },
+        { r: 2, c: 3 },
+        { r: 2, c: 2 },
+        { r: 2, c: 0 },
+        { r: 2, c: 2 },
+        { r: 2, c: 3 },
+        { r: 1, c: 0 },
+        { r: 2, c: 0 },
+        { r: 2, c: 2 },
+      ];
 
-     // ========================================
-     //  Helper Functions
-     // ========================================
+       // ========================================
+       //  Helper Functions
+       // ========================================
 
-     function getFrequency(row, col) {
-       const degreeIdx = col % SCALE_DEGREES.length;
-       const scaleSemitones = SCALE_DEGREES[degreeIdx];
-       const octaveOffset = Math.floor(col / SCALE_DEGREES.length);
-       return ROW_FREQS[row] * Math.pow(2, scaleSemitones / 12 + octaveOffset);
-     }
-
-     function noteName(row, col) {
-       return NOTE_NAMES[col % NOTE_NAMES.length];
-     }
-
-     function getAmplitudeFromPosition(r, c) {
-       const rowFactor = 1 - (r / (ROWS - 1)) * 0.4;
-       const colFactor = 0.8 + 0.2 * Math.sin(Math.PI * c / (COLS - 1));
-       return 0.32 * rowFactor * colFactor;
-     }
-
-     // Anti-aliasing: compute safe Q and cutoff for a given frequency
-     // As frequency increases, we reduce Q and cap cutoff to prevent aliasing
-     function getAntiAliasedParams(freq) {
-       const nyquist = audioCtx.sampleRate * 0.5;
-       const freqRatio = freq / nyquist;
-       // For high notes (> nyquist/6), reduce Q to prevent self-oscillation alias
-       const maxQ = 3.8;
-       const minQ = 1.2;
-       let q;
-       if (freqRatio > 0.12) {
-         const t = Math.min(1, (freqRatio - 0.12) / 0.13);
-         q = maxQ - (maxQ - minQ) * t;
-       } else {
-         q = maxQ;
-       }
-       // Cutoff ceiling: never let cutoff exceed 40% of Nyquist to stay safe
-       const cutoffCeiling = nyquist * 0.4;
-       let cutoff = Math.min(freq * 5, 10000, cutoffCeiling);
-       return { q, cutoff };
-     }
-
-     // ========================================
-     //  Initialize Audio Context
-     // ========================================
-
-     function ensureAudio() {
-       if (!audioCtx) {
-         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-         masterGain = audioCtx.createGain();
-         masterGain.gain.value = 0.28;
-
-         // Soft clipping curve via WaveShaper: prevents clipping at resonance peak
-         limiter = audioCtx.createWaveShaper();
-         limiter.curve = buildSoftClipCurve();
-         limiter.oversample = '4x';
-
-         // Compressor for headroom
-         const compressor = audioCtx.createDynamicsCompressor();
-         compressor.threshold.value = -8;
-         compressor.knee.value = 10;
-         compressor.ratio.value = 8;
-         compressor.attack.value = 0.001;
-         compressor.release.value = 0.03;
-
-         analyser = audioCtx.createAnalyser();
-         analyser.fftSize = 256;
-         analyser.smoothingTimeConstant = 0.75;
-         analyserData = new Uint8Array(analyser.frequencyBinCount);
-
-         // Chain: masterGain -> softClip -> compressor -> analyser -> destination
-         // No shared pre-delay: each voice connects directly to masterGain
-         // This eliminates pre-delay stutter entirely
-         masterGain.connect(limiter);
-         limiter.connect(compressor);
-         compressor.connect(analyser);
-         analyser.connect(audioCtx.destination);
-       }
-       if (audioCtx.state === 'suspended') {
-         audioCtx.resume();
-       }
-     }
-
-     function buildSoftClipCurve() {
-       const n = audioCtx.sampleRate * 2;
-       const curve = new Float32Array(n);
-       const threshold = 0.82;
-       for (let i = 0; i < n; i++) {
-         const x = (i / (n - 1)) * 2 - 1;
-         if (Math.abs(x) < 0.01) {
-           curve[i] = x;
-         } else if (Math.abs(x) <= threshold) {
-           curve[i] = x;
-         } else {
-           const t = (Math.abs(x) - threshold) / (1 - threshold);
-           curve[i] = Math.sign(x) * (threshold + (1 - threshold) * (1 - Math.exp(-6 * t)));
-         }
-       }
-       return curve;
-     }
-
-     // ========================================
-     //  Voice: Oscillator → Filter → VCA → Master
-     // ========================================
-
-     function createVoice(freq, amplitude, isSeq) {
-       ensureAudio();
-       const now = audioCtx.currentTime;
-       const seqVol = isSeq ? 0.55 : 1;
-       const vol = amplitude * seqVol;
-
-       // Anti-aliased filter params
-       const aaParams = getAntiAliasedParams(freq);
-
-       // Main oscillator: sawtooth for harmonic richness
-       const osc = audioCtx.createOscillator();
-       osc.type = 'sawtooth';
-       osc.frequency.value = freq;
-       osc.detune.value = -3;
-
-       // Sub oscillator: triangle, one octave down, for body
-       const subOsc = audioCtx.createOscillator();
-       subOsc.type = 'triangle';
-       subOsc.frequency.value = freq * 0.5;
-       subOsc.detune.value = 0;
-
-       const subGain = audioCtx.createGain();
-       subGain.gain.value = 0.1;
-       subOsc.connect(subGain);
-
-       // Filter: lowpass with anti-aliased Q and cutoff
-       const filter = audioCtx.createBiquadFilter();
-       filter.type = 'lowpass';
-       filter.Q.value = aaParams.q;
-       filter.frequency.value = aaParams.cutoff;
-
-       // Slow LFO modulating filter cutoff for organic breathing
-       const lfo = audioCtx.createOscillator();
-       lfo.type = 'sine';
-       lfo.frequency.value = 0.2;
-
-       const lfoGain = audioCtx.createGain();
-       lfoGain.gain.value = freq * 0.35;
-       lfo.connect(lfoGain);
-       lfoGain.connect(filter.frequency);
-
-       // VCA: three-phase woody envelope
-       // No pre-delay: signal flows VCA → masterGain directly
-       const vca = audioCtx.createGain();
-
-       // Phase 1: attack 2ms (key-strike)
-       vca.gain.setValueAtTime(0, now);
-       vca.gain.linearRampToValueAtTime(vol, now + 0.002);
-
-       // Phase 2: percussive decay 80ms to 45%
-       vca.gain.setValueAtTime(vol, now + 0.002);
-       vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
-
-       // Phase 3: breath decay 520ms to 15%
-       const p3Start = now + 0.082;
-       vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
-       vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
-
-       // Phase 4: gentle tail release 1200ms to 2%
-       const p4Start = p3Start + 0.52;
-       vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
-       vca.gain.exponentialRampToValueAtTime(0.001, p4Start + 1.2);
-
-       // Signal path: Osc + Sub → Filter → VCA → masterGain
-       osc.connect(filter);
-       subGain.connect(filter);
-       filter.connect(vca);
-       vca.connect(masterGain);
-
-       osc.start(now);
-       subOsc.start(now);
-       lfo.start(now);
-
-       const stopTime = p4Start + 1.25;
-       osc.stop(stopTime);
-       subOsc.stop(stopTime);
-       lfo.stop(stopTime);
-
-       return {
-         osc, subOsc, subGain, filter, vca, lfo, lfoGain,
-         stopTime, isSeq: !!isSeq
-       };
-     }
-
-     function updateVoice(voice, freq, amplitude) {
-       if (!voice) return;
-       const now = audioCtx.currentTime;
-       const aaParams = getAntiAliasedParams(freq);
-
-       voice.osc.frequency.setTargetAtTime(freq, now, 0.003);
-       voice.subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.003);
-       voice.filter.frequency.setTargetAtTime(aaParams.cutoff, now, 0.005);
-       voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
-       voice.lfoGain.gain.setTargetAtTime(freq * 0.35, now, 0.005);
-       voice.vca.gain.setTargetAtTime(amplitude, now, 0.001);
-     }
-
-     function killVoice(cellIndex) {
-       const v = activeVoices[cellIndex];
-       if (!v) return;
-       const now = audioCtx.currentTime;
-       try {
-         v.vca.gain.cancelScheduledValues(now);
-         v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
-         v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-         const stopT = now + 0.3;
-         v.osc.detach();
-         v.subOsc.detach();
-         v.subGain.disconnect();
-         v.filter.disconnect();
-         v.vca.disconnect();
-         v.lfo.detach();
-         v.lfoGain.disconnect();
-         v.osc.stop(stopT);
-         v.subOsc.stop(stopT);
-         v.lfo.stop(stopT);
-       } catch(e) {}
-       delete activeVoices[cellIndex];
-     }
-
-     // ========================================
-     //  Grid UI
-     // ========================================
-
-     const gridEl = document.getElementById('grid');
-     const allCells = [];
-
-     function buildGrid() {
-       const vw = window.innerWidth;
-       const vh = window.innerHeight;
-       const maxW = Math.min(vw * 0.85, 600);
-       const cellW = Math.floor((maxW - (COLS + 1) * 4) / COLS);
-       const cellH = cellW * 0.78;
-
-       const totalH = ROWS * cellH + (ROWS + 1) * 4;
-       const maxH = vh * 0.65;
-       const scaleFactor = Math.min(1, maxH / totalH);
-
-       const finalCellW = Math.round(cellW * scaleFactor);
-       const finalCellH = Math.round(cellH * scaleFactor);
-
-       gridEl.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + finalCellW + 'px)';
-       gridEl.style.gridTemplateRows = 'repeat(' + ROWS + ', ' + finalCellH + 'px)';
-
-       gridEl.innerHTML = '';
-       allCells.length = 0;
-
-       for (let r = 0; r < ROWS; r++) {
-         for (let c = 0; c < COLS; c++) {
-           const idx = r * COLS + c;
-           const el = document.createElement('div');
-           el.className = 'cell';
-           el.dataset.index = idx;
-           el.dataset.row = r;
-           el.dataset.col = c;
-
-           const label = document.createElement('span');
-           label.className = 'cell-label';
-           label.textContent = noteName(r, c);
-           el.appendChild(label);
-
-           gridEl.appendChild(el);
-           allCells.push(el);
-         }
-       }
-     }
-
-     // ========================================
-     //  Lookahead Sequencer
-     // ========================================
-
-     let seqScheduleQueue = [];
-
-     function scheduleNote(step, time) {
-       const s = seqPattern[step % seqPattern.length];
-       const idx = s.r * COLS + s.c;
-       const cell = allCells[idx];
-       const freq = getFrequency(s.r, s.c);
-       const amp = getAmplitudeFromPosition(s.r, s.c);
-
-       // Create voice scheduled for the target time
-       const voice = createVoice(freq, amp, true);
-
-       // Schedule voice start at target time
-       voice.osc.stop(voice.stopTime);
-       voice.subOsc.stop(voice.stopTime);
-       voice.lfo.stop(voice.stopTime);
-
-       const now = audioCtx.currentTime;
-       const delayUntil = Math.max(0, time - now);
-
-       // Set VCA timeline relative to 'time'
-       const vol = amp * 0.55;
-       voice.vca.gain.cancelScheduledValues(now);
-       voice.vca.gain.setValueAtTime(0, time);
-       voice.vca.gain.linearRampToValueAtTime(vol, time + 0.002);
-       voice.vca.gain.setValueAtTime(vol, time + 0.002);
-       voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), time + 0.082);
-       voice.vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), time + 0.082);
-       voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), time + 0.602);
-       voice.vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), time + 0.602);
-       voice.vca.gain.exponentialRampToValueAtTime(0.001, time + 1.802);
-
-       voice.osc.start(time);
-       voice.subOsc.start(time);
-       voice.lfo.start(time);
-
-       // Visual scheduling
-       const visualDelayMs = delayUntil * 1000;
-       setTimeout(function() {
-         if (cell) cell.classList.add('active');
-       }, visualDelayMs);
-       setTimeout(function() {
-         if (cell) cell.classList.remove('active');
-       }, visualDelayMs + 800);
-     }
-
-     function seqScheduler() {
-       if (!sequencerRunning) return;
-
-       const now = audioCtx.currentTime;
-       const elapsed = now - seqStartTime;
-       const currentStep = Math.floor(elapsed / (seqIntervalMs / 1000));
-
-       // Schedule notes ahead of time
-       while (seqScheduleQueue.length === 0 ||
-               seqScheduleQueue[seqScheduleQueue.length - 1].step <= currentStep) {
-         const nextStep = seqScheduleQueue.length > 0
-           ? Math.max(currentStep, seqScheduleQueue[seqScheduleQueue.length - 1].step + 1)
-           : currentStep;
-         const playTime = seqStartTime + nextStep * (seqIntervalMs / 1000);
-         if (playTime <= now + LOOKAHEAD) {
-           seqScheduleQueue.push({ step: nextStep, time: playTime });
-           scheduleNote(nextStep, playTime);
-         } else {
-           break;
-         }
+      function getFrequency(row, col) {
+        const degreeIdx = col % SCALE_DEGREES.length;
+        const scaleSemitones = SCALE_DEGREES[degreeIdx];
+        const octaveOffset = Math.floor(col / SCALE_DEGREES.length);
+        return ROW_FREQS[row] * Math.pow(2, scaleSemitones / 12 + octaveOffset);
        }
 
-       // Clean old queue entries
-       seqScheduleQueue = seqScheduleQueue.filter(function(entry) {
-         return entry.time > now - 2;
-       });
-     }
-
-     function startSequence() {
-       ensureAudio();
-       sequencerRunning = true;
-       seqStep = 0;
-       seqStartTime = audioCtx.currentTime + 0.05;
-       seqScheduleQueue = [];
-
-       seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
-     }
-
-     function stopSequence() {
-       sequencerRunning = false;
-       if (seqScheduleTimer) {
-         clearInterval(seqScheduleTimer);
-         seqScheduleTimer = null;
-       }
-       seqScheduleQueue = [];
-       seqStep = 0;
-
-       // Clean up sequence voices
-       const toKill = [];
-       for (const idx in activeVoices) {
-         if (activeVoices[idx].isSeq) toKill.push(parseInt(idx));
-       }
-       toKill.forEach(function(idx) { killVoice(idx); });
-     }
-
-     // ========================================
-     //  Touch / Mouse Input
-     // ========================================
-
-     let hintEl = document.getElementById('hint');
-     let firstTouch = true;
-     let dragVoice = null;
-     let dragCellIndex = -1;
-     let mouseDown = false;
-     let userHasPlayed = false;
-
-     function getCellFromEvent(e) {
-       const target = e.target || (e.touches && e.touches[0] && e.touches[0].target);
-       if (!target) return null;
-       const cell = (target.closest && target.closest('.cell')) || target;
-       if (!cell.classList || !cell.classList.contains('cell')) return null;
-       return cell;
-     }
-
-     function showLiveDots() {
-       const dotLfo = document.getElementById('dot-lfo');
-       const dotDecay = document.getElementById('dot-decay');
-       const dotFilter = document.getElementById('dot-filter');
-       if (dotLfo) dotLfo.classList.add('live');
-       if (dotDecay) dotDecay.classList.add('live');
-       if (dotFilter) dotFilter.classList.add('live');
-     }
-
-     function clearLiveDotsIfIdle() {
-       const hasDrag = !!dragVoice;
-       const hasVoices = Object.keys(activeVoices).some(function(k) {
-         return !activeVoices[k].isSeq;
-       });
-       if (!hasDrag && !hasVoices) {
-         const dotLfo = document.getElementById('dot-lfo');
-         const dotDecay = document.getElementById('dot-decay');
-         const dotFilter = document.getElementById('dot-filter');
-         if (dotLfo) dotLfo.classList.remove('live');
-         if (dotDecay) dotDecay.classList.remove('live');
-         if (dotFilter) dotFilter.classList.remove('live');
-       }
-     }
-
-     function hitCell(cell) {
-       const r = parseInt(cell.dataset.row);
-       const c = parseInt(cell.dataset.col);
-       const idx = parseInt(cell.dataset.index);
-       const freq = getFrequency(r, c);
-       const amp = getAmplitudeFromPosition(r, c);
-
-       if (firstTouch) {
-         firstTouch = false;
-         if (hintEl) hintEl.classList.add('hidden');
+      function noteName(row, col) {
+        return NOTE_NAMES[col % NOTE_NAMES.length];
        }
 
-       if (dragVoice) {
-         if (idx !== dragCellIndex) {
-           if (allCells[dragCellIndex]) allCells[dragCellIndex].classList.remove('active');
-           dragCellIndex = idx;
-         }
-         cell.classList.add('active');
-         updateVoice(dragVoice, freq, amp);
-         return;
+      function getAmplitudeFromPosition(r, c) {
+        const rowFactor = 1 - (r / (ROWS - 1)) * 0.4;
+        const colFactor = 0.8 + 0.2 * Math.sin(Math.PI * c / (COLS - 1));
+        return 0.32 * rowFactor * colFactor;
        }
 
-       cell.classList.add('active');
-       showLiveDots();
-
-       if (activeVoices[idx] && !activeVoices[idx].isSeq) {
-         updateVoice(activeVoices[idx], freq, amp);
-         return;
+       // Anti-aliasing: compute safe Q and cutoff for a given frequency
+       // As frequency increases, we reduce Q and cap cutoff to prevent aliasing
+      function getAntiAliasedParams(freq) {
+        const nyquist = audioCtx.sampleRate * 0.5;
+        const freqRatio = freq / nyquist;
+        // For high notes (> nyquist/6), reduce Q to prevent self-oscillation alias
+        const maxQ = 3.8;
+        const minQ = 1.2;
+        let q;
+        if (freqRatio > 0.12) {
+          const t = Math.min(1, (freqRatio - 0.12) / 0.13);
+          q = maxQ - (maxQ - minQ) * t;
+        } else {
+          q = maxQ;
+        }
+        // Cutoff ceiling: never let cutoff exceed 40% of Nyquist to stay safe
+        const cutoffCeiling = nyquist * 0.4;
+        let cutoff = Math.min(freq * 5, 10000, cutoffCeiling);
+        return { q, cutoff };
        }
 
-       const voice = createVoice(freq, amp, false);
-       activeVoices[idx] = voice;
-     }
+       // ========================================
+       //  Initialize Audio Context
+       // ========================================
 
-     function releaseCell() {
-       if (dragVoice) {
-         if (dragCellIndex >= 0 && allCells[dragCellIndex]) {
-           allCells[dragCellIndex].classList.remove('active');
-         }
-         const v = dragVoice;
-         dragVoice = null;
-         dragCellIndex = -1;
-         if (v && audioCtx) {
-           const now = audioCtx.currentTime;
-           try {
-             v.vca.gain.cancelScheduledValues(now);
-             v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
-             v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-             const stopT = now + 0.4;
-             v.osc.stop(stopT);
-             v.subOsc.stop(stopT);
-             v.lfo.stop(stopT);
-           } catch(e) {}
-         }
-         clearLiveDotsIfIdle();
-         return;
-       }
-       clearLiveDotsIfIdle();
-     }
+      function ensureAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-     // Touch handlers
-     function handleTouchStart(e) {
-       e.preventDefault();
-       ensureAudio();
-       userHasPlayed = true;
-       if (!sequencerRunning) startSequence();
+          masterGain = audioCtx.createGain();
+          masterGain.gain.value = 0.28;
 
-       for (let i = 0; i < e.changedTouches.length; i++) {
-         const touch = e.changedTouches[i];
-         const el = document.elementFromPoint(touch.clientX, touch.clientY);
-         const cell = el && el.closest && el.closest('.cell');
-         if (cell) {
-           const idx = parseInt(cell.dataset.index);
-           dragVoice = null;
-           dragCellIndex = -1;
+          // Soft clipping curve via WaveShaper: prevents clipping at resonance peak
+          limiter = audioCtx.createWaveShaper();
+          limiter.curve = buildSoftClipCurve();
+          limiter.oversample = '4x';
 
-           if (activeVoices[idx] && !activeVoices[idx].isSeq) {
-             dragVoice = activeVoices[idx];
-             dragCellIndex = idx;
-             const r = parseInt(cell.dataset.row);
-             const c = parseInt(cell.dataset.col);
-             updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
-           } else {
-             dragVoice = createVoice(
-               getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-               getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-               false
-             );
-             dragCellIndex = idx;
-           }
-           cell.classList.add('active');
-           showLiveDots();
-         }
-       }
-     }
+          // Compressor for headroom
+          const compressor = audioCtx.createDynamicsCompressor();
+          compressor.threshold.value = -8;
+          compressor.knee.value = 10;
+          compressor.ratio.value = 8;
+          compressor.attack.value = 0.001;
+          compressor.release.value = 0.03;
 
-     function handleTouchMove(e) {
-       e.preventDefault();
-       for (let i = 0; i < e.changedTouches.length; i++) {
-         const touch = e.changedTouches[i];
-         const el = document.elementFromPoint(touch.clientX, touch.clientY);
-         const cell = el && el.closest && el.closest('.cell');
-         if (cell) hitCell(cell);
-       }
-     }
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.75;
+          analyserData = new Uint8Array(analyser.frequencyBinCount);
 
-     function handleTouchEnd(e) {
-       e.preventDefault();
-       releaseCell();
-     }
-
-     gridEl.addEventListener('touchstart', handleTouchStart, { passive: false });
-     gridEl.addEventListener('touchmove', handleTouchMove, { passive: false });
-     gridEl.addEventListener('touchend', handleTouchEnd, { passive: false });
-     gridEl.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-
-     // Mouse handlers
-     gridEl.addEventListener('mousedown', function(e) {
-       e.preventDefault();
-       ensureAudio();
-       userHasPlayed = true;
-       if (!sequencerRunning) startSequence();
-       mouseDown = true;
-       const cell = getCellFromEvent(e);
-       if (cell) {
-         const idx = parseInt(cell.dataset.index);
-         dragVoice = null;
-         dragCellIndex = -1;
-
-         if (activeVoices[idx] && !activeVoices[idx].isSeq) {
-           dragVoice = activeVoices[idx];
-           dragCellIndex = idx;
-           const r = parseInt(cell.dataset.row);
-           const c = parseInt(cell.dataset.col);
-           updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
-         } else {
-           dragVoice = createVoice(
-             getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-             getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-             false
-           );
-           dragCellIndex = idx;
-         }
-         cell.classList.add('active');
-         showLiveDots();
-       }
-     });
-
-     gridEl.addEventListener('mousemove', function(e) {
-       if (!mouseDown) return;
-       const cell = getCellFromEvent(e);
-       if (cell) hitCell(cell);
-     });
-
-     gridEl.addEventListener('mouseup', function() {
-       releaseCell();
-       mouseDown = false;
-     });
-
-     gridEl.addEventListener('mouseleave', function() {
-       if (mouseDown) releaseCell();
-       mouseDown = false;
-     });
-
-     // ========================================
-     //  Audio-Reactive Visual Loop
-     // ========================================
-
-     let lfoPhase = 0;
-     let prevSignalLevel = 0;
-
-     function audioVisualLoop() {
-       lfoPhase += 0.03;
-
-       let signalLevel = 0;
-       if (analyser && analyserData) {
-         analyser.getByteFrequencyData(analyserData);
-         let sum = 0;
-         for (let i = 0; i < analyserData.length; i++) {
-           sum += analyserData[i];
-         }
-         signalLevel = sum / (analyserData.length * 255);
+          // Chain: masterGain -> softClip -> compressor -> analyser -> destination
+          // No shared pre-delay: each voice connects directly to masterGain
+          // This eliminates pre-delay stutter entirely
+          masterGain.connect(limiter);
+          limiter.connect(compressor);
+          compressor.connect(analyser);
+          analyser.connect(audioCtx.destination);
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
        }
 
-       prevSignalLevel = prevSignalLevel * 0.7 + signalLevel * 0.3;
-
-       const lfoBrightness = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(lfoPhase));
-       const dotLfo = document.getElementById('dot-lfo');
-       if (dotLfo && dotLfo.classList.contains('live')) {
-         dotLfo.style.opacity = lfoBrightness.toFixed(2);
+      function buildSoftClipCurve() {
+        const n = audioCtx.sampleRate * 2;
+        const curve = new Float32Array(n);
+        const threshold = 0.82;
+        for (let i = 0; i < n; i++) {
+          const x = (i / (n - 1)) * 2 - 1;
+          if (Math.abs(x) < 0.01) {
+            curve[i] = x;
+          } else if (Math.abs(x) <= threshold) {
+            curve[i] = x;
+          } else {
+            const t = (Math.abs(x) - threshold) / (1 - threshold);
+            curve[i] = Math.sign(x) * (threshold + (1 - threshold) * (1 - Math.exp(-6 * t)));
+          }
+        }
+        return curve;
        }
 
-       const dotDecay = document.getElementById('dot-decay');
-       if (dotDecay && dotDecay.classList.contains('live')) {
-         const decayPulse = Math.min(1, prevSignalLevel * 4);
-         dotDecay.style.transform = 'scale(' + (0.8 + decayPulse * 0.4) + ')';
-         dotDecay.style.filter = 'brightness(' + (0.8 + decayPulse) + ')';
+       // ========================================
+       //  Voice: Oscillator → Filter → VCA → Master
+       // ========================================
+
+      function createVoice(freq, amplitude, isSeq) {
+        ensureAudio();
+        const now = audioCtx.currentTime;
+        const seqVol = isSeq ? 0.55 : 1;
+        const vol = amplitude * seqVol;
+
+        // Anti-aliased filter params
+        const aaParams = getAntiAliasedParams(freq);
+
+        // Main oscillator: sawtooth for harmonic richness
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = freq;
+        osc.detune.value = -3;
+
+        // Sub oscillator: triangle, one octave down, for body
+        const subOsc = audioCtx.createOscillator();
+        subOsc.type = 'triangle';
+        subOsc.frequency.value = freq * 0.5;
+        subOsc.detune.value = 0;
+
+        const subGain = audioCtx.createGain();
+        subGain.gain.value = 0.1;
+        subOsc.connect(subGain);
+
+        // Filter: lowpass with anti-aliased Q and cutoff
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.Q.value = aaParams.q;
+        filter.frequency.value = aaParams.cutoff;
+
+        // Slow LFO modulating filter cutoff for organic breathing
+        const lfo = audioCtx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.2;
+
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.value = freq * 0.35;
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        // VCA: three-phase woody envelope
+        // No pre-delay: signal flows VCA → masterGain directly
+        const vca = audioCtx.createGain();
+
+        // Phase 1: attack 2ms (key-strike)
+        vca.gain.setValueAtTime(0, now);
+        vca.gain.linearRampToValueAtTime(vol, now + 0.002);
+
+        // Phase 2: percussive decay 80ms to 45%
+        vca.gain.setValueAtTime(vol, now + 0.002);
+        vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
+
+        // Phase 3: breath decay 520ms to 15%
+        const p3Start = now + 0.082;
+        vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
+        vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
+
+        // Phase 4: gentle tail release 1200ms to 2%
+        const p4Start = p3Start + 0.52;
+        vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
+        vca.gain.exponentialRampToValueAtTime(0.001, p4Start + 1.2);
+
+        // Signal path: Osc + Sub → Filter → VCA → masterGain
+        osc.connect(filter);
+        subGain.connect(filter);
+        filter.connect(vca);
+        vca.connect(masterGain);
+
+        osc.start(now);
+        subOsc.start(now);
+        lfo.start(now);
+
+        const stopTime = p4Start + 1.25;
+        osc.stop(stopTime);
+        subOsc.stop(stopTime);
+        lfo.stop(stopTime);
+
+        return {
+          osc, subOsc, subGain, filter, vca, lfo, lfoGain,
+          stopTime, isSeq: !!isSeq
+        };
        }
 
-       const dotFilter = document.getElementById('dot-filter');
-       if (dotFilter && dotFilter.classList.contains('live')) {
-         let highSum = 0;
-         const startBin = Math.floor(analyserData.length * 0.5);
-         for (let i = startBin; i < analyserData.length; i++) {
-           highSum += analyserData[i];
-         }
-         const highLevel = highSum / ((analyserData.length - startBin) * 255);
-         dotFilter.style.transform = 'scale(' + (0.8 + highLevel * 3) + ')';
+      function updateVoice(voice, freq, amplitude) {
+        if (!voice) return;
+        const now = audioCtx.currentTime;
+        const aaParams = getAntiAliasedParams(freq);
+
+        voice.osc.frequency.setTargetAtTime(freq, now, 0.003);
+        voice.subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.003);
+        voice.filter.frequency.setTargetAtTime(aaParams.cutoff, now, 0.005);
+        voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
+        voice.lfoGain.gain.setTargetAtTime(freq * 0.35, now, 0.005);
+        voice.vca.gain.setTargetAtTime(amplitude, now, 0.001);
        }
 
-       if (prevSignalLevel > 0.02) {
-         const glowIntensity = Math.min(1, prevSignalLevel * 3);
-         gridEl.style.boxShadow =
-           '0 0 ' + (60 + glowIntensity * 40) + 'px rgba(99,102,241,' + (0.03 + glowIntensity * 0.07).toFixed(3) + '),' +
-           '0 0 ' + (150 + glowIntensity * 80) + 'px rgba(99,102,241,' + (0.02 + glowIntensity * 0.05).toFixed(3) + '),' +
-           'inset 0 0 ' + (40 + glowIntensity * 30) + 'px rgba(168,85,247,' + (glowIntensity * 0.15).toFixed(3) + ')';
+      function killVoice(cellIndex) {
+        const v = activeVoices[cellIndex];
+        if (!v) return;
+        const now = audioCtx.currentTime;
+        try {
+          v.vca.gain.cancelScheduledValues(now);
+          v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
+          v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+          const stopT = now + 0.3;
+          v.osc.detach();
+          v.subOsc.detach();
+          v.subGain.disconnect();
+          v.filter.disconnect();
+          v.vca.disconnect();
+          v.lfo.detach();
+          v.lfoGain.disconnect();
+          v.osc.stop(stopT);
+          v.subOsc.stop(stopT);
+          v.lfo.stop(stopT);
+        } catch(e) {}
+        delete activeVoices[cellIndex];
        }
 
-       requestAnimationFrame(audioVisualLoop);
-     }
-     audioVisualLoop();
+       // ========================================
+       //  Grid UI
+       // ========================================
 
-     // ========================================
-     //  Init
-     // ========================================
+      const gridEl = document.getElementById('grid');
+      const allCells = [];
 
-     function init() {
-       buildGrid();
+      function buildGrid() {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const maxW = Math.min(vw * 0.88, 620);
+        const cellW = Math.floor((maxW - (COLS + 1) * 5) / COLS);
+        const cellH = cellW * 0.78;
 
-       let resizeTimer;
-       window.addEventListener('resize', function() {
-         clearTimeout(resizeTimer);
-         resizeTimer = setTimeout(buildGrid, 200);
-       });
+        const totalH = ROWS * cellH + (ROWS + 1) * 5;
+        const maxH = vh * 0.62;
+        const scaleFactor = Math.min(1, maxH / totalH);
 
-       if (!Element.prototype.closest) {
-         Element.prototype.closest = function(s) {
-           var el = this;
-           var matchesFn = Element.prototype.matches || Element.prototype.msMatchesSelector;
-           do {
-             if (matchesFn.call(el, s)) return el;
-             el = el.parentElement || el.parentNode;
-           } while (el !== null && el.nodeType === 1);
-           return null;
-         };
+        const finalCellW = Math.round(cellW * scaleFactor);
+        const finalCellH = Math.round(cellH * scaleFactor);
+
+        gridEl.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + finalCellW + 'px)';
+        gridEl.style.gridTemplateRows = 'repeat(' + ROWS + ', ' + finalCellH + 'px)';
+
+        gridEl.innerHTML = '';
+        allCells.length = 0;
+
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const idx = r * COLS + c;
+            const el = document.createElement('div');
+            el.className = 'cell';
+            el.dataset.index = idx;
+            el.dataset.row = r;
+            el.dataset.col = c;
+
+            const label = document.createElement('span');
+            label.className = 'cell-label';
+            label.textContent = noteName(r, c);
+            el.appendChild(label);
+
+            gridEl.appendChild(el);
+            allCells.push(el);
+          }
+        }
        }
-     }
 
-     init();
+       // ========================================
+       //  Lookahead Sequencer
+       // ========================================
+
+      let seqScheduleQueue = [];
+
+      function scheduleNote(step, time) {
+        const s = seqPattern[step % seqPattern.length];
+        const idx = s.r * COLS + s.c;
+        const cell = allCells[idx];
+        const freq = getFrequency(s.r, s.c);
+        const amp = getAmplitudeFromPosition(s.r, s.c);
+
+        // Create voice scheduled for the target time
+        const voice = createVoice(freq, amp, true);
+
+        // Schedule voice start at target time
+        voice.osc.stop(voice.stopTime);
+        voice.subOsc.stop(voice.stopTime);
+        voice.lfo.stop(voice.stopTime);
+
+        const now = audioCtx.currentTime;
+        const delayUntil = Math.max(0, time - now);
+
+        // Set VCA timeline relative to 'time'
+        const vol = amp * 0.55;
+        voice.vca.gain.cancelScheduledValues(now);
+        voice.vca.gain.setValueAtTime(0, time);
+        voice.vca.gain.linearRampToValueAtTime(vol, time + 0.002);
+        voice.vca.gain.setValueAtTime(vol, time + 0.002);
+        voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), time + 0.082);
+        voice.vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), time + 0.082);
+        voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), time + 0.602);
+        voice.vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), time + 0.602);
+        voice.vca.gain.exponentialRampToValueAtTime(0.001, time + 1.802);
+
+        voice.osc.start(time);
+        voice.subOsc.start(time);
+        voice.lfo.start(time);
+
+        // Visual scheduling — cell lights on note, fades off after decay
+        const visualDelayMs = delayUntil * 1000;
+        setTimeout(function() {
+          if (cell) cell.classList.add('active');
+        }, visualDelayMs);
+        setTimeout(function() {
+          if (cell) cell.classList.remove('active');
+        }, visualDelayMs + 850);
+       }
+
+      function seqScheduler() {
+        if (!sequencerRunning) return;
+
+        const now = audioCtx.currentTime;
+        const elapsed = now - seqStartTime;
+        const currentStep = Math.floor(elapsed / (seqIntervalMs / 1000));
+
+        // Schedule notes ahead of time
+        while (seqScheduleQueue.length === 0 ||
+                seqScheduleQueue[seqScheduleQueue.length - 1].step <= currentStep) {
+          const nextStep = seqScheduleQueue.length > 0
+             ? Math.max(currentStep, seqScheduleQueue[seqScheduleQueue.length - 1].step + 1)
+             : currentStep;
+          const playTime = seqStartTime + nextStep * (seqIntervalMs / 1000);
+          if (playTime <= now + LOOKAHEAD) {
+            seqScheduleQueue.push({ step: nextStep, time: playTime });
+            scheduleNote(nextStep, playTime);
+          } else {
+            break;
+          }
+        }
+
+        // Clean old queue entries
+        seqScheduleQueue = seqScheduleQueue.filter(function(entry) {
+          return entry.time > now - 2;
+        });
+       }
+
+      function startSequence() {
+        ensureAudio();
+        sequencerRunning = true;
+        seqStep = 0;
+        seqStartTime = audioCtx.currentTime + 0.05;
+        seqScheduleQueue = [];
+
+        seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
+       }
+
+      function stopSequence() {
+        sequencerRunning = false;
+        if (seqScheduleTimer) {
+          clearInterval(seqScheduleTimer);
+          seqScheduleTimer = null;
+        }
+        seqScheduleQueue = [];
+        seqStep = 0;
+
+        // Clean up sequence voices
+        const toKill = [];
+        for (const idx in activeVoices) {
+          if (activeVoices[idx].isSeq) toKill.push(parseInt(idx));
+        }
+        toKill.forEach(function(idx) { killVoice(idx); });
+       }
+
+       // ========================================
+       //  Touch / Mouse Input
+       // ========================================
+
+      let hintEl = document.getElementById('hint');
+      let firstTouch = true;
+      let dragVoice = null;
+      let dragCellIndex = -1;
+      let mouseDown = false;
+      let userHasPlayed = false;
+
+      function getCellFromEvent(e) {
+        const target = e.target || (e.touches && e.touches[0] && e.touches[0].target);
+        if (!target) return null;
+        const cell = (target.closest && target.closest('.cell')) || target;
+        if (!cell.classList || !cell.classList.contains('cell')) return null;
+        return cell;
+       }
+
+      function showLiveDots() {
+        const dotLfo = document.getElementById('dot-lfo');
+        const dotDecay = document.getElementById('dot-decay');
+        const dotFilter = document.getElementById('dot-filter');
+        if (dotLfo) dotLfo.classList.add('live');
+        if (dotDecay) dotDecay.classList.add('live');
+        if (dotFilter) dotFilter.classList.add('live');
+       }
+
+      function clearLiveDotsIfIdle() {
+        const hasDrag = !!dragVoice;
+        const hasVoices = Object.keys(activeVoices).some(function(k) {
+          return !activeVoices[k].isSeq;
+        });
+        if (!hasDrag && !hasVoices) {
+          const dotLfo = document.getElementById('dot-lfo');
+          const dotDecay = document.getElementById('dot-decay');
+          const dotFilter = document.getElementById('dot-filter');
+          if (dotLfo) dotLfo.classList.remove('live');
+          if (dotDecay) dotDecay.classList.remove('live');
+          if (dotFilter) dotFilter.classList.remove('live');
+        }
+       }
+
+      function hitCell(cell) {
+        const r = parseInt(cell.dataset.row);
+        const c = parseInt(cell.dataset.col);
+        const idx = parseInt(cell.dataset.index);
+        const freq = getFrequency(r, c);
+        const amp = getAmplitudeFromPosition(r, c);
+
+        if (firstTouch) {
+          firstTouch = false;
+          if (hintEl) hintEl.classList.add('hidden');
+        }
+
+        if (dragVoice) {
+          if (idx !== dragCellIndex) {
+            if (allCells[dragCellIndex]) allCells[dragCellIndex].classList.remove('active');
+            dragCellIndex = idx;
+          }
+          cell.classList.add('active');
+          updateVoice(dragVoice, freq, amp);
+          return;
+        }
+
+        cell.classList.add('active');
+        showLiveDots();
+
+        if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+          updateVoice(activeVoices[idx], freq, amp);
+          return;
+        }
+
+        const voice = createVoice(freq, amp, false);
+        activeVoices[idx] = voice;
+       }
+
+      function releaseCell() {
+        if (dragVoice) {
+          if (dragCellIndex >= 0 && allCells[dragCellIndex]) {
+            allCells[dragCellIndex].classList.remove('active');
+          }
+          const v = dragVoice;
+          dragVoice = null;
+          dragCellIndex = -1;
+          if (v && audioCtx) {
+            const now = audioCtx.currentTime;
+            try {
+              v.vca.gain.cancelScheduledValues(now);
+              v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
+              v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+              const stopT = now + 0.4;
+              v.osc.stop(stopT);
+              v.subOsc.stop(stopT);
+              v.lfo.stop(stopT);
+            } catch(e) {}
+          }
+          clearLiveDotsIfIdle();
+          return;
+        }
+        clearLiveDotsIfIdle();
+       }
+
+       // Touch handlers — use pointer events for unified, lowest-latency input
+      if (window.PointerEvent) {
+        // Pointer events give us unified mouse+touch with better latency
+        gridEl.addEventListener('pointerdown', function(e) {
+          e.preventDefault();
+          ensureAudio();
+          userHasPlayed = true;
+          if (!sequencerRunning) startSequence();
+          const cell = e.target.closest && e.target.closest('.cell');
+          if (!cell) return;
+          const idx = parseInt(cell.dataset.index);
+          dragVoice = null;
+          dragCellIndex = -1;
+
+          if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+            dragVoice = activeVoices[idx];
+            dragCellIndex = idx;
+            const r = parseInt(cell.dataset.row);
+            const c = parseInt(cell.dataset.col);
+            updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
+          } else {
+            dragVoice = createVoice(
+              getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+              getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+              false
+            );
+            dragCellIndex = idx;
+          }
+          cell.classList.add('active');
+          showLiveDots();
+          gridEl.setPointerCapture(e.pointerId);
+        });
+
+        gridEl.addEventListener('pointermove', function(e) {
+          const cell = e.target.closest && e.target.closest('.cell');
+          if (cell) hitCell(cell);
+        });
+
+        gridEl.addEventListener('pointerup', function(e) {
+          releaseCell();
+          try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
+        });
+
+        gridEl.addEventListener('pointercancel', function(e) {
+          releaseCell();
+          try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
+        });
+      } else {
+        // Fallback: legacy touch + mouse
+        function handleTouchStart(e) {
+          e.preventDefault();
+          ensureAudio();
+          userHasPlayed = true;
+          if (!sequencerRunning) startSequence();
+
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const cell = el && el.closest && el.closest('.cell');
+            if (cell) {
+              const idx = parseInt(cell.dataset.index);
+              dragVoice = null;
+              dragCellIndex = -1;
+
+              if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+                dragVoice = activeVoices[idx];
+                dragCellIndex = idx;
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
+              } else {
+                dragVoice = createVoice(
+                  getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+                  getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+                  false
+                );
+                dragCellIndex = idx;
+              }
+              cell.classList.add('active');
+              showLiveDots();
+            }
+          }
+        }
+
+        function handleTouchMove(e) {
+          e.preventDefault();
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            const touch = e.changedTouches[i];
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const cell = el && el.closest && el.closest('.cell');
+            if (cell) hitCell(cell);
+          }
+        }
+
+        function handleTouchEnd(e) {
+          e.preventDefault();
+          releaseCell();
+        }
+
+        gridEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+        gridEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+        gridEl.addEventListener('touchend', handleTouchEnd, { passive: false });
+        gridEl.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+        // Mouse handlers
+        gridEl.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          ensureAudio();
+          userHasPlayed = true;
+          if (!sequencerRunning) startSequence();
+          mouseDown = true;
+          const cell = getCellFromEvent(e);
+          if (cell) {
+            const idx = parseInt(cell.dataset.index);
+            dragVoice = null;
+            dragCellIndex = -1;
+
+            if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+              dragVoice = activeVoices[idx];
+              dragCellIndex = idx;
+              const r = parseInt(cell.dataset.row);
+              const c = parseInt(cell.dataset.col);
+              updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
+            } else {
+              dragVoice = createVoice(
+                getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+                getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+                false
+              );
+              dragCellIndex = idx;
+            }
+            cell.classList.add('active');
+            showLiveDots();
+          }
+        });
+
+        gridEl.addEventListener('mousemove', function(e) {
+          if (!mouseDown) return;
+          const cell = getCellFromEvent(e);
+          if (cell) hitCell(cell);
+        });
+
+        gridEl.addEventListener('mouseup', function() {
+          releaseCell();
+          mouseDown = false;
+        });
+
+        gridEl.addEventListener('mouseleave', function() {
+          if (mouseDown) releaseCell();
+          mouseDown = false;
+        });
+      }
+
+       // ========================================
+       //  Audio-Reactive Visual Loop
+       //  Uses requestAnimationFrame + analyser for
+       //  stutter-free reactive glow against dark stage
+       // ========================================
+
+      let lfoPhase = 0;
+      let prevSignalLevel = 0;
+      let smoothedHigh = 0;
+
+      function audioVisualLoop() {
+        lfoPhase += 0.03;
+
+        let signalLevel = 0;
+        let highLevel = 0;
+        if (analyser && analyserData) {
+          analyser.getByteFrequencyData(analyserData);
+          let sum = 0;
+          for (let i = 0; i < analyserData.length; i++) {
+            sum += analyserData[i];
+          }
+          signalLevel = sum / (analyserData.length * 255);
+
+          let highSum = 0;
+          const startBin = Math.floor(analyserData.length * 0.5);
+          for (let i = startBin; i < analyserData.length; i++) {
+            highSum += analyserData[i];
+          }
+          highLevel = highSum / ((analyserData.length - startBin) * 255);
+        }
+
+        // Smooth signal with fast attack, slow release for natural feel
+        const smoothing = signalLevel > prevSignalLevel ? 0.5 : 0.75;
+        prevSignalLevel = prevSignalLevel * (1 - smoothing) + signalLevel * smoothing;
+        smoothedHigh = smoothedHigh * 0.8 + highLevel * 0.2;
+
+        const glowIntensity = Math.min(1, prevSignalLevel * 3.5);
+
+        // --- LFO dot ---
+        const lfoBrightness = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(lfoPhase));
+        const dotLfo = document.getElementById('dot-lfo');
+        if (dotLfo && dotLfo.classList.contains('live')) {
+          dotLfo.style.opacity = lfoBrightness.toFixed(2);
+        }
+
+        // --- Decay dot: pulses with signal level ---
+        const dotDecay = document.getElementById('dot-decay');
+        if (dotDecay && dotDecay.classList.contains('live')) {
+          const decayPulse = Math.min(1, prevSignalLevel * 5);
+          dotDecay.style.transform = 'scale(' + (0.8 + decayPulse * 0.5) + ')';
+          dotDecay.style.filter = 'brightness(' + (0.8 + decayPulse * 0.8) + ')';
+        }
+
+        // --- Filter dot: scales with high-frequency content ---
+        const dotFilter = document.getElementById('dot-filter');
+        if (dotFilter && dotFilter.classList.contains('live')) {
+          dotFilter.style.transform = 'scale(' + (0.8 + smoothedHigh * 3.5) + ')';
+        }
+
+        // --- Grid ambient glow reacts to signal ---
+        // Even at idle, grid has a subtle glow. During signal, it blooms.
+        const baseGlow = 0.04;
+        const glowBoost = glowIntensity * 0.08;
+        const deepGlow = 0.025 + glowIntensity * 0.04;
+        const outerGlow = 0.015 + glowIntensity * 0.03;
+        const insetGlow = glowIntensity * 0.18;
+
+        gridEl.style.boxShadow =
+          '0 0 ' + (55 + glowIntensity * 50) + 'px rgba(99,102,241,' + (baseGlow + glowBoost).toFixed(3) + '),' +
+          '0 0 ' + (130 + glowIntensity * 90) + 'px rgba(99,102,241,' + deepGlow.toFixed(3) + '),' +
+          '0 0 ' + (200 + glowIntensity * 60) + 'px rgba(168,85,247,' + outerGlow.toFixed(3) + '),' +
+          'inset 0 0 ' + (35 + glowIntensity * 35) + 'px rgba(168,85,247,' + insetGlow.toFixed(3) + ')';
+
+        // --- Idle cells get a subtle audio-reactive glow halo ---
+        // Only applied when there's signal but cell isn't directly active
+        if (glowIntensity > 0.05) {
+          for (let i = 0; i < allCells.length; i++) {
+            const cell = allCells[i];
+            if (!cell.classList.contains('active')) {
+              const rowIdx = parseInt(cell.dataset.row);
+              const reactive = Math.sin(lfoPhase + rowIdx * 0.7) * 0.5 + 0.5;
+              cell.style.borderColor = 'rgba(99,102,241,' + (0.05 + glowIntensity * reactive * 0.12).toFixed(3) + ')';
+              cell.style.boxShadow = '0 0 ' + (4 + glowIntensity * reactive * 8) + 'px rgba(99,102,241,' + (glowIntensity * reactive * 0.06).toFixed(3) + ')';
+            }
+          }
+        } else {
+          // Reset idle cells
+          for (let i = 0; i < allCells.length; i++) {
+            const cell = allCells[i];
+            if (!cell.classList.contains('active')) {
+              cell.style.borderColor = '';
+              cell.style.boxShadow = '';
+            }
+          }
+        }
+
+        requestAnimationFrame(audioVisualLoop);
+       }
+      audioVisualLoop();
+
+       // ========================================
+       //  Init
+       // ========================================
+
+      function init() {
+        buildGrid();
+
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(buildGrid, 150);
+        });
+
+        if (!Element.prototype.closest) {
+          Element.prototype.closest = function(s) {
+            var el = this;
+            var matchesFn = Element.prototype.matches || Element.prototype.msMatchesSelector;
+            do {
+              if (matchesFn.call(el, s)) return el;
+              el = el.parentElement || el.parentNode;
+            } while (el !== null && el.nodeType === 1);
+            return null;
+          };
+        }
+       }
+
+      init();
 })();
-     </script>
+      </script>
 </body>
 </html>
