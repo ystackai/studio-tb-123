@@ -195,24 +195,78 @@ html, body {
   const stage = document.getElementById('stage');
   let launched = false;
 
+  // Audio context initialization promise — resolved exactly once on first user gesture
+  let audioCtxPromise = null;
+  let audioCtxReady = false;
+
+  function getAudioCtxPromise() {
+    if (audioCtxReady) return Promise.resolve();
+    if (!audioCtxPromise) {
+      audioCtxPromise = (function() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+          masterGain = audioCtx.createGain();
+          masterGain.gain.value = 0.28;
+
+          limiter = audioCtx.createWaveShaper();
+          limiter.curve = buildSoftClipCurve();
+          limiter.oversample = '4x';
+
+          const compressor = audioCtx.createDynamicsCompressor();
+          compressor.threshold.value = -8;
+          compressor.knee.value = 10;
+          compressor.ratio.value = 8;
+          compressor.attack.value = 0.001;
+          compressor.release.value = 0.03;
+
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.75;
+          analyserData = new Uint8Array(analyser.frequencyBinCount);
+
+          masterGain.connect(limiter);
+          limiter.connect(compressor);
+          compressor.connect(analyser);
+          analyser.connect(audioCtx.destination);
+        }
+        // Resume must be awaited — browsers require user gesture for audio
+        var resumePromise = (audioCtx.state === 'suspended') ? audioCtx.resume() : Promise.resolve();
+        return resumePromise.then(function() {
+          audioCtxReady = true;
+          audioCtxPromise = null; // allow re-use on next session
+          return audioCtx;
+        }).catch(function() {
+          // If resume fails (e.g., interrupted gesture), still mark ready
+          // to avoid blocking the UI. Audio will be silent but visuals still fire.
+          audioCtxReady = true;
+          audioCtxPromise = null;
+          return audioCtx;
+        });
+      })();
+    }
+    return audioCtxPromise;
+  }
+
   function launch() {
     if (launched) return;
     launched = true;
 
-    ensureAudio();
     overlay.classList.add('fade-out');
 
-    setTimeout(function() {
+    // Await audio context activation on the user gesture — satisfies autoplay policy
+    getAudioCtxPromise().then(function() {
+      // Audio is live — reveal stage and start sequence immediately
       stage.classList.add('visible');
       startSequence();
-    }, 100);
+    });
 
     setTimeout(function() {
       overlay.style.display = 'none';
-    }, 1000);
+      }, 1000);
   }
 
-  document.addEventListener('pointerdown', launch);
+  document.addEventListener('pointerdown', launch, { passive: true });
   document.addEventListener('touchstart', launch, { passive: true });
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'F5' && e.key !== 'F12') launch();
@@ -261,37 +315,8 @@ html, body {
   // ========================================
 
   function ensureAudio() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.28;
-
-      limiter = audioCtx.createWaveShaper();
-      limiter.curve = buildSoftClipCurve();
-      limiter.oversample = '4x';
-
-      const compressor = audioCtx.createDynamicsCompressor();
-      compressor.threshold.value = -8;
-      compressor.knee.value = 10;
-      compressor.ratio.value = 8;
-      compressor.attack.value = 0.001;
-      compressor.release.value = 0.03;
-
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.75;
-      analyserData = new Uint8Array(analyser.frequencyBinCount);
-
-      masterGain.connect(limiter);
-      limiter.connect(compressor);
-      compressor.connect(analyser);
-      analyser.connect(audioCtx.destination);
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-  }
+    return audioCtx && audioCtxReady;
+   }
 
   function buildSoftClipCurve() {
     const n = audioCtx.sampleRate * 2;
@@ -316,7 +341,7 @@ html, body {
   // ========================================
 
   function createVoice(freq, amplitude, isSeq) {
-    ensureAudio();
+    if (!ensureAudio()) return null;
     const now = audioCtx.currentTime;
     const seqVol = isSeq ? 0.55 : 1;
     const vol = amplitude * seqVol;
@@ -556,6 +581,7 @@ html, body {
     const amp = getAmplitudeFromPosition(s.r, s.c);
 
     const voice = createVoice(freq, amp, true);
+    if (!voice) return;
 
     voice.osc.stop(voice.stopTime);
     voice.subOsc.stop(voice.stopTime);
@@ -615,7 +641,7 @@ html, body {
   }
 
   function startSequence() {
-    ensureAudio();
+    if (!ensureAudio()) return;
     sequencerRunning = true;
     seqStep = 0;
     seqStartTime = audioCtx.currentTime + 0.05;
@@ -720,7 +746,6 @@ html, body {
   if (window.PointerEvent) {
     gridEl.addEventListener('pointerdown', function(e) {
       e.preventDefault();
-      ensureAudio();
       userHasPlayed = true;
       touchStartX = e.clientX;
       touchStartY = e.clientY;
@@ -730,23 +755,25 @@ html, body {
       const idx = parseInt(cell.dataset.index);
       dragVoice = null;
       dragCellIndex = -1;
-
-      if (activeVoices[idx] && !activeVoices[idx].isSeq) {
-        dragVoice = activeVoices[idx];
-        dragCellIndex = idx;
-        const r = parseInt(cell.dataset.row);
-        const c = parseInt(cell.dataset.col);
-        updateVoice(dragVoice, getFrequency(r, c), getAmplitudeFromPosition(r, c));
-      } else {
-        dragVoice = createVoice(
-          getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-          getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
-          false
-          );
-        dragCellIndex = idx;
-        }
       cell.classList.add('active');
       gridEl.setPointerCapture(e.pointerId);
+
+      // Wait for audio context to be live before creating/updating voice
+      getAudioCtxPromise().then(function() {
+        if (!ensureAudio()) return;
+        if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+          dragVoice = activeVoices[idx];
+          dragCellIndex = idx;
+          updateVoice(dragVoice, getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)), getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)));
+        } else {
+          dragVoice = createVoice(
+            getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+            getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
+            false
+            );
+          dragCellIndex = idx;
+        }
+      });
       });
 
     gridEl.addEventListener('pointermove', function(e) {
