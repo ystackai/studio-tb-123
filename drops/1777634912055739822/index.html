@@ -847,9 +847,10 @@
 
       return {
         osc: osc, subOsc: subOsc, subGain: subGain, filter: filter, vca: vca, lfo: lfo, lfoGain: lfoGain,
-        stopTime: stopTime, isSeq: !!isSeq, baseFreq: freq, baseRow: row || 0, baseCol: col || 0
-       };
-    }
+        stopTime: stopTime, isSeq: !!isSeq, baseFreq: freq, baseRow: row || 0, baseCol: col || 0,
+        birthTime: now, decayPhase: 0, glowIntensity: 1, filterCutoff: Math.min(freq * 3, aaParams.cutoff)
+        };
+      }
 
     function createScheduledVoice(freq, amplitude, isSeq, playTime) {
       if (!ensureAudio()) return null;
