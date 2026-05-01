@@ -6,128 +6,235 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Open Circuit</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body {
-  width: 100%; height: 100%; overflow: hidden;
-  background: #010108;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;
-    overscroll-behavior: none;
-}
-#stage {
-  position: relative; width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0;
-  transition: opacity 0.8s ease-out;
-  background:
-    radial-gradient(ellipse 35% 45% at 50% 20%, rgba(99,102,241,0.06) 0%, rgba(99,102,241,0.02) 40%, transparent 70%),
-    radial-gradient(ellipse 70% 80% at 50% 60%, rgba(168,85,247,0.015) 0%, transparent 60%),
-    radial-gradient(ellipse 90% 100% at 50% 50%, #010108 0%, #000003 100%);
-}
-#stage.visible { opacity: 1; }
+/* ============================================================
+   COVER LOOK — Design System Tokens
+   Museum-grade geometry. High-contrast typographic hierarchy.
+   "Dark Stage, Bright Performer" — locked for hero screenshot.
+   ============================================================ */
 
-#grid-wrap {
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-}
-#grid {
-  display: grid; gap: var(--grid-gap, 5px); padding: var(--grid-pad, 12px); border-radius: var(--grid-radius, 14px);
-  background: rgba(6,6,15,0.95);
-  border: var(--grid-border, 1px) solid rgba(99,102,241,0.08);
-  box-shadow:
-        0 0 60px rgba(99,102,241,0.04),
-        0 0 120px rgba(99,102,241,0.025),
-        0 0 200px rgba(99,102,241,0.015),
-        inset 0 0 40px rgba(0,0,10,0.5);
-  will-change: transform, box-shadow;
-  transition: box-shadow 0.15s ease-out;
-  transform-origin: center center;
-}
+   /* -- Palette -- */
+   :root {
+      /* Stage (gallery walls) */
+      --cover-stage: #000000;
+      --cover-stage-vignette: #050510;
+      --cover-stage-haze: rgba(99,102,241,0.04);
+      --cover-stage-haze-deep: rgba(168,85,247,0.012);
 
-@media (max-width: 480px) {
-  #grid {
-    --grid-gap: 3px; --grid-pad: 8px; --grid-radius: 10px; --grid-border: 1px;
-  }
-}
-@media (max-width: 370px) {
-  #grid {
-    --grid-gap: 2px; --grid-pad: 5px; --grid-radius: 8px; --grid-border: 1px;
-  }
-}
-@media (min-width: 768px) {
-  #grid { --grid-gap: 6px; --grid-pad: 14px; --grid-radius: 16px; }
-}
-@media (min-width: 1200px) {
-  #grid { --grid-gap: 8px; --grid-pad: 16px; --grid-radius: 18px; }
-}
+      /* Grid container (the instrument frame) */
+      --cover-frame-bg: rgba(4,4,10,0.97);
+      --cover-frame-border: rgba(99,102,241,0.06);
+      --cover-frame-radius: 2px;
 
-.cell {
-  position: relative; border-radius: 6px;
-  background: rgba(10,10,22,0.95);
-  border: var(--grid-border, 1px) solid rgba(99,102,241,0.05);
-  transition: background 0.03s, border-color 0.03s, box-shadow 0.03s;
-  cursor: pointer; will-change: background, box-shadow;
-  min-width: 0; min-height: 0;
-  overflow: hidden;
-}
-.cell::after {
-  content: '';
-  position: absolute; inset: 0; border-radius: 6px;
-  box-shadow: inset 0 0 6px rgba(99,102,241,0.03);
-  pointer-events: none; transition: box-shadow 0.1s;
-}
-.cell:active, .cell.active {
-  background: rgba(99,102,241,0.6);
-  border-color: rgba(168,85,247,1);
-  box-shadow:
-        0 0 24px rgba(99,102,241,0.9),
-        0 0 55px rgba(99,102,241,0.5),
-        0 0 95px rgba(168,85,247,0.3),
-        0 0 130px rgba(168,85,247,0.12),
-        inset 0 0 14px rgba(192,132,255,0.6),
-        inset 0 0 35px rgba(168,85,247,0.3);
-}
-.cell:active::after, .cell.active::after {
-  box-shadow: inset 0 0 10px rgba(255,255,255,0.15);
-}
+      /* Cell (idle state — dark, absorbs light) */
+      --cover-cell-idle-bg: rgba(6,6,14,0.98);
+      --cover-cell-idle-border: rgba(99,102,241,0.04);
+      --cover-cell-radius: 1px;
 
-#launch-overlay {
-  position: fixed; inset: 0;
-  background: #000003;
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; z-index: 9999;
-  transition: opacity 0.8s ease-in;
-}
-#launch-overlay.fade-out { opacity: 0; pointer-events: none; }
-#launch-label {
-  font-size: clamp(1.1rem, 3vw, 1.6rem);
-  font-weight: 900;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.75);
-  text-shadow:
-        0 0 30px rgba(99,102,241,0.6),
-        0 0 60px rgba(99,102,241,0.25);
-  user-select: none;
-}
-#launch-prompt {
-  margin-top: 1.5rem;
-  font-size: clamp(0.6rem, 1.4vw, 0.72rem);
-  color: rgba(255,255,255,0.2);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  animation: promptPulse 2.5s ease-in-out infinite;
-}
-@keyframes promptPulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.9; }
-}
+      /* Cell (active — the performer, bright) */
+      --cover-cell-active-bg-1: 99,102,241;    /* indigo core  */
+      --cover-cell-active-bg-2: 168,85,247;     /* violet edge   */
+      --cover-cell-active-glow-1: 192,132,255;  /* highlight     */
+      --cover-cell-active-glow-2: 139,92,246;   /* deep violet   */
+      --cover-cell-active-glow-3: 217,169,255;  /* white-violet  */
+
+      /* Typography */
+      --cover-type-display: 'SF Pro Display', 'Helvetica Neue', 'Inter', system-ui, sans-serif;
+      --cover-type-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --cover-type-track-wide: 0.34em;
+      --cover-type-track-normal: 0.08em;
+
+      /* Spacing (locked for album-cover grid proportions) */
+      --cover-gap: 4px;
+      --cover-pad: 10px;
+   }
+
+   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+   html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: var(--cover-stage);
+      font-family: var(--cover-type-display);
+      -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+   }
+
+   /* ---- Stage ---- */
+   #stage {
+      position: relative; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity 0.8s ease-out;
+      background:
+         radial-gradient(ellipse 32% 42% at 50% 18%, rgba(99,102,241,0.05) 0%, rgba(99,102,241,0.015) 35%, transparent 65%),
+         radial-gradient(ellipse 65% 75% at 50% 58%, rgba(168,85,247,0.01) 0%, transparent 55%),
+         radial-gradient(ellipse 90% 100% at 50% 50%, var(--cover-stage) 0%, var(--cover-stage-vignette) 100%);
+   }
+   #stage.visible { opacity: 1; }
+
+   /* ---- Grid Frame ---- */
+   #grid-wrap {
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+   }
+
+   #grid {
+      display: grid;
+      gap: var(--grid-gap, var(--cover-gap));
+      padding: var(--grid-pad, var(--cover-pad));
+      border-radius: var(--grid-radius, var(--cover-frame-radius));
+      background: var(--cover-frame-bg);
+      border: var(--grid-border, 1px) solid var(--cover-frame-border);
+      box-shadow:
+         0 0 50px rgba(99,102,241,0.03),
+         0 0 100px rgba(99,102,241,0.02),
+         0 0 180px rgba(99,102,241,0.012),
+        inset 0 0 30px rgba(0,0,0,0.6);
+      will-change: transform, box-shadow;
+      transition: box-shadow 0.15s ease-out;
+      transform-origin: center center;
+   }
+
+   @media (max-width: 480px) {
+      #grid {
+         --grid-gap: 3px; --grid-pad: 7px; --grid-radius: 2px; --grid-border: 1px;
+      }
+   }
+   @media (max-width: 370px) {
+      #grid {
+         --grid-gap: 2px; --grid-pad: 5px; --grid-radius: 1px; --grid-border: 1px;
+      }
+   }
+   @media (min-width: 768px) {
+      #grid { --grid-gap: 5px; --grid-pad: 12px; --grid-radius: 2px; }
+   }
+   @media (min-width: 1200px) {
+      #grid { --grid-gap: 6px; --grid-pad: 14px; --grid-radius: 2px; }
+   }
+
+   /* ---- Cell (idle) ---- */
+   .cell {
+      position: relative;
+      border-radius: var(--cover-cell-radius);
+      background: var(--cover-cell-idle-bg);
+      border: var(--grid-border, 1px) solid var(--cover-cell-idle-border);
+      transition: background 0.03s, border-color 0.03s, box-shadow 0.03s;
+      cursor: pointer;
+      will-change: background, box-shadow;
+      min-width: 0; min-height: 0;
+      overflow: hidden;
+   }
+   .cell::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: var(--cover-cell-radius);
+      box-shadow: inset 0 0 4px rgba(99,102,241,0.02);
+      pointer-events: none;
+      transition: box-shadow 0.1s;
+   }
+
+   /* ---- Cell (active — Bright Performer) ---- */
+   .cell:active, .cell.active {
+      background: rgba(99,102,241,0.65);
+      border-color: rgba(168,85,247,1);
+      box-shadow:
+         0 0 20px rgba(99,102,241,0.95),
+         0 0 48px rgba(99,102,241,0.55),
+         0 0 88px rgba(168,85,247,0.35),
+         0 0 125px rgba(139,92,246,0.15),
+        inset 0 0 12px rgba(192,132,255,0.65),
+        inset 0 0 30px rgba(168,85,247,0.35),
+        inset 0 0 50px rgba(217,169,255,0.12);
+   }
+   .cell:active::after, .cell.active::after {
+      box-shadow: inset 0 0 8px rgba(255,255,255,0.18);
+   }
+
+   /* ---- Cell Labels (Cover typography) ---- */
+   .cell-label {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--cover-type-mono);
+      font-size: clamp(0.55rem, 1.4vw, 0.7rem);
+      font-weight: 600;
+      letter-spacing: var(--cover-type-track-wide);
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.07);
+      pointer-events: none;
+      transition: color 0.06s, text-shadow 0.06s;
+      text-rendering: geometricPrecision;
+   }
+   .cell.active .cell-label {
+      color: rgba(235,235,255,0.95);
+      text-shadow:
+         0 0 6px rgba(192,132,255,0.9),
+         0 0 16px rgba(99,102,241,0.5),
+         0 0 28px rgba(168,85,247,0.25);
+   }
+
+   /* ---- Launch Overlay (Cover aesthetic) ---- */
+   #launch-overlay {
+      position: fixed; inset: 0;
+      background: #000000;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; z-index: 9999;
+      transition: opacity 0.8s ease-in;
+      gap: 0;
+   }
+   #launch-overlay.fade-out { opacity: 0; pointer-events: none; }
+
+   #launch-label {
+      font-family: var(--cover-type-display);
+      font-size: clamp(1.3rem, 3.5vw, 1.8rem);
+      font-weight: 800;
+      letter-spacing: var(--cover-type-track-wide);
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.82);
+      text-shadow:
+         0 0 32px rgba(99,102,241,0.65),
+         0 0 64px rgba(99,102,241,0.28),
+         0 0 100px rgba(168,85,247,0.12);
+      text-rendering: geometricPrecision;
+      user-select: none;
+      line-height: 1.1;
+   }
+
+   #launch-sublabel {
+      font-family: var(--cover-type-mono);
+      font-size: clamp(0.45rem, 1.1vw, 0.58rem);
+      font-weight: 400;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: rgba(99,102,241,0.35);
+      margin-top: 0.8rem;
+      margin-bottom: 2rem;
+      text-rendering: geometricPrecision;
+      user-select: none;
+   }
+
+   #launch-prompt {
+      font-family: var(--cover-type-mono);
+      font-size: clamp(0.48rem, 1.1vw, 0.6rem);
+      font-weight: 400;
+      color: rgba(255,255,255,0.15);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-rendering: geometricPrecision;
+      animation: promptPulse 2.5s ease-in-out infinite;
+   }
+   @keyframes promptPulse {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 0.9; }
+   }
 </style>
 </head>
 <body>
 <div id="launch-overlay">
-    <div id="launch-label">Open Circuit</div>
-    <div id="launch-prompt">Tap anywhere to open</div>
+      <div id="launch-label">Open Circuit</div>
+      <div id="launch-sublabel">Browser as Stage — Grid as Instrument</div>
+      <div id="launch-prompt">Tap Anywhere to Open</div>
 </div>
 
 <div id="stage">
@@ -165,9 +272,10 @@ html, body {
       // Filter cutoff modulation depth multiplier from touch Y position
        FILTER_CUTOFF_MOD_DEPTH: 3,
        BUILD_SHA: 'open-circuit-v2-pitchbend',
-       DROP_ID: '1777634912055739822',
-       AESTHETIC: 'Dark Stage, Bright Performer',
-       LOCKED_AT: '2026-05-01T00:00:00Z'
+        DROP_ID: '1777634912055739822',
+        AESTHETIC: 'Dark Stage, Bright Performer',
+        COVER_LOOK: 'v1-locked',
+        LOCKED_AT: '2026-05-01T00:00:00Z'
         };
 
     const ROWS = ENV.GRID_ROWS;
@@ -852,25 +960,7 @@ html, body {
       }
     }
 
-    (function injectCellLabelStyle() {
-      var styleEl = document.createElement('style');
-      styleEl.textContent =
-        '.cell-label { ' +
-        '  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; ' +
-        '  font-size: clamp(0.5rem, 1.2vw, 0.65rem); ' +
-        '  font-weight: 700; letter-spacing: 0.06em; ' +
-        '  color: rgba(255,255,255,0.12); ' +
-        '  pointer-events: none; transition: color 0.08s, text-shadow 0.08s; ' +
-        '  text-transform: uppercase; ' +
-        '} ' +
-        '.cell.active .cell-label { ' +
-        '  color: rgba(255,255,255,0.9); ' +
-        '  text-shadow: ' +
-        '      0 0 8px rgba(192,132,255,0.8), ' +
-        '      0 0 20px rgba(99,102,241,0.4); ' +
-        '}';
-      document.head.appendChild(styleEl);
-    })();
+    // Cell-label typography is now defined in main <style> block as .cell-label / .cell.active .cell-label
 
     // ========================================
     //  Lookahead Sequencer
