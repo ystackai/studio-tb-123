@@ -1752,11 +1752,174 @@
       if (window.PointerEvent) return;
       if (mouseDown) { LatencyProfiler.recordRelease(performance.now()); releaseCell(); }
       mouseDown = false;
-     });
+      });
 
-     // ========================================
-     //  Edit Mode Logic — Pattern Matrix
-     // ========================================
+      // ========================================
+      //  Desktop Keyboard Fallback — Key-to-Grid Mapping
+      // ========================================
+      // Keyboard Mapping Schema:
+      // 5 rows x 8 columns = 40 keys, 1:1 with grid cells.
+      // Physical keyboard rows map directly to grid rows (top→row0, bottom→row4).
+      //
+      //  Row 0 (highest):  ` 1 2 3 4 5 6 7
+      //  Row 1:            8 9 0 - = [ ]
+      //  Row 2 (C4 base):  Q W E R T Y U I
+      //  Row 3:            A S D F G H J K
+      //  Row 4 (lowest):   Z X C V B N M ,
+      //
+      // Signal flow per key press:
+      //   Key → Pitch (row col → base freq) → Filter (yFrac→cutoff)
+      //   → VCA (tight 2ms attack, woody decay) → PreDelay → Master
+      //
+      // Latency: No debounce. Direct keydown → createVoice → setTargetAtTime.
+      // Target < 4ms for both touch and keyboard input methods.
+      //
+      // Multi-key: Full polyphony. Each key gets its own voice key ('kb_' + key).
+      // Chord play and key hold are supported. Key repeat (e.repeat) is filtered.
+      // Shift-variants of number keys (!@#$%^&*) are mapped to same cells.
+      // Visual feedback: .active class applied on keydown, removed on keyup.
+      // Launch integration: First key press on unmapped key still triggers launch.
+
+    var KEYBOARD_MAP = {
+      '`': {r:0, c:0}, '~': {r:0, c:0},
+      '1': {r:0, c:1}, '!': {r:0, c:1},
+      '2': {r:0, c:2}, '@': {r:0, c:2},
+      '3': {r:0, c:3}, '#': {r:0, c:3},
+      '4': {r:0, c:4}, '$': {r:0, c:4},
+      '5': {r:0, c:5}, '%': {r:0, c:5},
+      '6': {r:0, c:6}, '^': {r:0, c:6},
+      '7': {r:0, c:7}, '&': {r:0, c:7},
+      '8': {r:1, c:0}, '*': {r:1, c:0},
+      '9': {r:1, c:1}, '(': {r:1, c:1},
+      '0': {r:1, c:2}, ')': {r:1, c:2},
+      '-': {r:1, c:3}, '_': {r:1, c:3},
+      '=': {r:1, c:4}, '+': {r:1, c:4},
+      '[': {r:1, c:5}, '{': {r:1, c:5},
+      ']': {r:1, c:6}, '}': {r:1, c:6},
+      '\\': {r:1, c:7}, '|': {r:1, c:7},
+      'q': {r:2, c:0}, 'Q': {r:2, c:0},
+      'w': {r:2, c:1}, 'W': {r:2, c:1},
+      'e': {r:2, c:2}, 'E': {r:2, c:2},
+      'r': {r:2, c:3}, 'R': {r:2, c:3},
+      't': {r:2, c:4}, 'T': {r:2, c:4},
+      'y': {r:2, c:5}, 'Y': {r:2, c:5},
+      'u': {r:2, c:6}, 'U': {r:2, c:6},
+      'i': {r:2, c:7}, 'I': {r:2, c:7},
+      'a': {r:3, c:0}, 'A': {r:3, c:0},
+      's': {r:3, c:1}, 'S': {r:3, c:1},
+      'd': {r:3, c:2}, 'D': {r:3, c:2},
+      'f': {r:3, c:3}, 'F': {r:3, c:3},
+      'g': {r:3, c:4}, 'G': {r:3, c:4},
+      'h': {r:3, c:5}, 'H': {r:3, c:5},
+      'j': {r:3, c:6}, 'J': {r:3, c:6},
+      'k': {r:3, c:7}, 'K': {r:3, c:7},
+      'z': {r:4, c:0}, 'Z': {r:4, c:0},
+      'x': {r:4, c:1}, 'X': {r:4, c:1},
+      'c': {r:4, c:2}, 'C': {r:4, c:2},
+      'v': {r:4, c:3}, 'V': {r:4, c:3},
+      'b': {r:4, c:4}, 'B': {r:4, c:4},
+      'n': {r:4, c:5}, 'N': {r:4, c:5},
+      'm': {r:4, c:6}, 'M': {r:4, c:6},
+      ',': {r:4, c:7}, '<': {r:4, c:7},
+    };
+    var activeKeyboardKeys = {};
+
+      // Keyboard keydown: strike a note. Full polyphony. < 4ms latency.
+     function onKeyboardDown(e) {
+        // Ignore modifier-only keys and control keys
+        if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' ||
+            e.key === 'Meta' || e.key === 'Tab' || e.key === 'CapsLock') return;
+
+        // Filter key-repeat events (key hold generates repeated keydown)
+        if (e.repeat) return;
+
+        // Prevent default for mapped keys to avoid cursor/IME interference
+        var key = e.key;
+        var mapping = KEYBOARD_MAP[key];
+        if (!mapping) {
+          // Unmapped key still triggers launch (existing behavior preserved)
+          if (!launched) launch();
+          return;
+        }
+        e.preventDefault();
+
+        // Trigger audio context on first key press (satisfies autoplay policy)
+        if (!launched) launch();
+
+        // Skip if this key is already held — prevents voice stacking
+        if (activeKeyboardKeys[key]) return;
+
+        var touchTs = performance.now();
+        LatencyProfiler.recordDown(touchTs);
+
+        getAudioCtxPromise().then(function() {
+          if (!ensureAudio()) return;
+
+          var r = mapping.r;
+          var c = mapping.c;
+          var idx = r * COLS + c;
+          var cell = getCellAt(r, c);
+          if (!cell) return;
+
+          var baseFreq = getFrequency(r, c);
+          var amp = calcAmplitude(r, c, undefined);
+
+          // Simulate key-strike position:
+          // xFrac varies per column (left edge = flat, middle = center, right = bright)
+          // yFrac = 0.4 (slightly above center = brighter filter)
+          var xFrac = 0.45 + (c / (COLS - 1)) * 0.1;
+          var yFrac = 0.4;
+
+          var voiceKey = 'kb_' + key;
+          var voice = null;
+          if (activeVoices[voiceKey] && !activeVoices[voiceKey].isSeq) {
+            voice = activeVoices[voiceKey];
+            retriggerVoice(voice, baseFreq, amp, r, c, xFrac, yFrac, undefined);
+          } else {
+            voice = createVoice(baseFreq, amp, false, r, c);
+            activeVoices[voiceKey] = voice;
+          }
+
+          // Visual feedback: mark cell as active (same .active class as touch)
+          cell.classList.add('active');
+          activeKeyboardKeys[key] = { cell: cell, voice: voice, r: r, c: c };
+
+          var audioT = performance.now();
+          LatencyProfiler.recordMove(touchTs, audioT);
+          });
+        }
+
+      // Keyboard keyup: release note with smooth exponential tail fade
+     function onKeyboardUp(e) {
+        var key = e.key;
+        var state = activeKeyboardKeys[key];
+        if (!state) {
+          // Also check if this was a modifier key that triggered launch
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        LatencyProfiler.recordRelease(performance.now());
+
+        var voiceKey = 'kb_' + key;
+        if (activeVoices[voiceKey] && !activeVoices[voiceKey].isSeq) {
+          killVoice(voiceKey);
+        }
+
+        // Remove visual active state — preserves "Dark Stage, Bright Performer" aesthetic
+        if (state.cell) {
+          state.cell.classList.remove('active');
+        }
+
+        delete activeKeyboardKeys[key];
+        }
+
+      document.addEventListener('keydown', onKeyboardDown, { passive: false });
+      document.addEventListener('keyup', onKeyboardUp, { passive: false });
+
+      // ========================================
+      //  Edit Mode Logic — Pattern Matrix
+      // ========================================
     var currentEditStep = 0;
     var stepNavInterval = null;
 
