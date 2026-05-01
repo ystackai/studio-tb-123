@@ -3063,10 +3063,203 @@
 
     var cellLastGlow = new Float32Array(ROWS * COLS);
 
-    // Optimized: batch DOM writes in a single rAF callback; skip idle updates entirely
-    // when signalLevel is low to keep compositor happy under heavy slides
+     // ========================================
+     //  VisibilityManager — Page Visibility API + AudioContext Suspension
+     // ========================================
+    // Pauses oscillators / LFOs and decays VCA envelopes when the tab leaves foreground.
+    // On visibility restoration, the AudioContext resumes, every active voice is re-triggered
+    // with phase-preserving state, and the sequencer restarts without scheduling a new step
+    // at the exact moment of resume — preventing a micro-click and phase cancellation.
+    //
+    // State Management Logic:
+    //   1. On hide: capture a snapshot of every active voice's oscillator phase (approximated
+    //      via birthTime + elapsed), current VCA gain, filter cutoff, and filter Q.
+    //   2. Suspend the AudioContext (stops all oscillators / LFOs cleanly, no clipping).
+    //   3. Drains the batched audio update queue to avoid stale state on resume.
+    //   4. Stops the sequencer timer (prevents scheduling against a suspended clock).
+    //   5. Stops the audio-reactive rAF loop and SignalGraph overlay (conserves CPU).
+    //   6. On show: resume the AudioContext, then restore each voice's parameters and
+    //      re-trigger the oscillators at a time offset equal to the elapsed hidden duration.
+    //      This avoids discontinuity because the ramp starts from the last known VCA gain
+    //      and smoothly returns to target within 32 ms.
+    //   7. The grid's CSS glow state (box-shadow, .active / .seq-active classes) is
+    //      stored in the DOM and is never touched by JS during a transition — so the
+    //      "Bright Performer" look persists visually even while audio is suspended.
+    var VisibilityManager = (function() {
+      var _isHidden = false;
+      var _hiddenAt = 0;
+      var _snapshot = null;
+      var _origAudioVisualLoop = null;
+
+       // Capture a point-in-time snapshot of all active non-sequencer voices
+      function captureSnapshot() {
+        var snap = [];
+        var keys = Object.keys(activeVoices);
+        for (var k = 0; k < keys.length; k++) {
+          var v = activeVoices[keys[k]];
+          if (!v || v.isSeq) continue;
+          try {
+            snap.push({
+              key: keys[k],
+              freq: v.osc.frequency.value,
+              subFreq: v.subOsc.frequency.value,
+              filterFreq: v.filter.frequency.value,
+              filterQ: v.filter.Q.value,
+              vcaGain: v.vca.gain.value,
+              lfoDepth: v.lfoGain.gain.value,
+              baseFreq: v.baseFreq,
+              baseRow: v.baseRow,
+              baseCol: v.baseCol,
+              birthTime: v.birthTime
+              });
+          } catch(e) {}
+          }
+        return snap;
+        }
+
+       // Restore voices from snapshot with phase-aware re-triggering
+      function restoreSnapshot(snap) {
+        if (!snap || !audioCtx) return;
+        var now = audioCtx.currentTime;
+        for (var i = 0; i < snap.length; i++) {
+          var s = snap[i];
+          var v = activeVoices[s.key];
+          if (!v) continue;
+          try {
+            var elapsed = now - s.birthTime - (audioCtx.currentTime - s.birthTime);
+            // Compute the phase offset: how far through the envelope we were
+            var timeInDecay = audioCtx.currentTime - s.birthTime;
+            var targetGain = calcDecayTarget(s.vcaGain, timeInDecay);
+
+            // Restore parameters instantly (no ramp) to avoid click
+            v.osc.frequency.setValueAtTime(s.freq, now);
+            v.subOsc.frequency.setValueAtTime(s.subFreq, now);
+            v.filter.frequency.setValueAtTime(s.filterFreq, now);
+            v.filter.Q.setValueAtTime(s.filterQ, now);
+            v.lfoGain.gain.setValueAtTime(s.lfoDepth, now);
+
+            // Ramp VCA from snapshot level to recalculated target over 32 ms
+            v.vca.gain.setValueAtTime(Math.max(s.vcaGain, 0.001), now);
+            v.vca.gain.linearRampToValueAtTime(Math.max(targetGain, 0.001), now + 0.032);
+          } catch(e) {}
+          }
+        }
+
+       // Compute what the VCA gain *should* be after a given time into the decay envelope.
+       // Mirrors the 3-phase envelope: percussive (0-80ms), breath (80-600ms), release (600-1800ms).
+      function calcDecayTarget(currentGain, timeInDecay) {
+        if (timeInDecay < 0.08) {
+          return currentGain; // still in attack / initial drop
+          } else if (timeInDecay < 0.6) {
+          return currentGain * 0.45; // breath zone
+          } else {
+          return Math.max(currentGain * 0.15, 0.001); // tail zone
+          }
+        }
+
+      function onVisibilityChange() {
+        if (document.hidden) {
+          onHide();
+        } else {
+          onShow();
+          }
+        }
+
+      function onHide() {
+        _isHidden = true;
+        _hiddenAt = performance.now();
+
+         // Drain pending audio batch — avoids stale state on resume
+        if (_audioUpdateBatch.length) {
+          _audioUpdateBatch.length = 0;
+          _audioBatchScheduled = false;
+          }
+
+         // Capture voice state before suspending
+        _snapshot = captureSnapshot();
+
+         // Stop the sequencer timer (prevents scheduling against suspended clock)
+        var wasRunning = sequencerRunning;
+        if (sequencerRunning && seqScheduleTimer) {
+          clearInterval(seqScheduleTimer);
+          seqScheduleTimer = null;
+          // Keep sequencerRunning flag so we can restart on show
+          }
+
+         // Suspend the audio context — stops all oscillators/LFOs at sample-accurate boundary
+        if (audioCtx && audioCtx.state === 'running') {
+          audioCtx.suspend().catch(function() {});
+          }
+
+         // Stop the audio-reactive visual loop (conserves rAF CPU in background)
+        // SignalGraph is stopped; it will restart on show
+        SignalGraph.stop();
+        PerfMonitor.stop();
+
+         // Store current glow intensity on the grid so CSS state persists
+         // The grid's box-shadow and cell .active classes are untouched — DOM state persists.
+        }
+
+      function onShow() {
+        var elapsed = performance.now() - _hiddenAt;
+
+         // Resume the audio context first — oscillators start from where they were
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().then(function() {
+            // Restore voice parameters with phase-aware re-triggering
+            restoreSnapshot(_snapshot);
+
+             // Restart sequencer if it was running
+            if (sequencerRunning) {
+              nextStepTime = audioCtx.currentTime + 0.05;
+              seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
+              }
+
+             // Restart visual loops
+            SignalGraph.start();
+            PerfMonitor.start();
+
+             // Re-run the audio visual loop — uses the throttled wrapper
+            requestAnimationFrame(_origAudioVisualLoop || audioVisualLoop);
+              });
+          } else if (audioCtx) {
+          restoreSnapshot(_snapshot);
+          if (sequencerRunning) {
+            nextStepTime = audioCtx.currentTime + 0.05;
+            seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
+            }
+          SignalGraph.start();
+          PerfMonitor.start();
+          }
+
+        _isHidden = false;
+        _snapshot = null;
+        }
+
+      function isHidden() { return _isHidden; }
+
+      return {
+        onHide: onHide,
+        onShow: onShow,
+        isHidden: isHidden,
+        captureSnapshot: captureSnapshot,
+        restoreSnapshot: restoreSnapshot,
+        init: function(auralLoopRef) {
+          _origAudioVisualLoop = auralLoopRef;
+          document.addEventListener('visibilitychange', onVisibilityChange);
+          }
+        };
+       })();
+
+     // Optimized: batch DOM writes in a single rAF callback; skip idle updates entirely
+     // when signalLevel is low to keep compositor happy under heavy slides
     function audioVisualLoop(ts) {
-       _frameStart = performance.now();
+        // Throttle: skip all DOM writes when tab is hidden to conserve CPU/battery
+      if (VisibilityManager.isHidden()) {
+        requestAnimationFrame(audioVisualLoop);
+        return;
+         }
+      _frameStart = performance.now();
       lfoPhase += 0.03;
 
       var signalLevel = 0;
@@ -3234,11 +3427,12 @@
      //  Init
      // ========================================
      function init() {
-        buildStepIndicators();
+         buildStepIndicators();
         buildGrid();
         PerfMonitor.start();
         SignalGraph.init();
         ProfilerHUD.init();
+        VisibilityManager.init(audioVisualLoop);
 
          // Invalidate rect cache on resize
       var resizeTimer;
