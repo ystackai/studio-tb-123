@@ -159,16 +159,103 @@
        box-shadow: inset 0 0 10px rgba(255,255,255,0.28);
       }
 
-    /* ---- Cell (sequencer pattern step) ---- */
-    .cell.seq-active {
-      background: rgba(168,85,247,0.35);
-      border-color: rgba(168,85,247,0.8);
-      box-shadow:
-          0 0 14px rgba(168,85,247,0.6),
-          0 0 32px rgba(99,102,241,0.3),
-          0 0 55px rgba(139,92,246,0.15),
-        inset 0 0 8px rgba(192,132,255,0.4),
-        inset 0 0 20px rgba(168,85,247,0.2);
+      /* ---- Cell (sequencer pattern step) ---- */
+      .cell.seq-active {
+       background: rgba(168,85,247,0.35);
+       border-color: rgba(168,85,247,0.8);
+       box-shadow:
+           0 0 14px rgba(168,85,247,0.6),
+           0 0 32px rgba(99,102,241,0.3),
+           0 0 55px rgba(139,92,246,0.15),
+         inset 0 0 8px rgba(192,132,255,0.4),
+         inset 0 0 20px rgba(168,85,247,0.2);
+      }
+
+      /* ---- Cell (misuse / feedback loop active) ---- */
+      @keyframes feedbackPulse {
+        0%, 100% { box-shadow: 0 0 22px rgba(244,63,94,0.8), 0 0 52px rgba(168,85,247,0.5), 0 0 90px rgba(99,102,241,0.3), inset 0 0 18px rgba(244,63,94,0.3); }
+        50% { box-shadow: 0 0 28px rgba(244,63,94,1), 0 0 65px rgba(168,85,247,0.7), 0 0 110px rgba(99,102,241,0.45), inset 0 0 24px rgba(244,63,94,0.5); }
+      }
+      .cell.feedback-active {
+        background: rgba(244,63,94,0.35);
+        border-color: rgba(244,63,94,0.9);
+        animation: feedbackPulse 0.6s ease-in-out infinite;
+      }
+
+      /* ---- Feedback Loop Visual Indicator ---- */
+      #feedback-indicator {
+        position: fixed;
+        bottom: 14px; left: 50%; transform: translateX(-50%);
+        font-family: var(--cover-type-mono);
+        font-size: 0.5rem; font-weight: 600;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: rgba(244,63,94,0.3);
+        transition: color 0.3s, text-shadow 0.3s;
+        pointer-events: none;
+        text-rendering: geometricPrecision;
+        text-align: center;
+        white-space: nowrap;
+        z-index: 100;
+      }
+      #feedback-indicator.live {
+        color: rgba(244,63,94,0.9);
+        text-shadow: 0 0 10px rgba(244,63,94,0.7), 0 0 25px rgba(168,85,247,0.4);
+      }
+
+      /* ---- Feedback Gain Slider ---- */
+      #feedback-wrap {
+        display: flex; align-items: center; gap: 8px;
+      }
+      #feedback-label {
+        font-family: var(--cover-type-mono);
+        font-size: 0.5rem;
+        color: rgba(244,63,94,0.35);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        transition: color 0.3s;
+      }
+      #feedback-label.live {
+        color: rgba(244,63,94,0.85);
+      }
+      #feedback-display {
+        font-family: var(--cover-type-mono);
+        font-size: 0.6rem;
+        color: rgba(244,63,94,0.5);
+        font-weight: 700;
+        min-width: 36px;
+        text-align: center;
+        transition: color 0.3s;
+      }
+      #feedback-display.live {
+        color: rgba(244,63,94,0.9);
+      }
+     input[type="range"]#feedback-gain-slider {
+       -webkit-appearance: none; appearance: none;
+       width: 70px; height: 3px;
+       background: rgba(244,63,94,0.15);
+       border-radius: 2px;
+       outline: none;
+       cursor: pointer;
+       transition: background 0.3s;
+     }
+     input[type="range"]#feedback-gain-slider:hover {
+       background: rgba(244,63,94,0.3);
+     }
+    input[type="range"]#feedback-gain-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: rgba(244,63,94,0.7);
+      box-shadow: 0 0 5px rgba(244,63,94,0.5);
+      cursor: pointer;
+    }
+    input[type="range"]#feedback-gain-slider::-moz-range-thumb {
+      width: 11px; height: 11px;
+      border: none; border-radius: 50%;
+      background: rgba(244,63,94,0.7);
+      box-shadow: 0 0 5px rgba(244,63,94,0.5);
+      cursor: pointer;
     }
 
     /* ---- Cell Labels ---- */
@@ -365,17 +452,24 @@
      <div id="grid-container">
         <div id="step-indicators"></div>
         <div id="grid-wrap"><div id="grid"></div></div>
-        <div id="seq-controls">
-           <button class="seq-btn" id="btn-loop" data-mode="loop">LOOP ON</button>
-           <button class="seq-btn" id="btn-edit" data-mode="edit">EDIT</button>
-           <div id="tempo-wrap">
-              <span id="tempo-label">TEMPO</span>
-              <input type="range" id="tempo-slider" min="40" max="240" value="158" step="1">
-              <span id="tempo-display">158 BPM</span>
-           </div>
-        </div>
-     </div>
-</div>
+          <div id="seq-controls">
+             <button class="seq-btn" id="btn-loop" data-mode="loop">LOOP ON</button>
+             <button class="seq-btn" id="btn-misuse" data-mode="misuse">MISUSE</button>
+             <button class="seq-btn" id="btn-edit" data-mode="edit">EDIT</button>
+             <div id="tempo-wrap">
+                <span id="tempo-label">TEMPO</span>
+                <input type="range" id="tempo-slider" min="40" max="240" value="158" step="1">
+                <span id="tempo-display">158 BPM</span>
+             </div>
+             <div id="feedback-wrap">
+                <span id="feedback-label">FB</span>
+                <input type="range" id="feedback-gain-slider" min="0" max="100" value="35" step="1">
+                <span id="feedback-display">0.35</span>
+             </div>
+          </div>
+       </div>
+       <div id="feedback-indicator">FEEDBACK OFF</div>
+ </div>
 
 <script>
 (function() {
@@ -412,12 +506,17 @@
         RESONANCE_DRIFT_GUARD_DECAY_MS: 150,
         SINGING_HARMONIC_RING_THRESHOLD: 0.65,
         SINGING_HARMONIC_STABILIZE_DECAY_MS: 80,
-        BUILD_SHA: 'open-circuit-v3-sequencer',
+        FEEDBACK_GAIN_MAX: 0.72,
+        FEEDBACK_GAIN_DEFAULT: 0.35,
+        FEEDBACK_DELAY_BASE_MS: 80,
+        FEEDBACK_LOWPASS_Q: 4,
+        FEEDBACK_LOWPASS_FREQ: 4500,
+        BUILD_SHA: 'open-circuit-v4-feedback',
         DROP_ID: '1777634912055739822',
         AESTHETIC: 'Dark Stage, Bright Performer',
-        COVER_LOOK: 'v1-locked',
+        COVER_LOOK: 'v1-feedback',
         LOCKED_AT: '2026-05-01T00:00:00Z'
-        };
+         };
 
     const ROWS = ENV.GRID_ROWS;
     const COLS = ENV.GRID_COLS;
@@ -525,6 +624,10 @@
     let audioCtx = null, masterGain = null, preDelayNode = null;
     let analyser = null, analyserData = null, limiter = null, compressor = null;
     let guardMaster = null;
+    let feedbackGain = null, feedbackDelay = null, feedbackFilter = null;
+    let feedbackDryMix = null, feedbackWetDest = null;
+    let misuseMode = false;
+    let feedbackGainValue = ENV.FEEDBACK_GAIN_DEFAULT;
     const activeVoices = {};
 
         // ========================================
@@ -863,13 +966,41 @@
             analyser.smoothingTimeConstant = 0.75;
             analyserData = new Uint8Array(analyser.frequencyBinCount);
 
-            // VCA → PreDelay (1.5ms) → masterGain → SoftClip → Compressor → Analyser → Destination
-              preDelayNode.connect(guardMaster);
-              guardMaster.connect(masterGain);
-             masterGain.connect(limiter);
-             limiter.connect(compressor);
-            compressor.connect(analyser);
-            analyser.connect(audioCtx.destination);
+           // VCA → PreDelay (1.5ms) → masterGain → SoftClip → Compressor → Analyser → Destination
+           // Feedback loop: PreDelay tap → feedbackGain → feedbackDelay → feedbackFilter → feedbackGain (loop)
+            feedbackGain = audioCtx.createGain();
+            feedbackGain.gain.value = 0;
+
+            feedbackDelay = audioCtx.createDelay(1.0);
+            feedbackDelay.delayTime.value = ENV.FEEDBACK_DELAY_BASE_MS / 1000;
+
+            feedbackFilter = audioCtx.createBiquadFilter();
+            feedbackFilter.type = 'lowpass';
+            feedbackFilter.frequency.value = ENV.FEEDBACK_LOWPASS_FREQ;
+            feedbackFilter.Q.value = ENV.FEEDBACK_LOWPASS_Q;
+
+            feedbackDryMix = audioCtx.createGain();
+            feedbackDryMix.gain.value = 1;
+
+            feedbackWetDest = audioCtx.createGain();
+            feedbackWetDest.gain.value = 0;
+
+            preDelayNode.connect(guardMaster);
+            preDelayNode.connect(feedbackGain);
+
+            feedbackGain.connect(feedbackDelay);
+            feedbackDelay.connect(feedbackFilter);
+            feedbackFilter.connect(feedbackGain);
+
+            preDelayNode.connect(feedbackDryMix);
+            feedbackDryMix.connect(feedbackWetDest);
+            feedbackWetDest.connect(guardMaster);
+
+            guardMaster.connect(masterGain);
+           masterGain.connect(limiter);
+           limiter.connect(compressor);
+           compressor.connect(analyser);
+           analyser.connect(audioCtx.destination);
            }
           var resumePromise = (audioCtx.state === 'suspended') ? audioCtx.resume() : Promise.resolve();
            return resumePromise.then(function() {
@@ -1035,20 +1166,84 @@
     btnLoop.classList.add('active');
 
      // Edit mode toggle — stops sequence, starts step nav, toggles play/edit
-     btnEdit.addEventListener('pointerdown', function(e) {
+       btnEdit.addEventListener('pointerdown', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        editMode = !editMode;
+        btnEdit.classList.toggle('active', editMode);
+        btnEdit.textContent = editMode ? 'PLAY' : 'EDIT';
+        renderPatternMatrix();
+        if (editMode) {
+         stopSequence();
+         startStepNav();
+          } else {
+         stopStepNav();
+         if (loopEnabled) startSequence();
+          }
+        });
+
+     // Misuse mode toggle — enables feedback loop (output patched back into input)
+     var btnMisuse = document.getElementById('btn-misuse');
+     var feedbackIndicator = document.getElementById('feedback-indicator');
+     var feedbackLabel = document.getElementById('feedback-label');
+     var feedbackDisplay = document.getElementById('feedback-display');
+     var feedbackGainSlider = document.getElementById('feedback-gain-slider');
+
+     btnMisuse.addEventListener('pointerdown', function(e) {
        e.preventDefault(); e.stopPropagation();
-       editMode = !editMode;
-       btnEdit.classList.toggle('active', editMode);
-       btnEdit.textContent = editMode ? 'PLAY' : 'EDIT';
-       renderPatternMatrix();
-       if (editMode) {
-        stopSequence();
-        startStepNav();
+       if (!ensureAudio()) getAudioCtxPromise();
+       misuseMode = !misuseMode;
+       btnMisuse.classList.toggle('active', misuseMode);
+       btnMisuse.textContent = misuseMode ? 'MISUSE ON' : 'MISUSE';
+
+       if (feedbackGain) {
+        var now = audioCtx.currentTime;
+        if (misuseMode) {
+          feedbackGain.gain.setTargetAtTime(feedbackGainValue, now, 0.02);
+          feedbackWetDest.gain.setTargetAtTime(feedbackGainValue * 0.8, now, 0.02);
+          feedbackIndicator.textContent = 'FEEDBACK ACTIVE';
+          feedbackIndicator.classList.add('live');
+          feedbackLabel.classList.add('live');
+          feedbackDisplay.classList.add('live');
         } else {
-        stopStepNav();
-        if (loopEnabled) startSequence();
+          feedbackGain.gain.setTargetAtTime(0, now, 0.05);
+          feedbackWetDest.gain.setTargetAtTime(0, now, 0.05);
+          feedbackIndicator.textContent = 'FEEDBACK OFF';
+          feedbackIndicator.classList.remove('live');
+          feedbackLabel.classList.remove('live');
+          feedbackDisplay.classList.remove('live');
+          clearFeedbackVisuals();
         }
+       }
+       updateFeedbackVisuals();
       });
+
+     // Feedback gain slider — continuously adjusts loop gain to prevent clipping
+     feedbackGainSlider.addEventListener('input', function() {
+       feedbackGainValue = parseInt(feedbackGainSlider.value) / 100;
+       if (feedbackGainValue > ENV.FEEDBACK_GAIN_MAX) feedbackGainValue = ENV.FEEDBACK_GAIN_MAX;
+       feedbackDisplay.textContent = feedbackGainValue.toFixed(2);
+
+       if (misuseMode && feedbackGain && audioCtx) {
+        var now = audioCtx.currentTime;
+        feedbackGain.gain.setTargetAtTime(feedbackGainValue, now, 0.01);
+        feedbackWetDest.gain.setTargetAtTime(feedbackGainValue * 0.8, now, 0.01);
+       }
+
+       // Clamp filter Q based on feedback gain to prevent self-oscillation
+       if (ensureAudio()) {
+        var allK = Object.keys(activeVoices);
+        for (var i = 0; i < allK.length; i++) {
+          var v = activeVoices[allK[i]];
+          if (v && v.filter) {
+            var safeQ = Math.max(0.5, ENV.MAX_Q * (1 - feedbackGainValue * 0.6));
+            v.filter.Q.setTargetAtTime(safeQ, audioCtx.currentTime, 0.008);
+          }
+        }
+       }
+       updateFeedbackVisuals();
+      });
+
+     feedbackGainSlider.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
 
     // Tempo slider
     tempoSlider.addEventListener('input', function() {
@@ -1084,11 +1279,69 @@
             all[idx].classList.add('seq-active');
               }
             }
+         }
+
+       // ========================================
+       //  Misuse Mode — Feedback Loop Visuals
+       // ========================================
+     var lastFeedbackVisualState = { active: false, gain: 0, cells: [] };
+
+     function updateFeedbackVisuals() {
+       if (!misuseMode) return;
+
+       var snap = getAllActiveVoicesSnapshot();
+       var keys = Object.keys(snap);
+       var activeIndices = [];
+
+       for (var i = 0; i < keys.length; i++) {
+         var s = snap[keys[i]];
+         if (s && s.row !== undefined) {
+           var ci = s.row * COLS + s.col;
+           activeIndices.push(ci);
+           var cel = allCells[ci];
+           if (cel && !cel.classList.contains('feedback-active')) cel.classList.add('feedback-active');
+           }
+         }
+
+       var gainChanged = Math.abs(feedbackGainValue - lastFeedbackVisualState.gain) > 0.02;
+       var prev = [];
+       for (var j = 0; j < lastFeedbackVisualState.cells.length; j++) prev.push(lastFeedbackVisualState.cells[j]);
+       var cellsChanged = (activeIndices.length !== prev.length) || (function() {
+         activeIndices.sort(function(a, b) { return a - b; });
+         for (var k = 0; k < activeIndices.length; k++) if (activeIndices[k] !== prev[k]) return true;
+         return false;
+         })();
+
+       if (!gainChanged && !cellsChanged) return;
+
+       for (var m = 0; m < activeIndices.length; m++) {
+         var cel2 = allCells[activeIndices[m]];
+         if (cel2) {
+           var intensity = Math.min(1, 0.4 + feedbackGainValue * 0.6);
+           cel2.style.boxShadow =
+             '0 0 ' + (22 + intensity * 20) + 'px rgba(244,63,94,' + (0.6 + intensity * 0.4).toFixed(2) + '),' +
+             '0 0 ' + (40 + intensity * 40) + ' rgba(168,85,247,' + (0.3 + intensity * 0.4).toFixed(2) + '),' +
+             '0 0 ' + (75 + intensity * 35) + 'px rgba(99,102,241,' + (0.15 + intensity * 0.2).toFixed(2) + '),' +
+             'inset 0 0 ' + (12 + intensity * 18) + 'px rgba(244,63,94,' + (0.2 + intensity * 0.3).toFixed(2) + ')';
+           }
+          }
+
+       lastFeedbackVisualState = { active: true, gain: feedbackGainValue, cells: activeIndices.slice() };
        }
 
-     // ========================================
-     //  Helper Functions
-     // ========================================
+     function clearFeedbackVisuals() {
+       for (var i = 0; i < allCells.length; i++) {
+         allCells[i].classList.remove('feedback-active');
+         allCells[i].style.boxShadow = '';
+          }
+       lastFeedbackVisualState = { active: false, gain: 0, cells: [] };
+       feedbackIndicator.textContent = 'FEEDBACK OFF';
+       feedbackIndicator.classList.remove('live');
+       }
+
+       // ========================================
+       //  Helper Functions
+       // ========================================
     function getFrequency(row, col) {
       var degreeIdx = col % SCALE_DEGREES.length;
       var scaleSemitones = SCALE_DEGREES[degreeIdx];
@@ -2177,11 +2430,32 @@
             resumeFromHardStop();
             stabilizerState.isStabilizing = false;
               }
-          stabilizerState.isStabilizing = false;
+           stabilizerState.isStabilizing = false;
+              }
             }
-          }
 
-      var glowIntensity = Math.min(1, prevSignalLevel * 3.5);
+           // Feedback Loop Stability Monitor
+       if (misuseMode) {
+        var feedbackThreat = signalLevel * 4.5;
+        if (feedbackThreat > 0.65 && feedbackGainValue > 0.05) {
+          var reducedGain = feedbackGainValue * Math.max(0.3, 1 - (feedbackThreat - 0.65) * 2.5);
+          if (Math.abs(feedbackGain.gain.value - reducedGain) > 0.02) {
+            feedbackGain.gain.exponentialRampToValueAtTime(Math.max(reducedGain, 0.001), audioCtx.currentTime + 0.02);
+            feedbackWetDest.gain.exponentialRampToValueAtTime(Math.max(reducedGain * 0.8, 0.001), audioCtx.currentTime + 0.02);
+            feedbackGainValue = reducedGain;
+            feedbackGainSlider.value = Math.round(reducedGain * 100);
+            feedbackDisplay.textContent = reducedGain.toFixed(2);
+            }
+          feedbackIndicator.textContent = 'FEEDBACK ' + Math.round(feedbackThreat * 100) + '% — STABILIZED';
+           } else {
+          feedbackIndicator.textContent = 'FEEDBACK ACTIVE — ' + Math.round(feedbackGainValue * 100) + '%';
+           }
+         updateFeedbackVisuals();
+        } else if (!misuseMode && lastFeedbackVisualState.active) {
+         clearFeedbackVisuals();
+        }
+
+       var glowIntensity = Math.min(1, prevSignalLevel * 3.5);
 
       if (Math.abs(glowIntensity - lastGlowIntensity) < 0.015) {
         requestAnimationFrame(audioVisualLoop);
