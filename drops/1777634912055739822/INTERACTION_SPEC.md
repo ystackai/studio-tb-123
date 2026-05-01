@@ -65,24 +65,26 @@ t = 1000ms ── Overlay element removed from DOM
 
 ## 3. Core Interaction Loop
 
-### 3.1 Touch Mapping
+### 3.1 Touch Mapping — Continuous sub-cell modulation
 ```
 Input:  Touch (pointer, mouse, or multi-touch)
-        └──→ Pitch (frequency) via row + column position
-        └──→ Amplitude via row position (lower rows = louder)
-        └──→ Filter cutoff directly (touch routing into filter cutoff)
+          ├──→ Pitch Bend: X-axis sub-cell position → ±1 semitone around cell's base frequency
+          ├──→ Filter Cutoff: Y-axis sub-cell position → multiplier [1x..5x] of base cutoff
+          └──→ Amplitude: touch force/pressure (if available) or row position → VCA gain
 
-Process:  Note name → frequency calculation → voice creation/update
-          Frequency = ROW_FREQS[row] × 2^(scaleSemitones/12 + octaveOffset)
-          Amplitude = 0.32 × rowFactor × colFactor
+Process:  Continuous real-time update on every pointermove/touchmove
+           Bended Freq = baseFreq × 2^((xFrac - 0.5) × 2 × BEND_SEMITONES / 12)
+           Cutoff      = baseFreq × CUTOFF_MOD_DEPTH × (1 + (1 - yFrac) × 2)
+           Amplitude   = baseAmp × (0.3 + force × 0.7)  [force ∈ 0..1]
 
-Output:   Web Audio voice with 4-phase decay envelope
+Output:   Web Audio voice updated via setTargetAtTime with sub-4ms time constants
+           Signal flow: Touch → Pitch → Filter → VCA → Decay
 ```
 
 ### 3.2 Latency
 - **Target:** < 4ms drag latency.
-- **Implementation:** No debounce. Direct `pointermove` → `updateVoice()` with `setTargetAtTime` (3ms time constant for frequency, 5ms for filter).
-- **No stutter:** Finger position maps directly to note. No queuing, no throttling.
+- **Implementation:** No debounce. Direct `pointermove`/`touchmove` → `updateVoiceWithTouch()` with `setTargetAtTime` (3ms time constant for frequency/pitch-bend, 5ms for filter-cutoff, 1ms for amplitude).
+- **No stutter:** Sub-cell position maps directly to continuous modulation. No queuing, no throttling, no deadzone.
 
 ### 3.2.1 Drag Latency Profiler
 The `LatencyProfiler` module measures touch-to-audio round-trip latency in real time.
