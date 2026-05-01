@@ -10,77 +10,76 @@
    COVER LOOK — Design System Tokens
    Museum-grade geometry. High-contrast typographic hierarchy.
    "Dark Stage, Bright Performer" — locked for hero screenshot.
-   ============================================================ */
+  ============================================================ */
 
-   /* -- Palette -- */
-   :root {
-      /* Stage (gallery walls) */
-      --cover-stage: #000000;
-      --cover-stage-vignette: #050510;
-      --cover-stage-haze: rgba(99,102,241,0.04);
-      --cover-stage-haze-deep: rgba(168,85,247,0.012);
+    /* -- Palette -- */
+    :root {
+       --cover-stage: #000000;
+       --cover-stage-vignette: #050510;
+       --cover-stage-haze: rgba(99,102,241,0.04);
+       --cover-stage-haze-deep: rgba(168,85,247,0.012);
 
-      /* Grid container (the instrument frame) */
-      --cover-frame-bg: rgba(4,4,10,0.97);
-      --cover-frame-border: rgba(99,102,241,0.06);
-      --cover-frame-radius: 2px;
+       --cover-frame-bg: rgba(4,4,10,0.97);
+       --cover-frame-border: rgba(99,102,241,0.06);
+       --cover-frame-radius: 2px;
 
-      /* Cell (idle state — dark, absorbs light) */
-      --cover-cell-idle-bg: rgba(6,6,14,0.98);
-      --cover-cell-idle-border: rgba(99,102,241,0.04);
-      --cover-cell-radius: 1px;
+       --cover-cell-idle-bg: rgba(6,6,14,0.98);
+       --cover-cell-idle-border: rgba(99,102,241,0.04);
+       --cover-cell-radius: 1px;
 
-      /* Cell (active — the performer, bright) */
-      --cover-cell-active-bg-1: 99,102,241;    /* indigo core  */
-      --cover-cell-active-bg-2: 168,85,247;     /* violet edge   */
-      --cover-cell-active-glow-1: 192,132,255;  /* highlight     */
-      --cover-cell-active-glow-2: 139,92,246;   /* deep violet   */
-      --cover-cell-active-glow-3: 217,169,255;  /* white-violet  */
+       --cover-cell-active-bg-1: 99,102,241;
+       --cover-cell-active-bg-2: 168,85,247;
+       --cover-cell-active-glow-1: 192,132,255;
+       --cover-cell-active-glow-2: 139,92,246;
+       --cover-cell-active-glow-3: 217,169,255;
 
-      /* Typography */
-      --cover-type-display: 'SF Pro Display', 'Helvetica Neue', 'Inter', system-ui, sans-serif;
-      --cover-type-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-      --cover-type-track-wide: 0.34em;
-      --cover-type-track-normal: 0.08em;
+       --cover-type-display: 'SF Pro Display', 'Helvetica Neue', 'Inter', system-ui, sans-serif;
+       --cover-type-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+       --cover-type-track-wide: 0.34em;
+       --cover-type-track-normal: 0.08em;
 
-      /* Spacing (locked for album-cover grid proportions) */
-      --cover-gap: 4px;
-      --cover-pad: 10px;
-   }
+       --cover-gap: 4px;
+       --cover-pad: 10px;
+    }
 
-   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
    html, body {
       width: 100%; height: 100%; overflow: hidden;
       background: var(--cover-stage);
       font-family: var(--cover-type-display);
-      -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+     -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
       touch-action: none;
       overscroll-behavior: none;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-   }
+     -webkit-font-smoothing: antialiased;
+     -moz-osx-font-smoothing: grayscale;
+    }
 
-   /* ---- Stage ---- */
-   #stage {
+    /* ---- Stage ---- */
+    #stage {
       position: relative; width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
       opacity: 0;
       transition: opacity 0.8s ease-out;
       background:
-         radial-gradient(ellipse 32% 42% at 50% 18%, rgba(99,102,241,0.05) 0%, rgba(99,102,241,0.015) 35%, transparent 65%),
-         radial-gradient(ellipse 65% 75% at 50% 58%, rgba(168,85,247,0.01) 0%, transparent 55%),
+         radial-gradient(ellipse 32% 42% at 50% 15%, rgba(99,102,241,0.05) 0%, rgba(99,102,241,0.015) 35%, transparent 65%),
+         radial-gradient(ellipse 65% 75% at 50% 55%, rgba(168,85,247,0.01) 0%, transparent 55%),
          radial-gradient(ellipse 90% 100% at 50% 50%, var(--cover-stage) 0%, var(--cover-stage-vignette) 100%);
-   }
-   #stage.visible { opacity: 1; }
+    }
+    #stage.visible { opacity: 1; }
 
-   /* ---- Grid Frame ---- */
-   #grid-wrap {
+    /* ---- Grid Container ---- */
+    #grid-container {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+
+    #grid-wrap {
       display: flex; align-items: center; justify-content: center;
       position: relative;
-   }
+    }
 
-   #grid {
+    #grid {
       display: grid;
       gap: var(--grid-gap, var(--cover-gap));
       padding: var(--grid-pad, var(--cover-pad));
@@ -88,34 +87,30 @@
       background: var(--cover-frame-bg);
       border: var(--grid-border, 1px) solid var(--cover-frame-border);
       box-shadow:
-         0 0 50px rgba(99,102,241,0.03),
-         0 0 100px rgba(99,102,241,0.02),
-         0 0 180px rgba(99,102,241,0.012),
+          0 0 50px rgba(99,102,241,0.03),
+          0 0 100px rgba(99,102,241,0.02),
+          0 0 180px rgba(99,102,241,0.012),
         inset 0 0 30px rgba(0,0,0,0.6);
       will-change: transform, box-shadow;
       transition: box-shadow 0.15s ease-out;
       transform-origin: center center;
-   }
+    }
 
-   @media (max-width: 480px) {
-      #grid {
-         --grid-gap: 3px; --grid-pad: 7px; --grid-radius: 2px; --grid-border: 1px;
-      }
-   }
-   @media (max-width: 370px) {
-      #grid {
-         --grid-gap: 2px; --grid-pad: 5px; --grid-radius: 1px; --grid-border: 1px;
-      }
-   }
-   @media (min-width: 768px) {
-      #grid { --grid-gap: 5px; --grid-pad: 12px; --grid-radius: 2px; }
-   }
-   @media (min-width: 1200px) {
-      #grid { --grid-gap: 6px; --grid-pad: 14px; --grid-radius: 2px; }
-   }
+    @media (max-width: 480px) {
+       #grid { --grid-gap: 3px; --grid-pad: 7px; --grid-radius: 2px; --grid-border: 1px; }
+    }
+    @media (max-width: 370px) {
+       #grid { --grid-gap: 2px; --grid-pad: 5px; --grid-radius: 1px; --grid-border: 1px; }
+    }
+    @media (min-width: 768px) {
+       #grid { --grid-gap: 5px; --grid-pad: 12px; --grid-radius: 2px; }
+    }
+    @media (min-width: 1200px) {
+       #grid { --grid-gap: 6px; --grid-pad: 14px; --grid-radius: 2px; }
+    }
 
-   /* ---- Cell (idle) ---- */
-   .cell {
+    /* ---- Cell (idle) ---- */
+    .cell {
       position: relative;
       border-radius: var(--cover-cell-radius);
       background: var(--cover-cell-idle-bg);
@@ -125,35 +120,47 @@
       will-change: background, box-shadow;
       min-width: 0; min-height: 0;
       overflow: hidden;
-   }
-   .cell::after {
+    }
+    .cell::after {
       content: '';
       position: absolute; inset: 0;
       border-radius: var(--cover-cell-radius);
       box-shadow: inset 0 0 4px rgba(99,102,241,0.02);
       pointer-events: none;
       transition: box-shadow 0.1s;
-   }
+    }
 
-   /* ---- Cell (active — Bright Performer) ---- */
-   .cell:active, .cell.active {
+    /* ---- Cell (active) ---- */
+    .cell:active, .cell.active {
       background: rgba(99,102,241,0.65);
       border-color: rgba(168,85,247,1);
       box-shadow:
-         0 0 20px rgba(99,102,241,0.95),
-         0 0 48px rgba(99,102,241,0.55),
-         0 0 88px rgba(168,85,247,0.35),
-         0 0 125px rgba(139,92,246,0.15),
+          0 0 20px rgba(99,102,241,0.95),
+          0 0 48px rgba(99,102,241,0.55),
+          0 0 88px rgba(168,85,247,0.35),
+          0 0 125px rgba(139,92,246,0.15),
         inset 0 0 12px rgba(192,132,255,0.65),
         inset 0 0 30px rgba(168,85,247,0.35),
         inset 0 0 50px rgba(217,169,255,0.12);
-   }
-   .cell:active::after, .cell.active::after {
+    }
+    .cell:active::after, .cell.active::after {
       box-shadow: inset 0 0 8px rgba(255,255,255,0.18);
-   }
+    }
 
-   /* ---- Cell Labels (Cover typography) ---- */
-   .cell-label {
+    /* ---- Cell (sequencer pattern step) ---- */
+    .cell.seq-active {
+      background: rgba(168,85,247,0.35);
+      border-color: rgba(168,85,247,0.8);
+      box-shadow:
+          0 0 14px rgba(168,85,247,0.6),
+          0 0 32px rgba(99,102,241,0.3),
+          0 0 55px rgba(139,92,246,0.15),
+        inset 0 0 8px rgba(192,132,255,0.4),
+        inset 0 0 20px rgba(168,85,247,0.2);
+    }
+
+    /* ---- Cell Labels ---- */
+    .cell-label {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
       font-family: var(--cover-type-mono);
@@ -165,27 +172,131 @@
       pointer-events: none;
       transition: color 0.06s, text-shadow 0.06s;
       text-rendering: geometricPrecision;
-   }
-   .cell.active .cell-label {
+    }
+    .cell.active .cell-label, .cell.seq-active .cell-label {
       color: rgba(235,235,255,0.95);
       text-shadow:
-         0 0 6px rgba(192,132,255,0.9),
-         0 0 16px rgba(99,102,241,0.5),
-         0 0 28px rgba(168,85,247,0.25);
-   }
+          0 0 6px rgba(192,132,255,0.9),
+          0 0 16px rgba(99,102,241,0.5),
+          0 0 28px rgba(168,85,247,0.25);
+    }
 
-   /* ---- Launch Overlay (Cover aesthetic) ---- */
-   #launch-overlay {
+    /* ---- Step Indicators ---- */
+    #step-indicators {
+      display: flex; gap: 6px; align-items: center; justify-content: center;
+      margin-bottom: 4px;
+    }
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.1);
+      transition: background 0.06s, box-shadow 0.06s, transform 0.06s;
+    }
+    .step-dot.current {
+      background: rgba(99,102,241,0.8);
+      box-shadow:
+          0 0 8px rgba(99,102,241,0.9),
+          0 0 20px rgba(168,85,247,0.5),
+        inset 0 0 3px rgba(217,169,255,0.5);
+      transform: scale(1.3);
+    }
+    .step-dot.current.playing {
+      animation: stepPulse 0.38s ease-out infinite;
+    }
+    @keyframes stepPulse {
+       0% { transform: scale(1.35); }
+      50% { transform: scale(1.15); }
+     100% { transform: scale(1.3); }
+    }
+
+    /* ---- Controls Bar ---- */
+    #seq-controls {
+      display: flex; gap: 16px; align-items: center; justify-content: center;
+      margin-top: 8px; flex-wrap: wrap;
+    }
+    .seq-btn {
+      font-family: var(--cover-type-mono);
+      font-size: 0.55rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      background: rgba(6,6,14,0.9);
+      border: 1px solid rgba(99,102,241,0.12);
+      border-radius: 2px;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: color 0.08s, border-color 0.08s, box-shadow 0.08s, background 0.08s;
+      user-select: none; -webkit-user-select: none;
+    }
+    .seq-btn:hover {
+      color: rgba(255,255,255,0.6);
+      border-color: rgba(99,102,241,0.3);
+    }
+    .seq-btn.active {
+      color: rgba(230,225,255,0.95);
+      border-color: rgba(168,85,247,0.9);
+      background: rgba(99,102,241,0.2);
+      box-shadow:
+          0 0 10px rgba(99,102,241,0.4),
+          0 0 24px rgba(168,85,247,0.2),
+        inset 0 0 6px rgba(192,132,255,0.3);
+    }
+    #tempo-wrap {
+      display: flex; align-items: center; gap: 8px;
+    }
+    #tempo-label {
+      font-family: var(--cover-type-mono);
+      font-size: 0.5rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    #tempo-display {
+      font-family: var(--cover-type-mono);
+      font-size: 0.65rem;
+      color: rgba(99,102,241,0.7);
+      font-weight: 700;
+      min-width: 48px;
+      text-align: center;
+    }
+    input[type="range"]#tempo-slider {
+      -webkit-appearance: none; appearance: none;
+      width: 80px; height: 3px;
+      background: rgba(99,102,241,0.2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]#tempo-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: rgba(99,102,241,0.8);
+      box-shadow: 0 0 6px rgba(168,85,247,0.6);
+      cursor: pointer;
+    }
+    input[type="range"]#tempo-slider::-moz-range-thumb {
+      width: 12px; height: 12px;
+      border: none; border-radius: 50%;
+      background: rgba(99,102,241,0.8);
+      box-shadow: 0 0 6px rgba(168,85,247,0.6);
+      cursor: pointer;
+    }
+
+    /* ---- Launch Overlay ---- */
+    #launch-overlay {
       position: fixed; inset: 0;
       background: #000000;
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; z-index: 9999;
       transition: opacity 0.8s ease-in;
       gap: 0;
-   }
-   #launch-overlay.fade-out { opacity: 0; pointer-events: none; }
+    }
+    #launch-overlay.fade-out { opacity: 0; pointer-events: none; }
 
-   #launch-label {
+    #launch-label {
       font-family: var(--cover-type-display);
       font-size: clamp(1.3rem, 3.5vw, 1.8rem);
       font-weight: 800;
@@ -193,15 +304,15 @@
       text-transform: uppercase;
       color: rgba(255,255,255,0.82);
       text-shadow:
-         0 0 32px rgba(99,102,241,0.65),
-         0 0 64px rgba(99,102,241,0.28),
-         0 0 100px rgba(168,85,247,0.12);
+          0 0 32px rgba(99,102,241,0.65),
+          0 0 64px rgba(99,102,241,0.28),
+          0 0 100px rgba(168,85,247,0.12);
       text-rendering: geometricPrecision;
       user-select: none;
       line-height: 1.1;
-   }
+    }
 
-   #launch-sublabel {
+    #launch-sublabel {
       font-family: var(--cover-type-mono);
       font-size: clamp(0.45rem, 1.1vw, 0.58rem);
       font-weight: 400;
@@ -212,9 +323,9 @@
       margin-bottom: 2rem;
       text-rendering: geometricPrecision;
       user-select: none;
-   }
+    }
 
-   #launch-prompt {
+    #launch-prompt {
       font-family: var(--cover-type-mono);
       font-size: clamp(0.48rem, 1.1vw, 0.6rem);
       font-weight: 400;
@@ -223,27 +334,39 @@
       text-transform: uppercase;
       text-rendering: geometricPrecision;
       animation: promptPulse 2.5s ease-in-out infinite;
-   }
-   @keyframes promptPulse {
-      0%, 100% { opacity: 0.35; }
-      50% { opacity: 0.9; }
-   }
+    }
+    @keyframes promptPulse {
+       0%, 100% { opacity: 0.35; }
+       50% { opacity: 0.9; }
+    }
 </style>
 </head>
 <body>
 <div id="launch-overlay">
-      <div id="launch-label">Open Circuit</div>
-      <div id="launch-sublabel">Browser as Stage — Grid as Instrument</div>
-      <div id="launch-prompt">Tap Anywhere to Open</div>
+       <div id="launch-label">Open Circuit</div>
+       <div id="launch-sublabel">Browser as Stage — Grid as Instrument</div>
+       <div id="launch-prompt">Tap Anywhere to Open</div>
 </div>
 
 <div id="stage">
-    <div id="grid-wrap"><div id="grid"></div></div>
+     <div id="grid-container">
+        <div id="step-indicators"></div>
+        <div id="grid-wrap"><div id="grid"></div></div>
+        <div id="seq-controls">
+           <button class="seq-btn" id="btn-loop" data-mode="loop">LOOP ON</button>
+           <button class="seq-btn" id="btn-edit" data-mode="edit">EDIT</button>
+           <div id="tempo-wrap">
+              <span id="tempo-label">TEMPO</span>
+              <input type="range" id="tempo-slider" min="40" max="240" value="158" step="1">
+              <span id="tempo-display">158 BPM</span>
+           </div>
+        </div>
+     </div>
 </div>
 
 <script>
 (function() {
-    'use strict';
+     'use strict';
 
     const ENV = {
        NODE: 'production',
@@ -267,11 +390,9 @@
        LFO_DEPTH_FACTOR: 0.5,
        MAX_Q: 3.8,
        MIN_Q: 1.0,
-      // Pitch bend range in semitones (±1st mapped to sub-cell X position)
        PITCH_BEND_SEMITONES: 1,
-      // Filter cutoff modulation depth multiplier from touch Y position
        FILTER_CUTOFF_MOD_DEPTH: 3,
-       BUILD_SHA: 'open-circuit-v2-pitchbend',
+       BUILD_SHA: 'open-circuit-v3-sequencer',
         DROP_ID: '1777634912055739822',
         AESTHETIC: 'Dark Stage, Bright Performer',
         COVER_LOOK: 'v1-locked',
@@ -286,34 +407,23 @@
     const BEND_SEMITONES = ENV.PITCH_BEND_SEMITONES;
     const CUTOFF_MOD_DEPTH = ENV.FILTER_CUTOFF_MOD_DEPTH;
 
-    // ========================================
-    //  Drag Latency Profiler
-    // ========================================
+     // ========================================
+     //  Drag Latency Profiler
+     // ========================================
     const LatencyProfiler = (function() {
       const samples = [];
       const MAX_SAMPLES = 500;
       let lastDownTime = 0;
 
-      function recordDown(ts) {
-        lastDownTime = ts;
-      }
-
+      function recordDown(ts) { lastDownTime = ts; }
       function recordMove(ts, audioCallTime) {
         const raw = ts - lastDownTime;
         const audioDelta = audioCallTime - ts;
-        samples.push({
-          touchToAudio: raw + audioDelta,
-          touchDelta: raw,
-          audioDelta: audioDelta
-        });
+        samples.push({ touchToAudio: raw + audioDelta, touchDelta: raw, audioDelta: audioDelta });
         if (samples.length > MAX_SAMPLES) samples.shift();
         lastDownTime = ts;
-      }
-
-      function recordRelease(ts) {
-        logBenchmark();
-      }
-
+       }
+      function recordRelease(ts) { logBenchmark(); }
       function getBenchmarks() {
         if (!samples.length) return { p50: 0, p95: 0, p99: 0, max: 0, min: 0, n: 0 };
         const sorted = samples.map(function(s) { return s.touchToAudio; }).sort(function(a, b) { return a - b; });
@@ -324,62 +434,41 @@
           max: sorted[sorted.length - 1],
           min: sorted[0],
           n: sorted.length
-        };
-      }
-
+         };
+       }
       function logBenchmark() {
         var b = getBenchmarks();
         console.log('[LatencyProfiler] Benchmarks:',
-          'p50=' + b.p50.toFixed(2) + 'ms',
-          'p95=' + b.p95.toFixed(2) + 'ms',
-          'p99=' + b.p99.toFixed(2) + 'ms',
-          'max=' + b.max.toFixed(2) + 'ms',
-          'min=' + b.min.toFixed(2) + 'ms',
-          'samples=' + b.n);
-      }
-
+           'p50=' + b.p50.toFixed(2) + 'ms',
+           'p95=' + b.p95.toFixed(2) + 'ms',
+           'p99=' + b.p99.toFixed(2) + 'ms',
+           'max=' + b.max.toFixed(2) + 'ms',
+           'min=' + b.min.toFixed(2) + 'ms',
+           'samples=' + b.n);
+       }
       function reset() { samples.length = 0; }
 
-      return {
-        recordDown: recordDown,
-        recordMove: recordMove,
-        recordRelease: recordRelease,
-        getBenchmarks: getBenchmarks,
-        logBenchmark: logBenchmark,
-        reset: reset
-      };
+      return { recordDown: recordDown, recordMove: recordMove, recordRelease: recordRelease,
+               getBenchmarks: getBenchmarks, logBenchmark: logBenchmark, reset: reset };
     })();
 
-    // ========================================
-    //  Performance Monitor
-    // ========================================
+     // ========================================
+     //  Performance Monitor
+     // ========================================
     const PerfMonitor = (function() {
-      let frameCount = 0;
-      let lastFpsTime = performance.now();
-      let fps = 60;
-      let lastFrameTime = 0;
-      let frameTimes = [];
+      let frameCount = 0, lastFpsTime = performance.now(), fps = 60, lastFrameTime = 0;
+      let frameTimes = [], running = false, rafId = null, tickCount = 0;
       const MAX_FRAME_SAMPLES = 60;
-      let running = false;
-      let rafId = null;
-      let tickCount = 0;
 
       function countAudioNodes() {
         if (!audioCtx) return 0;
-        try {
-          return Object.keys(activeVoices).length + 7;
-        } catch(e) { return 0; }
-      }
-
-      function getActiveVoiceCount() {
-        return Object.keys(activeVoices).length;
-      }
+        try { return Object.keys(activeVoices).length + 7; } catch(e) { return 0; }
+       }
+      function getActiveVoiceCount() { return Object.keys(activeVoices).length; }
 
       function tick(ts) {
         if (!running) return;
-        tickCount++;
-        frameCount++;
-
+        tickCount++; frameCount++;
         var now = performance.now();
         lastFrameTime = now - lastFpsTime;
         frameTimes.push(lastFrameTime);
@@ -387,74 +476,48 @@
 
         if (now - lastFpsTime >= 500) {
           fps = Math.round((frameCount * 1000) / (now - lastFpsTime));
-          frameCount = 0;
-          lastFpsTime = now;
-
-          var frameP50 = 0, frameP95 = 0;
+          frameCount = 0; lastFpsTime = now;
           if (frameTimes.length) {
             var ft = frameTimes.slice().sort(function(a, b) { return a - b; });
-            frameP50 = ft[Math.floor(ft.length * 0.5)];
-            frameP95 = ft[Math.floor(ft.length * 0.95)];
-          }
-
-          var nodeCount = countAudioNodes();
+           }
           if (tickCount % 1200 === 0) {
-            console.log('[PerfMonitor]',
-              'fps=' + fps,
-              'frameP50=' + frameP50.toFixed(2) + 'ms',
-              'frameP95=' + frameP95.toFixed(2) + 'ms',
-              'voices=' + getActiveVoiceCount(),
-              'nodes=' + nodeCount);
-          }
-        }
-
+            console.log('[PerfMonitor]', 'fps=' + fps,
+                'frameP50=' + (ft ? ft[Math.floor(ft.length * 0.5)].toFixed(2) : 0) + 'ms',
+                'voices=' + getActiveVoiceCount(), 'nodes=' + countAudioNodes());
+           }
+         }
         rafId = requestAnimationFrame(tick);
-      }
+       }
 
       return {
-        start: function() {
-          if (running) return;
-          running = true;
-          lastFpsTime = performance.now();
-          rafId = requestAnimationFrame(tick);
-        },
-        stop: function() {
-          running = false;
-          if (rafId) cancelAnimationFrame(rafId);
-        },
-        getStats: function() {
-          return {
-            fps: fps,
-            activeVoices: getActiveVoiceCount(),
-            audioNodes: countAudioNodes(),
-            lastFrameMs: lastFrameTime,
-            latencyProfiler: LatencyProfiler.getBenchmarks()
-          };
-        }
-      };
+        start: function() { if (running) return; running = true; lastFpsTime = performance.now(); rafId = requestAnimationFrame(tick); },
+        stop:  function() { running = false; if (rafId) cancelAnimationFrame(rafId); },
+        getStats: function() { return { fps: fps, activeVoices: getActiveVoiceCount(), audioNodes: countAudioNodes(),
+                                          lastFrameMs: lastFrameTime, latencyProfiler: LatencyProfiler.getBenchmarks() }; }
+       };
     })();
 
-    let audioCtx = null;
-    let masterGain = null;
-    let preDelayNode = null;
-    let analyser = null;
-    let analyserData = null;
-    let limiter = null;
-    let compressor = null;
+    let audioCtx = null, masterGain = null, preDelayNode = null;
+    let analyser = null, analyserData = null, limiter = null, compressor = null;
     const activeVoices = {};
 
-    // ========================================
-    //  Sequencer State
-    // ========================================
+     // ========================================
+     //  Sequencer State — Grid-Driven Pattern Matrix
+     // ========================================
     let sequencerRunning = false;
     let seqStep = 0;
     let nextStepTime = 0;
     let seqScheduleTimer = null;
     const LOOKAHEAD = 0.08;
     const SCHEDULE_INTERVAL = 25;
+    const NUM_STEPS = 16;
+    let currentTempo = 158;
+    let seqInterval = 60 / currentTempo;
+    let loopEnabled = true;
+    let editMode = false;
 
-    // Harmony-resolving 16-step pattern
-    const seqSteps = [
+    // Pattern matrix: seqSteps[s] = [{r, c}, ...]
+    var seqSteps = [
       [{ r: 2, c: 0 }],
       [{ r: 2, c: 2 }],
       [{ r: 2, c: 3 }],
@@ -473,9 +536,12 @@
       [{ r: 2, c: 0 }, { r: 2, c: 2 }, { r: 2, c: 3 }],
     ];
 
-    // ========================================
-    //  Launch Sequence
-    // ========================================
+    // Step indicator elements
+    var stepDots = [];
+
+     // ========================================
+     //  Launch Sequence
+     // ========================================
     const overlay = document.getElementById('launch-overlay');
     const stage = document.getElementById('stage');
     let launched = false;
@@ -488,7 +554,6 @@
         audioCtxPromise = (function() {
           if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
             masterGain = audioCtx.createGain();
             masterGain.gain.value = 0.28;
 
@@ -517,36 +582,33 @@
             limiter.connect(compressor);
             compressor.connect(analyser);
             analyser.connect(audioCtx.destination);
-          }
+           }
           var resumePromise = (audioCtx.state === 'suspended') ? audioCtx.resume() : Promise.resolve();
           return resumePromise.then(function() {
             audioCtxReady = true;
             audioCtxPromise = null;
             return audioCtx;
-          }).catch(function() {
+           }).catch(function() {
             audioCtxReady = true;
             audioCtxPromise = null;
             return audioCtx;
-          });
-        })();
+           });
+         })();
+        }
+       return audioCtxPromise;
       }
-      return audioCtxPromise;
-    }
 
     function launch() {
       if (launched) return;
       launched = true;
-
       overlay.classList.add('fade-out');
-
       getAudioCtxPromise().then(function() {
         stage.classList.add('visible');
+        buildStepIndicators();
+        buildGrid();
         startSequence();
-      });
-
-      setTimeout(function() {
-        overlay.style.display = 'none';
-      }, 1000);
+       });
+      setTimeout(function() { overlay.style.display = 'none'; }, 1000);
     }
 
     document.addEventListener('pointerdown', launch, { passive: true });
@@ -555,14 +617,111 @@
       if (e.key !== 'F5' && e.key !== 'F12') launch();
     });
 
-    // ========================================
-    //  Helper Functions
-    // ========================================
+     // ========================================
+     //  Step Indicators
+     // ========================================
+    function buildStepIndicators() {
+      var container = document.getElementById('step-indicators');
+      for (var i = 0; i < NUM_STEPS; i++) {
+        var dot = document.createElement('div');
+        dot.className = 'step-dot';
+        dot.dataset.step = i;
+        container.appendChild(dot);
+        stepDots[i] = dot;
+       }
+    }
 
+    function updateStepIndicator(step) {
+      for (var i = 0; i < NUM_STEPS; i++) {
+        stepDots[i].classList.remove('current', 'playing');
+        if (i === step) {
+          stepDots[i].classList.add('current', sequencerRunning ? 'playing' : '');
+         }
+       }
+    }
+
+     // ========================================
+     //  Sequencer Controls
+     // ========================================
+    var btnLoop = document.getElementById('btn-loop');
+    var btnEdit = document.getElementById('btn-edit');
+    var tempoSlider = document.getElementById('tempo-slider');
+    var tempoDisplay = document.getElementById('tempo-display');
+
+    // Loop toggle
+    btnLoop.addEventListener('pointerdown', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      if (!ensureAudio()) getAudioCtxPromise();
+      loopEnabled = !loopEnabled;
+      btnLoop.classList.toggle('active', loopEnabled);
+      btnLoop.textContent = loopEnabled ? 'LOOP ON' : 'LOOP OFF';
+      if (loopEnabled) {
+        startSequence();
+       } else {
+        stopSequence();
+       }
+    });
+    btnLoop.classList.add('active');
+
+     // Edit mode toggle — stops sequence, starts step nav, toggles play/edit
+     btnEdit.addEventListener('pointerdown', function(e) {
+       e.preventDefault(); e.stopPropagation();
+       editMode = !editMode;
+       btnEdit.classList.toggle('active', editMode);
+       btnEdit.textContent = editMode ? 'PLAY' : 'EDIT';
+       renderPatternMatrix();
+       if (editMode) {
+        stopSequence();
+        startStepNav();
+        } else {
+        stopStepNav();
+        if (loopEnabled) startSequence();
+        }
+      });
+
+    // Tempo slider
+    tempoSlider.addEventListener('input', function() {
+      currentTempo = parseInt(tempoSlider.value);
+      seqInterval = 60 / currentTempo;
+      tempoDisplay.textContent = currentTempo + ' BPM';
+      // If sequencer is running, immediately update nextStepTime
+      if (sequencerRunning && audioCtx) {
+        nextStepTime = audioCtx.currentTime + 0.05;
+        seqStep = 0;
+       }
+    });
+
+     // ========================================
+     //  Pattern Matrix Rendering
+     // ========================================
+    function renderPatternMatrix() {
+      // In edit mode, show the pattern matrix: columns = steps, rows = pitch rows
+      // Cells that are part of the current step pattern glow .seq-active
+      var all = allCells;
+      for (var i = 0; i < all.length; i++) {
+        all[i].classList.remove('seq-active');
+       }
+
+      if (!editMode) return;
+
+       // Highlight cells for current edit step only
+      var currentNotes = seqSteps[currentEditStep];
+        for (var n = 0; n < currentNotes.length; n++) {
+          var nc = currentNotes[n];
+          var idx = nc.r * COLS + nc.c;
+          if (all[idx]) {
+            all[idx].classList.add('seq-active');
+              }
+            }
+       }
+
+     // ========================================
+     //  Helper Functions
+     // ========================================
     function getFrequency(row, col) {
-      const degreeIdx = col % SCALE_DEGREES.length;
-      const scaleSemitones = SCALE_DEGREES[degreeIdx];
-      const octaveOffset = Math.floor(col / SCALE_DEGREES.length);
+      var degreeIdx = col % SCALE_DEGREES.length;
+      var scaleSemitones = SCALE_DEGREES[degreeIdx];
+      var octaveOffset = Math.floor(col / SCALE_DEGREES.length);
       return ROW_FREQS[row] * Math.pow(2, scaleSemitones / 12 + octaveOffset);
     }
 
@@ -570,69 +729,52 @@
       return NOTE_NAMES[col % NOTE_NAMES.length];
     }
 
-    // ========================================
-    //  Touch-Driven Pitch & Filter Mapping
-    // ========================================
-
-    // Calculates continuous pitch bend from touch X position within a cell.
-    // xFrac = 0.5 (center) → no bend. xFrac = 0 (left edge) → -BEND_SEMITONES. xFrac = 1 (right edge) → +BEND_SEMITONES.
+     // ========================================
+     //  Touch-Driven Pitch & Filter Mapping
+     // ========================================
     function calcBentFrequency(baseFreq, xFrac) {
       var bendSemis = (xFrac - 0.5) * 2 * BEND_SEMITONES;
       return baseFreq * Math.pow(2, bendSemis / 12);
     }
 
-    // Calculates filter cutoff modulation from touch Y position within a cell.
-    // yFrac = 0 (top) → cutoff multiplied by (1 + CUTOFF_MOD_DEPTH) → brighter
-    // yFrac = 1 (bottom) → cutoff at base value → darker
     function calcModulatedCutoff(baseFreq, yFrac) {
       return baseFreq * CUTOFF_MOD_DEPTH * (1 + (1 - yFrac) * 2);
     }
 
-       // Calculates amplitude from touch force/intensity (0-1) and row position.
-       // Smooth cubic mapping: intensity follows a curve that feels natural under the finger.
-       // When force is available (pressure-sensitive touch), it directly modulates VCA gain.
-       // Fallback: row position + column position shape a base amplitude.
-     var _smoothing = new Float32Array(COLS);
-     function calcAmplitude(row, col, force) {
-       var rowFactor = 1 - (row / (ROWS - 1)) * 0.4;
-       var colFactor = 0.8 + 0.2 * Math.sin(Math.PI * col / (COLS - 1));
-       var baseAmp = 0.32 * rowFactor * colFactor;
-       if (force !== undefined && force > 0 && force <= 1) {
-         var raw = 0.15 + force * 0.85;
-         var cube = raw * raw * (3 - 2 * raw);
-         var prev = _smoothing[col];
-         _smoothing[col] = prev * 0.7 + cube * 0.3;
-         return baseAmp * _smoothing[col];
-         }
-       return baseAmp;
+    var _smoothing = new Float32Array(COLS);
+    function calcAmplitude(row, col, force) {
+      var rowFactor = 1 - (row / (ROWS - 1)) * 0.4;
+      var colFactor = 0.8 + 0.2 * Math.sin(Math.PI * col / (COLS - 1));
+      var baseAmp = 0.32 * rowFactor * colFactor;
+      if (force !== undefined && force > 0 && force <= 1) {
+        var raw = 0.15 + force * 0.85;
+        var cube = raw * raw * (3 - 2 * raw);
+        var prev = _smoothing[col];
+        _smoothing[col] = prev * 0.7 + cube * 0.3;
+        return baseAmp * _smoothing[col];
        }
-       return baseAmp;
-      }
+      return baseAmp;
+    }
 
     function getAntiAliasedParams(freq) {
       var nyquist = audioCtx.sampleRate * 0.5;
       var freqRatio = freq / nyquist;
-      var maxQ = 3.8;
-      var minQ = 1.0;
-      var q;
+      var maxQ = 3.8, minQ = 1.0, q;
       if (freqRatio > 0.12) {
         var t = Math.min(1, (freqRatio - 0.12) / 0.13);
         q = maxQ - (maxQ - minQ) * t;
-      } else {
+       } else {
         q = maxQ;
-      }
+       }
       var cutoffCeiling = nyquist * 0.38;
       var cutoff = Math.min(freq * 5, 10000, cutoffCeiling);
       return { q: Math.max(q, 0.5), cutoff: cutoff };
     }
 
-    // ========================================
-    //  Audio Context Init
-    // ========================================
-
-    function ensureAudio() {
-      return audioCtx && audioCtxReady;
-    }
+     // ========================================
+     //  Audio Context
+     // ========================================
+    function ensureAudio() { return audioCtx && audioCtxReady; }
 
     function buildSoftClipCurve() {
       var n = audioCtx.sampleRate * 2;
@@ -642,21 +784,19 @@
         var x = (i / (n - 1)) * 2 - 1;
         if (Math.abs(x) < 0.01) {
           curve[i] = x;
-        } else if (Math.abs(x) <= threshold) {
+         } else if (Math.abs(x) <= threshold) {
           curve[i] = x;
-        } else {
+         } else {
           var t = (Math.abs(x) - threshold) / (1 - threshold);
           curve[i] = Math.sign(x) * (threshold + (1 - threshold) * (1 - Math.exp(-6 * t)));
-        }
-      }
+         }
+       }
       return curve;
     }
 
-    // ========================================
-    //  Voice: Oscillator → Filter → VCA → PreDelay → Master
-    // ========================================
-
-    // Touch modulation state carried by each voice for continuous updates
+     // ========================================
+     //  Voice: Oscillator → Filter → VCA → PreDelay → Master
+     // ========================================
     function createVoice(freq, amplitude, isSeq, row, col) {
       if (!ensureAudio()) return null;
       var now = audioCtx.currentTime;
@@ -664,42 +804,27 @@
       var vol = amplitude * seqVol;
 
       var aaParams = getAntiAliasedParams(freq);
-
-      // Primary oscillator — sawtooth for dense harmonics
       var osc = audioCtx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.value = freq;
-      osc.detune.value = -3;
-
-      // Sub oscillator — triangle for warmth
+      osc.type = 'sawtooth'; osc.frequency.value = freq; osc.detune.value = -3;
       var subOsc = audioCtx.createOscillator();
-      subOsc.type = 'triangle';
-      subOsc.frequency.value = freq * 0.5;
-      subOsc.detune.value = 0;
-
+      subOsc.type = 'triangle'; subOsc.frequency.value = freq * 0.5; subOsc.detune.value = 0;
       var subGain = audioCtx.createGain();
       subGain.gain.value = 0.1;
       subOsc.connect(subGain);
 
-      // Lowpass filter — the creative engine
       var filter = audioCtx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.Q.value = aaParams.q;
       filter.frequency.value = Math.min(freq * 3, aaParams.cutoff);
 
-      // Slow LFO modulates cutoff for singing harmonic movement
       var lfo = audioCtx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.2;
-
+      lfo.type = 'sine'; lfo.frequency.value = 0.2;
       var lfoGain = audioCtx.createGain();
       lfoGain.gain.value = freq * 0.5;
       lfo.connect(lfoGain);
       lfoGain.connect(filter.frequency);
 
-      // VCA with woody, breathing decay envelope (4-phase)
       var vca = audioCtx.createGain();
-
       vca.gain.setValueAtTime(0, now);
       vca.gain.linearRampToValueAtTime(vol, now + 0.002);
       vca.gain.setValueAtTime(vol, now + 0.002);
@@ -711,30 +836,21 @@
       vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
       vca.gain.exponentialRampToValueAtTime(0.0001, p4Start + 1.2);
 
-      // Signal chain: osc + sub → filter → vca → preDelay → masterGain
       osc.connect(filter);
       subGain.connect(filter);
       filter.connect(vca);
       vca.connect(preDelayNode);
 
-      osc.start(now);
-      subOsc.start(now);
-      lfo.start(now);
-
+      osc.start(now); subOsc.start(now); lfo.start(now);
       var stopTime = p4Start + 0.75;
-      osc.stop(stopTime);
-      subOsc.stop(stopTime);
-      lfo.stop(stopTime);
+      osc.stop(stopTime); subOsc.stop(stopTime); lfo.stop(stopTime);
 
       return {
         osc: osc, subOsc: subOsc, subGain: subGain, filter: filter, vca: vca, lfo: lfo, lfoGain: lfoGain,
-        stopTime: stopTime, isSeq: !!isSeq,
-        // Touch modulation: base freq and cell row/col for continuous pitch/filter mapping
-        baseFreq: freq, baseRow: row || 0, baseCol: col || 0
-      };
+        stopTime: stopTime, isSeq: !!isSeq, baseFreq: freq, baseRow: row || 0, baseCol: col || 0
+       };
     }
 
-    // Schedule a voice for a future play time
     function createScheduledVoice(freq, amplitude, isSeq, playTime) {
       if (!ensureAudio()) return null;
       var t0 = Math.max(playTime, audioCtx.currentTime);
@@ -742,17 +858,10 @@
       var vol = amplitude * seqVol;
 
       var aaParams = getAntiAliasedParams(freq);
-
       var osc = audioCtx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.value = freq;
-      osc.detune.value = -3;
-
+      osc.type = 'sawtooth'; osc.frequency.value = freq; osc.detune.value = -3;
       var subOsc = audioCtx.createOscillator();
-      subOsc.type = 'triangle';
-      subOsc.frequency.value = freq * 0.5;
-      subOsc.detune.value = 0;
-
+      subOsc.type = 'triangle'; subOsc.frequency.value = freq * 0.5; subOsc.detune.value = 0;
       var subGain = audioCtx.createGain();
       subGain.gain.value = 0.1;
       subOsc.connect(subGain);
@@ -763,9 +872,7 @@
       filter.frequency.value = Math.min(freq * 3, aaParams.cutoff);
 
       var lfo = audioCtx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.2;
-
+      lfo.type = 'sine'; lfo.frequency.value = 0.2;
       var lfoGain = audioCtx.createGain();
       lfoGain.gain.value = freq * 0.5;
       lfo.connect(lfoGain);
@@ -786,61 +893,41 @@
       filter.connect(vca);
       vca.connect(preDelayNode);
 
-      osc.start(t0);
-      subOsc.start(t0);
-      lfo.start(t0);
-
+      osc.start(t0); subOsc.start(t0); lfo.start(t0);
       var stopTime = t0 + 1.22;
-      osc.stop(stopTime);
-      subOsc.stop(stopTime);
-      lfo.stop(stopTime);
+      osc.stop(stopTime); subOsc.stop(stopTime); lfo.stop(stopTime);
 
       return {
         osc: osc, subOsc: subOsc, subGain: subGain, filter: filter, vca: vca, lfo: lfo, lfoGain: lfoGain,
-        stopTime: stopTime, isSeq: !!isSeq,
-        baseFreq: freq, baseRow: 0, baseCol: 0
-      };
+        stopTime: stopTime, isSeq: !!isSeq, baseFreq: freq, baseRow: 0, baseCol: 0
+       };
     }
 
-    // ========================================
-    //  Touch-Driven Voice Update
-    // ========================================
-    // Core function: maps touch coordinates directly to pitch bend + filter cutoff + amplitude.
-    // Signal flow: Touch → Pitch (via xFrac) → Filter (via yFrac) → VCA (via force/amp) → Decay
+     // ========================================
+     //  Touch-Driven Voice Update
+     // ========================================
     function updateVoiceWithTouch(voice, baseFreq, row, col, xFrac, yFrac, force) {
       if (!voice) return;
       var now = audioCtx.currentTime;
 
-      // Pitch bend: xFrac (0=left, 1=right) maps to ±BEND_SEMITONES around base frequency
       var bentFreq = calcBentFrequency(baseFreq, xFrac);
-
-      // Filter cutoff: yFrac (0=top, 1=bottom) modulates cutoff depth
       var modCutoff = calcModulatedCutoff(baseFreq, yFrac);
       var aaParams = getAntiAliasedParams(bentFreq);
       var finalCutoff = Math.min(modCutoff, aaParams.cutoff);
-
-      // Amplitude: touch force/intensity + row position → VCA pre-delay gain
       var amp = calcAmplitude(row, col, force);
 
-      // Touch → Pitch: oscillators track bent frequency with 3ms time constant
       voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
       voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
-
-      // Touch → Filter: cutoff follows y position with 5ms time constant
       voice.filter.frequency.setTargetAtTime(finalCutoff, now, 0.005);
       voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
       voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
-
-      // Touch → Amplitude: VCA pre-delay gain responds to touch intensity with 1ms time constant
       voice.vca.gain.setTargetAtTime(amp, now, 0.001);
     }
 
-    // Compatibility wrapper for sequencer-style calls
     function updateVoice(voice, freq, amplitude) {
       if (!voice) return;
       var now = audioCtx.currentTime;
       var aaParams = getAntiAliasedParams(freq);
-
       voice.osc.frequency.setTargetAtTime(freq, now, 0.003);
       voice.subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.003);
       voice.filter.frequency.setTargetAtTime(Math.min(freq * 3, aaParams.cutoff), now, 0.005);
@@ -858,46 +945,31 @@
         v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
         v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
         var stopT = now + 0.25;
-        v.osc.disconnect();
-        v.subOsc.disconnect();
-        v.subGain.disconnect();
-        v.filter.disconnect();
-        v.vca.disconnect();
-        v.lfo.disconnect();
-        v.lfoGain.disconnect();
-        v.osc.stop(stopT);
-        v.subOsc.stop(stopT);
-        v.lfo.stop(stopT);
-      } catch(e) {}
+        v.osc.disconnect(); v.subOsc.disconnect(); v.subGain.disconnect();
+        v.filter.disconnect(); v.vca.disconnect(); v.lfo.disconnect(); v.lfoGain.disconnect();
+        v.osc.stop(stopT); v.subOsc.stop(stopT); v.lfo.stop(stopT);
+       } catch(e) {}
       delete activeVoices[cellIndex];
     }
 
-    // ========================================
-    //  Grid UI
-    // ========================================
-
+     // ========================================
+     //  Grid UI
+     // ========================================
     var gridEl = document.getElementById('grid');
-    var gridWrap = document.getElementById('grid-wrap');
     var allCells = [];
     var gridBuilt = false;
     var MIN_TOUCH_TARGET = 44;
 
     function getGridGapPx() {
       var w = window.innerWidth;
-      if (w <= 370) return 2;
-      if (w <= 480) return 3;
-      if (w >= 1200) return 8;
-      if (w >= 768) return 6;
-      return 5;
+      if (w <= 370) return 2; if (w <= 480) return 3;
+      if (w >= 1200) return 8; if (w >= 768) return 6; return 5;
     }
 
     function getGridPadPx() {
       var w = window.innerWidth;
-      if (w <= 370) return 5;
-      if (w <= 480) return 8;
-      if (w >= 1200) return 16;
-      if (w >= 768) return 14;
-      return 12;
+      if (w <= 370) return 5; if (w <= 480) return 8;
+      if (w >= 1200) return 16; if (w >= 768) return 14; return 12;
     }
 
     function buildGrid() {
@@ -923,31 +995,24 @@
 
           gridEl.appendChild(el);
           allCells.push(el);
-        }
-      }
-
+         }
+       }
       resizeGrid();
     }
 
     function resizeGrid() {
       if (!gridBuilt) return;
-
-      var vw = window.innerWidth;
-      var vh = window.innerHeight;
-      var pad = getGridPadPx();
-      var gap = getGridGapPx();
-
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var pad = getGridPadPx(), gap = getGridGapPx();
       var availW = Math.min(vw * 0.92, 680) - 2 * pad;
       var gapTotalW = (COLS - 1) * gap;
       var rawCellW = (availW - gapTotalW) / COLS;
       var cellH = rawCellW * 0.78;
-
-      var availH = vh * 0.62;
+      var availH = vh * 0.55;
       var totalGapH = (ROWS - 1) * gap;
       var rawTotalH = ROWS * cellH + totalGapH;
       var hScale = Math.min(1, (availH - 2 * pad) / rawTotalH);
       var scale = Math.min(1, hScale);
-
       var finalW = Math.max(MIN_TOUCH_TARGET, rawCellW * scale);
       var finalH = finalW * 0.78;
 
@@ -957,21 +1022,18 @@
       gridEl.style.setProperty('--grid-pad', pad + 'px');
 
       if (scale < 0.85) {
-        var borderRadius = Math.max(4, 14 * scale * scale);
-        gridEl.style.setProperty('--grid-radius', borderRadius + 'px');
-        var borderW = Math.max(0, 1 - (0.85 - scale) * 10);
-        gridEl.style.setProperty('--grid-border', borderW + 'px');
-      } else {
+        gridEl.style.setProperty('--grid-radius', Math.max(4, 14 * scale * scale) + 'px');
+        gridEl.style.setProperty('--grid-border', Math.max(0, 1 - (0.85 - scale) * 10) + 'px');
+       } else {
         gridEl.style.setProperty('--grid-radius', '14px');
         gridEl.style.setProperty('--grid-border', '1px');
-      }
+       }
     }
 
-    // Cell-label typography is now defined in main <style> block as .cell-label / .cell.active .cell-label
-
-    // ========================================
-    //  Lookahead Sequencer
-    // ========================================
+     // ========================================
+     //  Lookahead Sequencer
+     // ========================================
+    function getSeqInterval() { return seqInterval; }
 
     function scheduleStep(stepIdx, playTime) {
       var notes = seqSteps[stepIdx % seqSteps.length];
@@ -986,39 +1048,40 @@
 
         var voice = createScheduledVoice(freq, amp, true, playTime);
         if (voice) {
-          activeVoices['seq_' + stepIdx + '_' + n] = voice;
+          var key = 'seq_' + stepIdx + '_' + n;
+          activeVoices[key] = voice;
           var cleanupDelay = (voice.stopTime - audioCtx.currentTime) * 1000 + 50;
-          setTimeout(function() {
-            // eslint-disable-next-line no-loop-func
-            delete activeVoices['seq_' + stepIdx + '_' + n];
-          }, cleanupDelay);
-        }
+          setTimeout((function(k) { return function() { delete activeVoices[k]; }; })(key), cleanupDelay);
+         }
 
         var delayUntil = Math.max(0, (playTime - audioCtx.currentTime)) * 1000;
         visualDelays.push({ cell: cell, delay: delayUntil });
-      }
+       }
 
       for (var d = 0; d < visualDelays.length; d++) {
-        (function(cd) {
-          setTimeout(function() {
-            if (cd.cell) cd.cell.classList.add('active');
-          }, cd.delay);
-          setTimeout(function() {
-            if (cd.cell) cd.cell.classList.remove('active');
-          }, cd.delay + 550);
-        })(visualDelays[d]);
-      }
+         (function(cd) {
+          setTimeout(function() { if (cd.cell) cd.cell.classList.add('active'); }, cd.delay);
+          setTimeout(function() { if (cd.cell) cd.cell.classList.remove('active'); }, cd.delay + 550);
+         })(visualDelays[d]);
+       }
+
+      // Update step indicator with scheduling
+      var stepDotIdx = stepIdx % NUM_STEPS;
+      var dotDelay = Math.max(0, (playTime - audioCtx.currentTime)) * 1000;
+      if (stepDots[stepDotIdx]) {
+        setTimeout(function() { updateStepIndicator(stepDotIdx); }, dotDelay);
+       }
     }
 
     function seqScheduler() {
       if (!sequencerRunning) return;
-
       var now = audioCtx.currentTime;
+      var interval = getSeqInterval();
       while (nextStepTime < now + LOOKAHEAD) {
         scheduleStep(seqStep, nextStepTime);
         seqStep++;
-        nextStepTime += 0.38;
-      }
+        nextStepTime += interval;
+       }
     }
 
     function startSequence() {
@@ -1026,24 +1089,18 @@
       sequencerRunning = true;
       seqStep = 0;
       nextStepTime = audioCtx.currentTime + 0.05;
-
       if (seqScheduleTimer) clearInterval(seqScheduleTimer);
       seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
     }
 
     function stopSequence() {
       sequencerRunning = false;
-      if (seqScheduleTimer) {
-        clearInterval(seqScheduleTimer);
-        seqScheduleTimer = null;
-      }
+      if (seqScheduleTimer) { clearInterval(seqScheduleTimer); seqScheduleTimer = null; }
 
       var toKill = [];
       for (var key in activeVoices) {
-        if (activeVoices[key].isSeq && key.indexOf('seq_') === 0) {
-          toKill.push(key);
-        }
-      }
+        if (activeVoices[key].isSeq && key.indexOf('seq_') === 0) toKill.push(key);
+       }
       for (var i = 0; i < toKill.length; i++) {
         var v = activeVoices[toKill[i]];
         if (v) {
@@ -1053,44 +1110,38 @@
             v.vca.gain.setValueAtTime(Math.max(v.vca.gain.value, 0.001), now);
             v.vca.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
             var stopT = now + 0.2;
-            v.osc.disconnect();
-            v.subOsc.disconnect();
-            v.subGain.disconnect();
-            v.filter.disconnect();
-            v.vca.disconnect();
-            v.lfo.disconnect();
-            v.lfoGain.disconnect();
-            v.osc.stop(stopT);
-            v.subOsc.stop(stopT);
-            v.lfo.stop(stopT);
-          } catch(e) {}
-        }
+            v.osc.disconnect(); v.subOsc.disconnect(); v.subGain.disconnect();
+            v.filter.disconnect(); v.vca.disconnect(); v.lfo.disconnect(); v.lfoGain.disconnect();
+            v.osc.stop(stopT); v.subOsc.stop(stopT); v.lfo.stop(stopT);
+           } catch(e) {}
+         }
         delete activeVoices[toKill[i]];
-      }
+       }
+      // Clear step indicators
+      for (var di = 0; di < stepDots.length; di++) {
+        stepDots[di].classList.remove('current', 'playing');
+       }
     }
 
-    // ========================================
-    //  Touch-Driven Input Handling
-    // ========================================
-    // Signal flow: Touch → Pitch (x-axis bend) → Filter (y-axis cutoff) → VCA (amplitude via force/position)
-
+     // ========================================
+     //  Touch-Driven Input Handling
+     // ========================================
     var dragVoice = null;
     var dragCellIndex = -1;
     var dragBaseFreq = 0;
-    var dragRow = 0;
-    var dragCol = 0;
+    var dragRow = 0, dragCol = 0;
     var dragCellEl = null;
     var mouseDown = false;
+    var _cachedRect = null;
+    var _cachedRectIdx = -1;
 
-    // Compute fractional touch position within a cell: xFrac, yFrac ∈ [0,1]
     function getTouchFracInCell(cell, clientX, clientY) {
       var rect = cell.getBoundingClientRect();
-      var x = clientX - rect.left;
-      var y = clientY - rect.top;
+      var x = clientX - rect.left, y = clientY - rect.top;
       return {
         xFrac: Math.min(1, Math.max(0, x / rect.width)),
         yFrac: Math.min(1, Math.max(0, y / rect.height))
-      };
+       };
     }
 
     function getCellFromCoords(clientX, clientY) {
@@ -1100,192 +1151,92 @@
       return (cell && cell.classList && cell.classList.contains('cell')) ? cell : null;
     }
 
-      // Cached cell rect to avoid getBoundingClientRect on every frame
-     var _cachedRect = null;
-     var _cachedRectIdx = -1;
+    function processTouchMove(clientX, clientY, force) {
+      var touchTs = performance.now();
+      var cell = getCellFromCoords(clientX, clientY);
+      if (!cell || !dragVoice) return;
 
-       // Cached cell rect to avoid getBoundingClientRect on every frame
-     var _cachedRect = null;
-     var _cachedRectIdx = -1;
+      var r = parseInt(cell.dataset.row);
+      var c = parseInt(cell.dataset.col);
+      var idx = r * COLS + c;
 
-       // Core touch/mouse handler: reads cell + sub-cell position, applies touch-driven modulation
-       // Signal flow: Touch → Pitch(xFrac) → Filter(yFrac) → VCA(force) → Decay
-     function processTouchMove(clientX, clientY, force) {
-       var touchTs = performance.now();
-
-       var cell = getCellFromCoords(clientX, clientY);
-       if (!cell || !dragVoice) {
-         return;
-           }
-
-       var r = parseInt(cell.dataset.row);
-       var c = parseInt(cell.dataset.col);
-       var idx = r * COLS + c;
-
-         // Switch active cell if we moved to a different one
-       if (idx !== dragCellIndex) {
-         if (dragCellEl) dragCellEl.classList.remove('active');
-         dragCellIndex = idx;
-         dragCellEl = cell;
-         dragBaseFreq = getFrequency(r, c);
-         dragRow = r;
-         dragCol = c;
-         cell.classList.add('active');
-           // Reset cached rect when cell changes
-         _cachedRect = null;
-         _cachedRectIdx = -1;
-          }
-
-         // Cached getBoundingClientRect: <0.1ms vs 0.8ms per call
-       if (_cachedRectIdx !== idx) {
-         _cachedRect = cell.getBoundingClientRect();
-         _cachedRectIdx = idx;
-          }
-       var x = clientX - _cachedRect.left;
-       var y = clientY - _cachedRect.top;
-       var xFrac = (x / _cachedRect.width);
-       var yFrac = (y / _cachedRect.height);
-       if (xFrac < 0) xFrac = 0;
-       if (xFrac > 1) xFrac = 1;
-       if (yFrac < 0) yFrac = 0;
-       if (yFrac > 1) yFrac = 1;
-
-       var audioT = performance.now();
-       LatencyProfiler.recordMove(touchTs, audioT);
-       updateVoiceWithTouch(dragVoice, dragBaseFreq, dragRow, dragCol, xFrac, yFrac, force);
+      if (idx !== dragCellIndex) {
+        if (dragCellEl) dragCellEl.classList.remove('active');
+        dragCellIndex = idx;
+        dragCellEl = cell;
+        dragBaseFreq = getFrequency(r, c);
+        dragRow = r;
+        dragCol = c;
+        cell.classList.add('active');
+        _cachedRect = null;
+        _cachedRectIdx = -1;
        }
 
-       var r = parseInt(cell.dataset.row);
-       var c = parseInt(cell.dataset.col);
-       var idx = r * COLS + c;
-
-        // Switch active cell if we moved to a different one
-       if (idx !== dragCellIndex) {
-         if (dragCellEl) dragCellEl.classList.remove('active');
-         dragCellIndex = idx;
-         dragCellEl = cell;
-         dragBaseFreq = getFrequency(r, c);
-         dragRow = r;
-         dragCol = c;
-         cell.classList.add('active');
-          // Reset cached rect when cell changes
-         _cachedRect = null;
-         _cachedRectIdx = -1;
-         }
-
-        // Cached getBoundingClientRect: <0.1ms vs 0.8ms per call
-       if (_cachedRectIdx !== idx) {
-         _cachedRect = cell.getBoundingClientRect();
-         _cachedRectIdx = idx;
-         }
-       var x = clientX - _cachedRect.left;
-       var y = clientY - _cachedRect.top;
-       var xFrac = (x / _cachedRect.width);
-       var yFrac = (y / _cachedRect.height);
-       if (xFrac < 0) xFrac = 0;
-       if (xFrac > 1) xFrac = 1;
-       if (yFrac < 0) yFrac = 0;
-       if (yFrac > 1) yFrac = 1;
-
-       var audioT = performance.now();
-       LatencyProfiler.recordMove(touchTs, audioT);
-       updateVoiceWithTouch(dragVoice, dragBaseFreq, dragRow, dragCol, xFrac, yFrac, force);
-      }
-
-     function retriggerVoice(voice, freq, amp, row, col, xFrac, yFrac, force) {
-       var now = audioCtx.currentTime;
-       var vol = calcAmplitude(row, col, force);
-
-       var aaParams = getAntiAliasedParams(freq);
-       var bentFreq = calcBentFrequency(freq, xFrac);
-
-      // Cancel all existing envelope scheduling for clean re-strike
-       voice.vca.gain.cancelScheduledValues(now);
-       voice.vca.gain.setValueAtTime(0, now);
-       voice.vca.gain.linearRampToValueAtTime(vol, now + 0.002);
-       voice.vca.gain.setValueAtTime(vol, now + 0.002);
-       voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
-       var p3Start = now + 0.082;
-       voice.vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
-       voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
-       var p4Start = p3Start + 0.52;
-       voice.vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
-       voice.vca.gain.exponentialRampToValueAtTime(0.0001, p4Start + 1.2);
-
-      // Re-route filter cutoff based on Y touch position
-       var modCutoff = calcModulatedCutoff(freq, yFrac);
-       var finalCutoff = Math.min(modCutoff, aaParams.cutoff);
-       voice.filter.frequency.setTargetAtTime(finalCutoff, now, 0.005);
-       voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
-       voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
-
-      // Re-route oscillators to bent frequency
-       voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
-       voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
-      }
-
-     function retriggerVoice(voice, freq, amp, row, col, xFrac, yFrac, force) {
-       var now = audioCtx.currentTime;
-       var vol = calcAmplitude(row, col, force);
-
-       var aaParams = getAntiAliasedParams(freq);
-       var bentFreq = calcBentFrequency(freq, xFrac);
-
-       // Cancel all existing envelope scheduling for clean re-strike
-       voice.vca.gain.cancelScheduledValues(now);
-       voice.vca.gain.setValueAtTime(0, now);
-       voice.vca.gain.linearRampToValueAtTime(vol, now + 0.002);
-       voice.vca.gain.setValueAtTime(vol, now + 0.002);
-       voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
-       var p3Start = now + 0.082;
-       voice.vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
-       voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
-       var p4Start = p3Start + 0.52;
-       voice.vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
-       voice.vca.gain.exponentialRampToValueAtTime(0.0001, p4Start + 1.2);
-
-       // Re-route filter cutoff based on Y touch position
-       var modCutoff = calcModulatedCutoff(freq, yFrac);
-       var finalCutoff = Math.min(modCutoff, aaParams.cutoff);
-       voice.filter.frequency.setTargetAtTime(finalCutoff, now, 0.005);
-       voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
-       voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
-
-       // Re-route oscillators to bent frequency
-       voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
-       voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
+      if (_cachedRectIdx !== idx) {
+        _cachedRect = cell.getBoundingClientRect();
+        _cachedRectIdx = idx;
        }
+      var x = clientX - _cachedRect.left;
+      var y = clientY - _cachedRect.top;
+      var xFrac = Math.max(0, Math.min(1, x / _cachedRect.width));
+      var yFrac = Math.max(0, Math.min(1, y / _cachedRect.height));
 
-     function startDrag(cell, clientX, clientY, force) {
-       touchStartX = clientX;
-       touchStartY = clientY;
-       touchMoved = false;
+      var audioT = performance.now();
+      LatencyProfiler.recordMove(touchTs, audioT);
+      updateVoiceWithTouch(dragVoice, dragBaseFreq, dragRow, dragCol, xFrac, yFrac, force);
+    }
 
-       var idx = parseInt(cell.dataset.index);
-       var r = parseInt(cell.dataset.row);
-       var c = parseInt(cell.dataset.col);
+    function retriggerVoice(voice, freq, amp, row, col, xFrac, yFrac, force) {
+      var now = audioCtx.currentTime;
+      var vol = calcAmplitude(row, col, force);
+      var aaParams = getAntiAliasedParams(freq);
+      var bentFreq = calcBentFrequency(freq, xFrac);
 
-       var baseFreq = getFrequency(r, c);
-       var amp = calcAmplitude(r, c, force);
+      voice.vca.gain.cancelScheduledValues(now);
+      voice.vca.gain.setValueAtTime(0, now);
+      voice.vca.gain.linearRampToValueAtTime(vol, now + 0.002);
+      voice.vca.gain.setValueAtTime(vol, now + 0.002);
+      voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.45, 0.001), now + 0.082);
+      var p3Start = now + 0.082;
+      voice.vca.gain.setValueAtTime(Math.max(vol * 0.45, 0.001), p3Start);
+      voice.vca.gain.exponentialRampToValueAtTime(Math.max(vol * 0.15, 0.001), p3Start + 0.52);
+      var p4Start = p3Start + 0.52;
+      voice.vca.gain.setValueAtTime(Math.max(vol * 0.15, 0.001), p4Start);
+      voice.vca.gain.exponentialRampToValueAtTime(0.0001, p4Start + 1.2);
 
-       dragBaseFreq = baseFreq;
-       dragRow = r;
-       dragCol = c;
-       dragCellIndex = idx;
-       dragCellEl = cell;
-       cell.classList.add('active');
-       LatencyProfiler.recordDown(performance.now());
+      var modCutoff = calcModulatedCutoff(freq, yFrac);
+      var finalCutoff = Math.min(modCutoff, aaParams.cutoff);
+      voice.filter.frequency.setTargetAtTime(finalCutoff, now, 0.005);
+      voice.filter.Q.setTargetAtTime(aaParams.q, now, 0.008);
+      voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
+      voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
+      voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
+    }
 
-       if (activeVoices[idx] && !activeVoices[idx].isSeq) {
-         dragVoice = activeVoices[idx];
-         var fracs = getTouchFracInCell(cell, clientX, clientY);
-         retriggerVoice(dragVoice, baseFreq, amp, r, c, fracs.xFrac, fracs.yFrac, force);
-            } else {
-         dragVoice = createVoice(baseFreq, amp, false, r, c);
-         activeVoices[idx] = dragVoice;
-            }
-        }
-        }
+    function startDrag(cell, clientX, clientY, force) {
+      var idx = parseInt(cell.dataset.index);
+      var r = parseInt(cell.dataset.row);
+      var c = parseInt(cell.dataset.col);
+      var baseFreq = getFrequency(r, c);
+      var amp = calcAmplitude(r, c, force);
+
+      dragBaseFreq = baseFreq;
+      dragRow = r;
+      dragCol = c;
+      dragCellIndex = idx;
+      dragCellEl = cell;
+      cell.classList.add('active');
+      LatencyProfiler.recordDown(performance.now());
+
+      if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+        dragVoice = activeVoices[idx];
+        var fracs = getTouchFracInCell(cell, clientX, clientY);
+        retriggerVoice(dragVoice, baseFreq, amp, r, c, fracs.xFrac, fracs.yFrac, force);
+       } else {
+        dragVoice = createVoice(baseFreq, amp, false, r, c);
+        activeVoices[idx] = dragVoice;
+       }
+    }
 
     function releaseCell() {
       if (dragVoice) {
@@ -1295,81 +1246,74 @@
         var releaseIdx = dragCellIndex;
         dragCellIndex = -1;
         dragCellEl = null;
-        if (v && audioCtx) {
-          killVoice(releaseIdx);
-        }
-      }
+        if (v && audioCtx) killVoice(releaseIdx);
+       }
     }
 
-    var touchStartX = 0;
-    var touchStartY = 0;
     var touchMoved = false;
 
-    // --- Pointer Event handlers (primary: desktop + pointer-capable mobile) ---
+    // --- Pointer Event handlers ---
     if (window.PointerEvent) {
        gridEl.addEventListener('pointerdown', function(e) {
          e.preventDefault();
          var cell = (e.target.closest && e.target.closest('.cell')) || null;
          if (!cell) return;
 
-        gridEl.setPointerCapture(e.pointerId);
-        getAudioCtxPromise().then(function() {
-          if (!ensureAudio()) return;
-          // Use pointer's force property if available, otherwise default to 0.5
-          var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
-          startDrag(cell, e.clientX, e.clientY, force);
-        });
-      });
+         // In edit mode, toggling cell participation in the current step
+         if (editMode) {
+           editCellInPattern(e, cell);
+           return;
+          }
 
-      // DEBOUNCE RIPPED — direct pointermove → touch-driven modulation
+         gridEl.setPointerCapture(e.pointerId);
+         getAudioCtxPromise().then(function() {
+           if (!ensureAudio()) return;
+           var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
+           startDrag(cell, e.clientX, e.clientY, force);
+          });
+       });
+
       gridEl.addEventListener('pointermove', function(e) {
         if (!dragVoice) return;
         var force = (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined;
         processTouchMove(e.clientX, e.clientY, force);
-      });
+       });
 
       gridEl.addEventListener('pointerup', function(e) {
         LatencyProfiler.recordRelease(performance.now());
         releaseCell();
         try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-      });
+       });
 
       gridEl.addEventListener('pointercancel', function(e) {
         LatencyProfiler.recordRelease(performance.now());
         releaseCell();
         try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-      });
+       });
 
     } else {
-      // --- Touch fallback for non-pointer devices ---
-
+      // --- Touch fallback ---
       function handleTouchStart(e) {
         e.preventDefault();
         var touchTs = performance.now();
         LatencyProfiler.recordDown(touchTs);
         getAudioCtxPromise();
-
         for (var i = 0; i < e.changedTouches.length; i++) {
           var t = e.changedTouches[i];
-          touchStartX = t.clientX;
-          touchStartY = t.clientY;
           touchMoved = false;
-        }
-
+         }
         for (var j = 0; j < e.changedTouches.length; j++) {
           var touch = e.changedTouches[j];
           if (touch.radiusX && touch.radiusX > 50) continue;
           if (touch.force !== undefined && touch.force < 0.01) continue;
-
           var cell = getCellFromCoords(touch.clientX, touch.clientY);
           if (cell) {
             var force = (touch.force !== undefined && touch.force > 0) ? touch.force : undefined;
             startDrag(cell, touch.clientX, touch.clientY, force);
-          }
-        }
-      }
+           }
+         }
+       }
 
-      // DEBOUNCE RIPPED — direct touchmove → touch-driven modulation
       function handleTouchMove(e) {
         e.preventDefault();
         for (var i = 0; i < e.changedTouches.length; i++) {
@@ -1377,14 +1321,14 @@
           touchMoved = true;
           var force = (touch.force !== undefined && touch.force > 0) ? touch.force : undefined;
           processTouchMove(touch.clientX, touch.clientY, force);
-        }
-      }
+         }
+       }
 
       function handleTouchEnd(e) {
         e.preventDefault();
         LatencyProfiler.recordRelease(performance.now());
         releaseCell();
-      }
+       }
 
       gridEl.addEventListener('touchstart', handleTouchStart, { passive: false });
       gridEl.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -1392,18 +1336,15 @@
       gridEl.addEventListener('touchcancel', handleTouchEnd, { passive: false });
     }
 
-    // --- Mouse fallback (non-pointer desktop) ---
+    // --- Mouse fallback ---
     gridEl.addEventListener('mousedown', function(e) {
       if (window.PointerEvent) return;
       e.preventDefault();
       LatencyProfiler.recordDown(performance.now());
       getAudioCtxPromise();
       mouseDown = true;
-
       var cell = getCellFromCoords(e.clientX, e.clientY);
-      if (cell) {
-        startDrag(cell, e.clientX, e.clientY, undefined);
-      }
+      if (cell) startDrag(cell, e.clientX, e.clientY, undefined);
     });
 
     gridEl.addEventListener('mousemove', function(e) {
@@ -1420,24 +1361,86 @@
 
     gridEl.addEventListener('mouseleave', function() {
       if (window.PointerEvent) return;
-      if (mouseDown) {
-        LatencyProfiler.recordRelease(performance.now());
-        releaseCell();
-      }
+      if (mouseDown) { LatencyProfiler.recordRelease(performance.now()); releaseCell(); }
       mouseDown = false;
     });
 
-    // ========================================
-    //  Audio-Reactive Visual Loop
-    // ========================================
-    // Dirty-flag: skip frame when signal unchanged. Per-cell glow modulated by signal + LFO.
+     // ========================================
+     //  Edit Mode Logic — Pattern Matrix
+     // ========================================
+    var currentEditStep = 0;
+    var stepNavInterval = null;
 
+    // Advance edit step automatically when in edit mode, to show pattern across steps
+    function startStepNav() {
+      if (stepNavInterval) return;
+      stepNavInterval = setInterval(function() {
+        if (!editMode) return;
+        currentEditStep = (currentEditStep + 1) % NUM_STEPS;
+        // Update step indicator to show current edit position
+        for (var si = 0; si < stepDots.length; si++) {
+          stepDots[si].classList.remove('current');
+         }
+        if (stepDots[currentEditStep]) stepDots[currentEditStep].classList.add('current');
+        renderPatternMatrix();
+       }, Math.round(getSeqInterval() * 1000));
+    }
+
+    function stopStepNav() {
+      if (stepNavInterval) { clearInterval(stepNavInterval); stepNavInterval = null; }
+    }
+
+    function editCellInPattern(e, cell) {
+      var r = parseInt(cell.dataset.row);
+      var c = parseInt(cell.dataset.col);
+      var step = currentEditStep;
+      var notes = seqSteps[step];
+
+      // Check if this note is already in the pattern for this step
+      var found = -1;
+      for (var ni = 0; ni < notes.length; ni++) {
+        if (notes[ni].r === r && notes[ni].c === c) {
+          found = ni;
+          break;
+         }
+       }
+
+      if (found >= 0) {
+        // Remove from pattern
+        notes.splice(found, 1);
+       } else {
+        // Add to pattern
+        notes.push({ r: r, c: c });
+       }
+
+      // Play a preview sound
+      getAudioCtxPromise().then(function() {
+        if (!ensureAudio()) return;
+        var freq = getFrequency(r, c);
+        var amp = calcAmplitude(r, c, undefined);
+        var voice = createVoice(freq, amp, true);
+        var key = 'edit_' + r + '_' + c + '_' + Date.now();
+        activeVoices[key] = voice;
+        setTimeout(function() { delete activeVoices[key]; },
+          (voice.stopTime - audioCtx.currentTime) * 1000 + 50);
+       });
+
+      // Update visual
+      if (found >= 0) {
+        cell.classList.remove('seq-active');
+       } else {
+        cell.classList.add('seq-active');
+       }
+    }
+
+      // ========================================
+      //  Audio-Reactive Visual Loop
+     // ========================================
     var lfoPhase = 0;
     var prevSignalLevel = 0;
     var smoothedHigh = 0;
     var lastGlowIntensity = -1;
 
-    // Pre-allocate per-cell metadata
     var cellMeta = new Array(ROWS * COLS);
     for (var _cm = 0; _cm < cellMeta.length; _cm++) {
       cellMeta[_cm] = { row: _cm % ROWS, col: Math.floor(_cm / ROWS) % COLS };
@@ -1453,18 +1456,14 @@
       if (analyser && analyserData) {
         analyser.getByteFrequencyData(analyserData);
         var sum = 0;
-        for (var i = 0; i < analyserData.length; i++) {
-          sum += analyserData[i];
-        }
+        for (var i = 0; i < analyserData.length; i++) { sum += analyserData[i]; }
         signalLevel = sum / (analyserData.length * 255);
 
         var highSum = 0;
         var startBin = Math.floor(analyserData.length * 0.5);
-        for (var ii = startBin; ii < analyserData.length; ii++) {
-          highSum += analyserData[ii];
-        }
+        for (var ii = startBin; ii < analyserData.length; ii++) { highSum += analyserData[ii]; }
         highLevel = highSum / ((analyserData.length - startBin) * 255);
-      }
+       }
 
       var smoothing = signalLevel > prevSignalLevel ? 0.5 : 0.75;
       prevSignalLevel = prevSignalLevel * (1 - smoothing) + signalLevel * smoothing;
@@ -1475,7 +1474,7 @@
       if (Math.abs(glowIntensity - lastGlowIntensity) < 0.015) {
         requestAnimationFrame(audioVisualLoop);
         return;
-      }
+       }
       lastGlowIntensity = glowIntensity;
 
       // Grid-level glow reactive to signal
@@ -1486,10 +1485,10 @@
       var insetGlow = glowIntensity * 0.18;
 
       gridEl.style.boxShadow =
-          '0 0 ' + (55 + glowIntensity * 50 | 0) + 'px rgba(99,102,241,' + (baseGlow + glowBoost).toFixed(3) + '),' +
-          '0 0 ' + (130 + glowIntensity * 90 | 0) + 'px rgba(99,102,241,' + deepGlow.toFixed(3) + '),' +
-          '0 0 ' + (200 + glowIntensity * 60 | 0) + 'px rgba(168,85,247,' + outerGlow.toFixed(3) + '),' +
-          'inset 0 0 ' + (35 + glowIntensity * 35 | 0) + 'px rgba(168,85,247,' + insetGlow.toFixed(3) + ')';
+           '0 0 ' + (55 + glowIntensity * 50 | 0) + 'px rgba(99,102,241,' + (baseGlow + glowBoost).toFixed(3) + '),' +
+           '0 0 ' + (130 + glowIntensity * 90 | 0) + 'px rgba(99,102,241,' + deepGlow.toFixed(3) + '),' +
+           '0 0 ' + (200 + glowIntensity * 60 | 0) + 'px rgba(168,85,247,' + outerGlow.toFixed(3) + '),' +
+           'inset 0 0 ' + (35 + glowIntensity * 35 | 0) + 'px rgba(168,85,247,' + insetGlow.toFixed(3) + ')';
 
       var colorFactor = Math.min(1, smoothedHigh * 2.5);
       var numCells = allCells.length;
@@ -1521,14 +1520,14 @@
           cell.style.background = 'rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.45 + cellGlow * 0.35).toFixed(2) + ')';
           cell.style.borderColor = 'rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.6 + cellGlow * 0.4).toFixed(2) + ')';
           cell.style.boxShadow =
-             '0 0 ' + blur1 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.7 + cellGlow * 0.3).toFixed(2) + '),' +
-             '0 0 ' + blur2 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.35 + cellGlow * 0.25).toFixed(2) + '),' +
-             '0 0 ' + blur3 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.18 + cellGlow * 0.2).toFixed(2) + '),' +
-             '0 0 ' + blur4 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.06 + cellGlow * 0.1).toFixed(2) + '),' +
-             'inset 0 0 ' + iBlur1 + 'px rgba(' + (violetR + 24) + ',' + (violetG + 47) + ',' + (violetB + 8) + ',' + (0.4 + cellGlow * 0.35).toFixed(2) + '),' +
-             'inset 0 0 ' + iBlur2 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.15 + cellGlow * 0.25).toFixed(2) + ')';
+              '0 0 ' + blur1 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.7 + cellGlow * 0.3).toFixed(2) + '),' +
+              '0 0 ' + blur2 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.35 + cellGlow * 0.25).toFixed(2) + '),' +
+              '0 0 ' + blur3 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.18 + cellGlow * 0.2).toFixed(2) + '),' +
+              '0 0 ' + blur4 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.06 + cellGlow * 0.1).toFixed(2) + '),' +
+              'inset 0 0 ' + iBlur1 + 'px rgba(' + (violetR + 24) + ',' + (violetG + 47) + ',' + (violetB + 8) + ',' + (0.4 + cellGlow * 0.35).toFixed(2) + '),' +
+              'inset 0 0 ' + iBlur2 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.15 + cellGlow * 0.25).toFixed(2) + ')';
 
-        } else {
+         } else {
           var row = cellMeta[ci].row;
           var reactive = Math.sin(lfoPhase + row * 0.7) * 0.5 + 0.5;
           var edgeGlow = glowIntensity * reactive;
@@ -1538,34 +1537,33 @@
           if (edgeGlow > 0.04) {
             cell.style.borderColor = 'rgba(99,102,241,' + (0.05 + edgeGlow * 0.12).toFixed(3) + ')';
             cell.style.boxShadow = '0 0 ' + (4 + edgeGlow * 8 | 0) + 'px rgba(99,102,241,' + (edgeGlow * 0.06).toFixed(3) + ')';
-          } else {
+           } else {
             cell.style.borderColor = '';
             cell.style.boxShadow = '';
-          }
-        }
-      }
+           }
+         }
+       }
 
       requestAnimationFrame(audioVisualLoop);
     }
     audioVisualLoop();
 
-    // ========================================
-    //  Init
-    // ========================================
-
+     // ========================================
+     //  Init
+     // ========================================
     function init() {
-      buildGrid();
+      buildStepIndicators();
       PerfMonitor.start();
 
       var resizeTimer;
       window.addEventListener('resize', function() {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(resizeGrid, 80);
-      });
+       });
       if (window.matchMedia) {
         window.matchMedia('(orientation: portrait)').addEventListener('change', resizeGrid);
         window.matchMedia('(orientation: landscape)').addEventListener('change', resizeGrid);
-      }
+       }
 
       if (!Element.prototype.closest) {
         Element.prototype.closest = function(s) {
@@ -1574,10 +1572,10 @@
           do {
             if (matchesFn.call(el, s)) return el;
             el = el.parentElement || el.parentNode;
-          } while (el !== null && el.nodeType === 1);
+           } while (el !== null && el.nodeType === 1);
           return null;
-        };
-      }
+         };
+       }
     }
 
     init();
