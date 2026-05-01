@@ -92,25 +92,7 @@ html, body {
 .cell:active::after, .cell.active::after {
   box-shadow: inset 0 0 10px rgba(255,255,255,0.15);
 }
-@keyframes cellGlow {
-  0%, 100% {
-    box-shadow:
-        0 0 18px rgba(99,102,241,0.8),
-        0 0 48px rgba(99,102,241,0.4),
-        0 0 80px rgba(168,85,247,0.2),
-      inset 0 0 10px rgba(168,85,247,0.35);
-  }
-  50% {
-    box-shadow:
-        0 0 32px rgba(99,102,241,1),
-        0 0 75px rgba(99,102,241,0.7),
-        0 0 120px rgba(168,85,247,0.35),
-        0 0 160px rgba(168,85,247,0.15),
-      inset 0 0 20px rgba(192,132,255,0.7),
-      inset 0 0 45px rgba(168,85,247,0.4);
-  }
-}
-.cell.active { animation: cellGlow 0.85s ease-in-out infinite; }
+/* Active-cell glow is driven by the audio-reactive JS loop (no CSS animation) */
 
 /* Launch overlay — dark stage curtain */
 #launch-overlay {
@@ -988,76 +970,137 @@ html, body {
     });
   }
 
-  // ========================================
-  //  Audio-Reactive Visual Loop
-  // ========================================
+    // ========================================
+    //  Audio-Reactive Visual Loop — Optimized
+    // ========================================
+    // Dirty-flag: skip frame entirely when signal hasn't changed.
+    // Active-cell glow driven by signal level + high-freq content.
+    // Filter-cutoff-reactive color: bass = deeper indigo, treble = bright violet.
+    // Batch style writes: only touch cells whose intensity actually changed.
 
-  let lfoPhase = 0;
-  let prevSignalLevel = 0;
-  let smoothedHigh = 0;
+   let lfoPhase = 0;
+   let prevSignalLevel = 0;
+   let smoothedHigh = 0;
+   let lastGlowIntensity = -1;
 
-  function audioVisualLoop() {
-    lfoPhase += 0.03;
+   // Pre-allocate per-cell state to avoid repeated parseInt on data attributes
+   const cellMeta = new Array(ROWS * COLS);
+   for (let _cm = 0; _cm < cellMeta.length; _cm++) {
+     cellMeta[_cm] = { row: _cm % ROWS, col: Math.floor(_cm / ROWS) % COLS };
+   }
 
-    let signalLevel = 0;
-    let highLevel = 0;
-    if (analyser && analyserData) {
-      analyser.getByteFrequencyData(analyserData);
-      let sum = 0;
-      for (let i = 0; i < analyserData.length; i++) {
-        sum += analyserData[i];
-      }
-      signalLevel = sum / (analyserData.length * 255);
+   // Track per-cell visual intensity to skip unchanged cells
+   const cellLastGlow = new Float32Array(ROWS * COLS);
 
-      let highSum = 0;
-      const startBin = Math.floor(analyserData.length * 0.5);
-      for (let i = startBin; i < analyserData.length; i++) {
-        highSum += analyserData[i];
-      }
-      highLevel = highSum / ((analyserData.length - startBin) * 255);
-    }
+   function audioVisualLoop() {
+     lfoPhase += 0.03;
 
-    const smoothing = signalLevel > prevSignalLevel ? 0.5 : 0.75;
-    prevSignalLevel = prevSignalLevel * (1 - smoothing) + signalLevel * smoothing;
-    smoothedHigh = smoothedHigh * 0.8 + highLevel * 0.2;
-
-    const glowIntensity = Math.min(1, prevSignalLevel * 3.5);
-
-    const baseGlow = 0.04;
-    const glowBoost = glowIntensity * 0.08;
-    const deepGlow = 0.025 + glowIntensity * 0.04;
-    const outerGlow = 0.015 + glowIntensity * 0.03;
-    const insetGlow = glowIntensity * 0.18;
-
-    gridEl.style.boxShadow =
-      '0 0 ' + (55 + glowIntensity * 50) + 'px rgba(99,102,241,' + (baseGlow + glowBoost).toFixed(3) + '),' +
-      '0 0 ' + (130 + glowIntensity * 90) + 'px rgba(99,102,241,' + deepGlow.toFixed(3) + '),' +
-      '0 0 ' + (200 + glowIntensity * 60) + 'px rgba(168,85,247,' + outerGlow.toFixed(3) + '),' +
-      'inset 0 0 ' + (35 + glowIntensity * 35) + 'px rgba(168,85,247,' + insetGlow.toFixed(3) + ')';
-
-    if (glowIntensity > 0.05) {
-      for (let i = 0; i < allCells.length; i++) {
-        const cell = allCells[i];
-        if (!cell.classList.contains('active')) {
-          const rowIdx = parseInt(cell.dataset.row);
-          const reactive = Math.sin(lfoPhase + rowIdx * 0.7) * 0.5 + 0.5;
-          cell.style.borderColor = 'rgba(99,102,241,' + (0.05 + glowIntensity * reactive * 0.12).toFixed(3) + ')';
-          cell.style.boxShadow = '0 0 ' + (4 + glowIntensity * reactive * 8) + 'px rgba(99,102,241,' + (glowIntensity * reactive * 0.06).toFixed(3) + ')';
+     let signalLevel = 0;
+     let highLevel = 0;
+     if (analyser && analyserData) {
+       analyser.getByteFrequencyData(analyserData);
+       let sum = 0;
+       for (let i = 0; i < analyserData.length; i++) {
+         sum += analyserData[i];
         }
-      }
-    } else {
-      for (let i = 0; i < allCells.length; i++) {
-        const cell = allCells[i];
-        if (!cell.classList.contains('active')) {
-          cell.style.borderColor = '';
-          cell.style.boxShadow = '';
-        }
-      }
-    }
+       signalLevel = sum / (analyserData.length * 255);
 
-    requestAnimationFrame(audioVisualLoop);
-  }
-  audioVisualLoop();
+       let highSum = 0;
+       const startBin = Math.floor(analyserData.length * 0.5);
+       for (let i = startBin; i < analyserData.length; i++) {
+         highSum += analyserData[i];
+        }
+       highLevel = highSum / ((analyserData.length - startBin) * 255);
+      }
+
+     const smoothing = signalLevel > prevSignalLevel ? 0.5 : 0.75;
+     prevSignalLevel = prevSignalLevel * (1 - smoothing) + signalLevel * smoothing;
+     smoothedHigh = smoothedHigh * 0.8 + highLevel * 0.2;
+
+     const glowIntensity = Math.min(1, prevSignalLevel * 3.5);
+
+     // Dirty-flag: skip all DOM writes if signal hasn't budged
+     if (Math.abs(glowIntensity - lastGlowIntensity) < 0.015) {
+       requestAnimationFrame(audioVisualLoop);
+       return;
+      }
+     lastGlowIntensity = glowIntensity;
+
+     // --- Grid-level glow (reactive to overall signal) ---
+     const baseGlow = 0.04;
+     const glowBoost = glowIntensity * 0.08;
+     const deepGlow = 0.025 + glowIntensity * 0.04;
+     const outerGlow = 0.015 + glowIntensity * 0.03;
+     const insetGlow = glowIntensity * 0.18;
+
+     gridEl.style.boxShadow =
+        '0 0 ' + (55 + glowIntensity * 50 | 0) + 'px rgba(99,102,241,' + (baseGlow + glowBoost).toFixed(3) + '),' +
+        '0 0 ' + (130 + glowIntensity * 90 | 0) + 'px rgba(99,102,241,' + deepGlow.toFixed(3) + '),' +
+        '0 0 ' + (200 + glowIntensity * 60 | 0) + 'px rgba(168,85,247,' + outerGlow.toFixed(3) + '),' +
+        'inset 0 0 ' + (35 + glowIntensity * 35 | 0) + 'px rgba(168,85,247,' + insetGlow.toFixed(3) + ')';
+
+     // --- High-freq color factor: 0 = bass-heavy (indigo), 1 = treble-heavy (violet) ---
+     const colorFactor = Math.min(1, smoothedHigh * 2.5);
+
+     // --- Per-cell glow ---
+     const numCells = allCells.length;
+     for (let i = 0; i < numCells; i++) {
+       const cell = allCells[i];
+       const isActive = cell.classList.contains('active');
+
+       if (isActive) {
+         // Active cell: glow intensity driven by signal + LFO breathing
+         const breathe = Math.sin(lfoPhase + cellMeta[i].row * 1.1) * 0.15 + 0.85;
+         const cellGlow = Math.min(1, (glowIntensity + 0.3) * breathe);
+         if (Math.abs(cellGlow - cellLastGlow[i]) < 0.02) continue;
+         cellLastGlow[i] = cellGlow;
+
+         // Decay-reactive: brighter when signal is strong, dims with envelope tail
+         const innerR = 99 + colorFactor * 93 | 0;
+         const innerG = 102 + colorFactor * 31 | 0;
+         const innerB = 241 + colorFactor * 14 | 0;
+         const violetR = 168 + colorFactor * 40 | 0;
+         const violetG = 85 + colorFactor * 60 | 0;
+         const violetB = 247 + colorFactor * 8 | 0;
+
+         const blur1 = (20 + cellGlow * 25 | 0);
+         const blur2 = (45 + cellGlow * 40 | 0);
+         const blur3 = (75 + cellGlow * 50 | 0);
+         const blur4 = (110 + cellGlow * 40 | 0);
+         const iBlur1 = (10 + cellGlow * 16 | 0);
+         const iBlur2 = (28 + cellGlow * 25 | 0);
+
+         cell.style.background = 'rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.45 + cellGlow * 0.35).toFixed(2) + ')';
+         cell.style.borderColor = 'rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.6 + cellGlow * 0.4).toFixed(2) + ')';
+         cell.style.boxShadow =
+           '0 0 ' + blur1 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.7 + cellGlow * 0.3).toFixed(2) + '),' +
+           '0 0 ' + blur2 + 'px rgba(' + innerR + ',' + innerG + ',' + innerB + ',' + (0.35 + cellGlow * 0.25).toFixed(2) + '),' +
+           '0 0 ' + blur3 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.18 + cellGlow * 0.2).toFixed(2) + '),' +
+           '0 0 ' + blur4 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.06 + cellGlow * 0.1).toFixed(2) + '),' +
+           'inset 0 0 ' + iBlur1 + 'px rgba(' + (violetR + 24) + ',' + (violetG + 47) + ',' + (violetB + 8) + ',' + (0.4 + cellGlow * 0.35).toFixed(2) + '),' +
+           'inset 0 0 ' + iBlur2 + 'px rgba(' + violetR + ',' + violetG + ',' + violetB + ',' + (0.15 + cellGlow * 0.25).toFixed(2) + ')';
+
+       } else {
+         // Idle cell: subtle reactive halo
+         const row = cellMeta[i].row;
+         const reactive = Math.sin(lfoPhase + row * 0.7) * 0.5 + 0.5;
+         const edgeGlow = glowIntensity * reactive;
+         if (Math.abs(edgeGlow - cellLastGlow[i]) < 0.02) continue;
+         cellLastGlow[i] = edgeGlow;
+
+         if (edgeGlow > 0.04) {
+           cell.style.borderColor = 'rgba(99,102,241,' + (0.05 + edgeGlow * 0.12).toFixed(3) + ')';
+           cell.style.boxShadow = '0 0 ' + (4 + edgeGlow * 8 | 0) + 'px rgba(99,102,241,' + (edgeGlow * 0.06).toFixed(3) + ')';
+          } else {
+           cell.style.borderColor = '';
+           cell.style.boxShadow = '';
+          }
+        }
+       }
+
+     requestAnimationFrame(audioVisualLoop);
+    }
+   audioVisualLoop();
 
   // ========================================
   //  Init
