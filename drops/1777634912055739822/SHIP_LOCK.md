@@ -7,11 +7,12 @@
 | Field | Value |
 |---|---|
 | Drop ID | 1777634912055739822 |
-| Build SHA | open-circuit-v4-feedback |
+| Build SHA | open-circuit-v5-hero-locked |
 | Branch | director/1777634912055739822/1777634912055739822-build-1-director-3742 |
 | Locked At | 2026-05-01T00:00:00Z |
 | Aesthetic | Dark Stage, Bright Performer |
-| Cover Look | v1-feedback |
+| Cover Look | v2-hero-locked |
+| Render Budget | 6ms per frame; 10 max DOM writes |
 | Status | **SHIPPABLE** |
 
 ---
@@ -67,10 +68,14 @@ Touch → Pitch (Frequency)
 ### Visual Aesthetic
 - Stage: `#000000` with 3-layer radial gradients (violet haze at top-center, deep center, vignette)
 - Grid: 5×8, responsive sizing with 5 viewport breakpoints (≤370, ≤480, ≤768, ≤1200, default)
-- Active cell glow: 8-layer box-shadow (indigo + purple + white inset)
-- Audio-reactive: `audioVisualLoop` reads FFT 60fps, modulates cell border color and box-shadow
-- Idle cell breathing: `idleCellPulse` animation, 3s cycle
-- **Result:** ✅ PASS — Grid glows brightly against dark stage. "Dark Stage, Bright Performer" locked across all viewports.
+- Active cell glow: 9-layer box-shadow (indigo + purple + white inset), boosted for hero screenshot
+  - Primary glow: 22px@100% indigo → 50px@85% → 90px@65% purple → 130px@42% → 175px@25% → 210px@12%
+  - Inset highlights: 18px@55% white, 42px@65% violet, 70px@32% lavender
+  - ::after pseudo: 14px@42% white inset for center-hot glow
+- Audio-reactive: `audioVisualLoop` reads FFT 60fps, frame budget 6ms, max 10 DOM writes per frame
+- Idle cell breathing: `idleCellPulse` animation, 3s cycle, compositor-only
+- Rendering optimization: idle cells skipped below 0.25 signal threshold; active-only reactivity under load
+- **Result:** ✅ PASS — Grid glows brilliantly against dark stage. "Dark Stage, Bright Performer" locked. Hero screenshot captures iconic album-cover aesthetic.
 
 ### Self-Oscillation
 - Q-reduction curve drops Q from 3.8 to 1.0 at freqRatio > 0.12 (linear interpolation)
