@@ -23,9 +23,9 @@ Every voice follows the same chain. No exceptions.
 ### Filter Stage
 
 - **Type:** Biquad lowpass filter. This is the creative engine of the patch.
-- **Cutoff:** Set to `min(freq × 5, 10kHz)`. The higher the note, the wider the filter opens, but never beyond the hearing ceiling. During drag updates, cutoff follows pitch via `setTargetAtTime` with a 6ms time constant — the sweep is smooth, never abrupt.
-- **Q (Resonance):** Fixed at **3.8**. This is the singing harmonic. It is held deliberately just below the clipping threshold — high enough to produce a clear, melodic overtone, low enough to avoid screech. Resonance drift is acceptable if it contributes to the singing character.
-- **LFO modulation:** A sine-wave LFO at **0.2 Hz** (5-second period) modulates the filter cutoff with a depth proportional to the note's fundamental frequency (`depth = freq × 0.5`). This creates a slow, organic, breathing movement in the filter — not a wobble, not a trill, but a drift. The filter sweeps are smooth by design.
+- **Cutoff:** Base set to `min(freq × 5, 10kHz)`. **Touch-driven modulation:** Y-axis position within the cell multiplies the base cutoff by a factor from ×1 (bottom = dark) to ×5 (top = bright, open). During heavy slides, continuous `setTargetAtTime` at 5ms time constant ensures buttery-smooth sweeps with zero stutter.
+- **Q (Resonance):** Fixed at **3.8**. This is the singing harmonic. Anti-aliased via Q-reduction curve at high frequencies (freqRatio > 0.12 → Q drops to 1.0). Resonance drift is acceptable if it contributes to the singing character.
+- **LFO modulation:** A sine-wave LFO at **0.2 Hz** (5-second period) modulates the filter cutoff with a depth proportional to the note's fundamental frequency (`depth = freq × 0.5`). Slow, organic, breathing movement.
 
 ### VCA Stage (Amplitude Envelope)
 
