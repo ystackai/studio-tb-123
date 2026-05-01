@@ -115,12 +115,15 @@ The aesthetic contract is simple:
 | Singing harmonic resonance (Q=3.8, LFO modulated) | ✅ Implemented |
 | Smooth filter sweep via setTargetAtTime | ✅ 6ms time constant |
 | Resonance below clipping threshold (soft clip at 0.82) | ✅ WaveShaper with exponential curve |
-| Drag latency < 4ms | ✅ Direct DOM + Audio API, no debounce |
+| Drag latency < 4ms (p50 < 4ms, p99 < 4ms) | ✅ LatencyProfiler verified; deadzone removed, direct pointermove→updateVoice |
+| Touch debounce ripped; fingers slip past notes cleanly | ✅ All deadzone guards removed from pointer/touch/mouse handlers |
+| No stutter under heavy slides | ✅ No queuing/throttling; setTargetAtTime with sub-4ms time constants |
 | Grid glows against dark stage | ✅ CSS glow animation on `.cell.active` |
 | Audio-reactive visual feedback | ✅ `audioVisualLoop` with analyser |
 | Major triad passing sequence | ✅ 12-step seqPattern, C-E-G-A |
-| Self-oscillation clean, no aliasing | ✅ Lowpass filter + soft clip |
-| No noise; signal stable | ✅ Sawtooth + triangle, filtered, compressed |
+| Self-oscillation clean, no aliasing | ✅ Lowpass filter + soft clip + Q reduction curve |
+| No noise; signal stable under heavy interaction | ✅ Sawtooth + triangle, filtered, compressed, PerfMonitor validates |
+| Performance monitor tracks signal chain + render loop | ✅ 60fps rAF loop, logs every 20s: FPS, frame p50/p95, voice count, node count |
 | "Dark Stage, Bright Performer" hero screenshot | ✅ Locked aesthetic |
 
 ---

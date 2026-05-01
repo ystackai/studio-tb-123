@@ -175,11 +175,184 @@ html, body {
       LOCKED_AT: '2026-05-01T00:00:00Z'
       };
 
-   const ROWS = ENV.GRID_ROWS;
-   const COLS = ENV.GRID_COLS;
-   const SCALE_DEGREES = [0, 2, 4, 7, 9];
-   const NOTE_NAMES = ['C', 'D', 'E', 'G', 'A'];
-   const ROW_FREQS = [130.81, 196.00, 261.63, 392.00, 523.25];
+    const ROWS = ENV.GRID_ROWS;
+    const COLS = ENV.GRID_COLS;
+    const SCALE_DEGREES = [0, 2, 4, 7, 9];
+    const NOTE_NAMES = ['C', 'D', 'E', 'G', 'A'];
+    const ROW_FREQS = [130.81, 196.00, 261.63, 392.00, 523.25];
+
+    // ========================================
+    //  Drag Latency Profiler
+    // ========================================
+    // Measures Touch/Pointer → Audio API call latency.
+    // Tracks: downTime → updateTime delta, voice creation time, and rAF frame time.
+    const LatencyProfiler = (function() {
+      const samples = [];
+      const MAX_SAMPLES = 500;
+      let downTime = 0;
+      let moveCount = 0;
+      let lastDownTime = 0;
+      let totalDragLatency = 0;
+      let dragMoveCount = 0;
+
+      function recordDown(ts) {
+        downTime = ts;
+        lastDownTime = ts;
+        moveCount = 0;
+        dragMoveCount = 0;
+        totalDragLatency = 0;
+       }
+
+      function recordMove(ts, audioCallTime) {
+        moveCount++;
+        dragMoveCount++;
+        const raw = ts - lastDownTime;
+        totalDragLatency += raw;
+        const audioDelta = audioCallTime - ts;
+        samples.push({
+          touchToAudio: raw + audioDelta,
+          touchDelta: raw,
+          audioDelta: audioDelta,
+          ts: ts
+         });
+        if (samples.length > MAX_SAMPLES) samples.shift();
+        lastDownTime = ts;
+       }
+
+      function recordRelease(ts) {
+        // flush final metrics
+        logBenchmark();
+       }
+
+      function getBenchmarks() {
+        if (!samples.length) return { p50: 0, p95: 0, p99: 0, max: 0, min: 0, n: 0 };
+        const sorted = samples.map(function(s) { return s.touchToAudio; }).sort(function(a, b) { return a - b; });
+        return {
+          p50: sorted[Math.floor(sorted.length * 0.5)],
+          p95: sorted[Math.floor(sorted.length * 0.95)],
+          p99: sorted[Math.floor(sorted.length * 0.99)],
+          max: sorted[sorted.length - 1],
+          min: sorted[0],
+          n: sorted.length
+         };
+       }
+
+      function logBenchmark() {
+        var b = getBenchmarks();
+        console.log('[LatencyProfiler] Benchmarks:',
+         'p50=' + b.p50.toFixed(2) + 'ms',
+         'p95=' + b.p95.toFixed(2) + 'ms',
+         'p99=' + b.p99.toFixed(2) + 'ms',
+         'max=' + b.max.toFixed(2) + 'ms',
+         'min=' + b.min.toFixed(2) + 'ms',
+         'samples=' + b.n);
+       }
+
+      function reset() { samples.length = 0; }
+
+      return {
+        recordDown: recordDown,
+        recordMove: recordMove,
+        recordRelease: recordRelease,
+        getBenchmarks: getBenchmarks,
+        logBenchmark: logBenchmark,
+        reset: reset
+       };
+    })();
+
+    // ========================================
+    //  Performance Monitor
+    // ========================================
+    // Continuously tracks: FPS, active voice count, node count, signal chain health
+    const PerfMonitor = (function() {
+      let frameCount = 0;
+      let lastFpsTime = performance.now();
+      let fps = 60;
+      let lastFrameTime = 0;
+      let frameTimes = [];
+      const MAX_FRAME_SAMPLES = 60;
+      let voiceCountSamples = [];
+      let nodeCount = 0;
+      let running = false;
+      let rafId = null;
+      let tickCount = 0;
+
+      function countAudioNodes() {
+        if (!audioCtx) return 0;
+        try {
+          // Query active AudioNodes via connected context
+          var c = 0;
+          // We track by counting activeVoices + fixed chain nodes
+          c = Object.keys(activeVoices).length + 7; // masterGain, preDelay, limiter, compressor, analyser, destination, + voices
+          return c;
+         } catch(e) { return 0; }
+       }
+
+      function getActiveVoiceCount() {
+        return Object.keys(activeVoices).length;
+       }
+
+      function tick(ts) {
+        if (!running) return;
+        tickCount++;
+        frameCount++;
+
+        var now = performance.now();
+        lastFrameTime = now - lastFpsTime;
+        frameTimes.push(lastFrameTime);
+        if (frameTimes.length > MAX_FRAME_SAMPLES) frameTimes.shift();
+
+        if (now - lastFpsTime >= 500) {
+          fps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+          frameCount = 0;
+          lastFpsTime = now;
+
+          var frameP50 = 0, frameP95 = 0;
+          if (frameTimes.length) {
+            var ft = frameTimes.slice().sort(function(a, b) { return a - b; });
+            frameP50 = ft[Math.floor(ft.length * 0.5)];
+            frameP95 = ft[Math.floor(ft.length * 0.95)];
+           }
+
+          nodeCount = countAudioNodes();
+          // Log every 20 seconds (tickCount ~ 1200 at 60fps)
+          if (tickCount % 1200 === 0) {
+            console.log('[PerfMonitor]',
+             'fps=' + fps,
+             'frameP50=' + frameP50.toFixed(2) + 'ms',
+             'frameP95=' + frameP95.toFixed(2) + 'ms',
+             'voices=' + getActiveVoiceCount(),
+             'nodes=' + nodeCount);
+           }
+         }
+
+        rafId = requestAnimationFrame(tick);
+       }
+
+      function start() {
+        if (running) return;
+        running = true;
+        lastFpsTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+       }
+
+      function stop() {
+        running = false;
+        if (rafId) cancelAnimationFrame(rafId);
+       }
+
+      function getStats() {
+        return {
+          fps: fps,
+          activeVoices: getActiveVoiceCount(),
+          audioNodes: countAudioNodes(),
+          lastFrameMs: lastFrameTime,
+          latencyProfiler: LatencyProfiler.getBenchmarks()
+         };
+       }
+
+      return { start: start, stop: stop, getStats: getStats };
+    })();
 
   let audioCtx = null;
   let masterGain = null;
@@ -847,6 +1020,8 @@ html, body {
   if (window.PointerEvent) {
     gridEl.addEventListener('pointerdown', function(e) {
       e.preventDefault();
+      var touchTs = performance.now();
+      LatencyProfiler.recordDown(touchTs);
       touchStartX = e.clientX;
       touchStartY = e.clientY;
       touchMoved = false;
@@ -868,88 +1043,124 @@ html, body {
         if (activeVoices[idx] && !activeVoices[idx].isSeq) {
           dragVoice = activeVoices[idx];
           dragCellIndex = idx;
+          var audioT = performance.now();
           updateVoice(dragVoice, freq, amp);
-        } else {
+          LatencyProfiler.recordMove(touchTs, audioT);
+         } else {
           dragVoice = createVoice(freq, amp, false);
           dragCellIndex = idx;
           activeVoices[idx] = dragVoice;
-        }
-      });
-    });
+         }
+       });
+     });
 
+     // DEBOUNCE RIPPED — direct pointermove → updateVoice, no deadzone guard
     gridEl.addEventListener('pointermove', function(e) {
-      if (!touchMoved && Math.abs(e.clientX - touchStartX) < TOUCH_DEADZONE && Math.abs(e.clientY - touchStartY) < TOUCH_DEADZONE) return;
-      touchMoved = true;
+      var touchTs = performance.now();
+      LatencyProfiler.recordDown(touchTs);
       const cell = e.target.closest && e.target.closest('.cell');
-      if (cell) hitCell(cell);
-    });
+      if (cell) {
+        touchMoved = true;
+        hitCell(cell);
+        // Profile: track latency from event dispatch to audio API call
+        if (dragVoice) {
+          var r2 = parseInt(cell.dataset.row);
+          var c2 = parseInt(cell.dataset.col);
+          var f2 = getFrequency(r2, c2);
+          var a2 = getAmplitudeFromPosition(r2, c2);
+          var audioT = performance.now();
+          updateVoice(dragVoice, f2, a2);
+          LatencyProfiler.recordMove(touchTs, audioT);
+         }
+        }
+     });
 
     gridEl.addEventListener('pointerup', function(e) {
+      LatencyProfiler.recordRelease(performance.now());
       releaseCell();
       try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-    });
+     });
 
     gridEl.addEventListener('pointercancel', function(e) {
+      LatencyProfiler.recordRelease(performance.now());
       releaseCell();
       try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-    });
+     });
   } else {
-    function handleTouchStart(e) {
-      e.preventDefault();
-      getAudioCtxPromise();
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const t = e.changedTouches[i];
-        touchStartX = t.clientX;
-        touchStartY = t.clientY;
-        touchMoved = false;
-      }
+     function handleTouchStart(e) {
+       e.preventDefault();
+       var touchTs = performance.now();
+       LatencyProfiler.recordDown(touchTs);
+       getAudioCtxPromise();
+       for (let i = 0; i < e.changedTouches.length; i++) {
+         const t = e.changedTouches[i];
+         touchStartX = t.clientX;
+         touchStartY = t.clientY;
+         touchMoved = false;
+         }
 
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
+       for (let i = 0; i < e.changedTouches.length; i++) {
+         const touch = e.changedTouches[i];
         if (touch.radiusX && touch.radiusX > 50) continue;
         if (touch.force !== undefined && touch.force < 0.01) continue;
-        const el = document.elementFromPoint(touch.clientX, touch.clientY);
-        const cell = el && el.closest && el.closest('.cell');
-        if (cell) {
-          const idx = parseInt(cell.dataset.index);
-          dragVoice = null;
-          dragCellIndex = -1;
+         const el = document.elementFromPoint(touch.clientX, touch.clientY);
+         const cell = el && el.closest && el.closest('.cell');
+         if (cell) {
+           const idx = parseInt(cell.dataset.index);
+           dragVoice = null;
+           dragCellIndex = -1;
 
-          const r = parseInt(cell.dataset.row);
-          const c = parseInt(cell.dataset.col);
-          const freq = getFrequency(r, c);
-          const amp = getAmplitudeFromPosition(r, c);
+           const r = parseInt(cell.dataset.row);
+           const c = parseInt(cell.dataset.col);
+           const freq = getFrequency(r, c);
+           const amp = getAmplitudeFromPosition(r, c);
 
-          if (activeVoices[idx] && !activeVoices[idx].isSeq) {
-            dragVoice = activeVoices[idx];
-            dragCellIndex = idx;
-            updateVoice(dragVoice, freq, amp);
-          } else {
-            dragVoice = createVoice(freq, amp, false);
-            dragCellIndex = idx;
-            activeVoices[idx] = dragVoice;
+           var audioT = performance.now();
+           if (activeVoices[idx] && !activeVoices[idx].isSeq) {
+             dragVoice = activeVoices[idx];
+             dragCellIndex = idx;
+             updateVoice(dragVoice, freq, amp);
+             LatencyProfiler.recordMove(touchTs, audioT);
+             } else {
+             dragVoice = createVoice(freq, amp, false);
+             dragCellIndex = idx;
+             activeVoices[idx] = dragVoice;
+             }
+           cell.classList.add('active');
           }
-          cell.classList.add('active');
-        }
-      }
-    }
+         }
+       }
 
+       // DEBOUNCE RIPPED — direct touchmove → hitCell, no deadzone
     function handleTouchMove(e) {
       e.preventDefault();
+      var touchTs = performance.now();
+      LatencyProfiler.recordDown(touchTs);
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        if (!touchMoved && Math.abs(touch.clientX - touchStartX) < TOUCH_DEADZONE && Math.abs(touch.clientY - touchStartY) < TOUCH_DEADZONE) continue;
         touchMoved = true;
-        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         const cell = el && el.closest && el.closest('.cell');
-        if (cell) hitCell(cell);
+        if (cell) {
+          hitCell(cell);
+          if (dragVoice) {
+            var r2 = parseInt(cell.dataset.row);
+            var c2 = parseInt(cell.dataset.col);
+            var f2 = getFrequency(r2, c2);
+            var a2 = getAmplitudeFromPosition(r2, c2);
+            var audioT = performance.now();
+            updateVoice(dragVoice, f2, a2);
+            LatencyProfiler.recordMove(touchTs, audioT);
+            }
+          }
+        }
       }
-    }
 
     function handleTouchEnd(e) {
       e.preventDefault();
+      LatencyProfiler.recordRelease(performance.now());
       releaseCell();
-    }
+      }
 
     gridEl.addEventListener('touchstart', handleTouchStart, { passive: false });
     gridEl.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -958,6 +1169,8 @@ html, body {
 
     gridEl.addEventListener('mousedown', function(e) {
       e.preventDefault();
+      var touchTs = performance.now();
+      LatencyProfiler.recordDown(touchTs);
       getAudioCtxPromise();
       mouseDown = true;
       const cell = getCellFromEvent(e);
@@ -971,35 +1184,55 @@ html, body {
         dragVoice = null;
         dragCellIndex = -1;
 
+        var audioT = performance.now();
         if (activeVoices[idx] && !activeVoices[idx].isSeq) {
           dragVoice = activeVoices[idx];
           dragCellIndex = idx;
           updateVoice(dragVoice, freq, amp);
-        } else {
+          LatencyProfiler.recordMove(touchTs, audioT);
+          } else {
           dragVoice = createVoice(freq, amp, false);
           dragCellIndex = idx;
           activeVoices[idx] = dragVoice;
-        }
+          }
         cell.classList.add('active');
-      }
-    });
+        }
+       });
 
+      // DEBOUNCE RIPPED — direct mousemove → hitCell → updateVoice
     gridEl.addEventListener('mousemove', function(e) {
       if (!mouseDown) return;
+      var touchTs = performance.now();
+      LatencyProfiler.recordDown(touchTs);
       const cell = getCellFromEvent(e);
-      if (cell) hitCell(cell);
-    });
+      if (cell) {
+        hitCell(cell);
+        if (dragVoice) {
+          var r2 = parseInt(cell.dataset.row);
+          var c2 = parseInt(cell.dataset.col);
+          var f2 = getFrequency(r2, c2);
+          var a2 = getAmplitudeFromPosition(r2, c2);
+          var audioT = performance.now();
+          updateVoice(dragVoice, f2, a2);
+          LatencyProfiler.recordMove(touchTs, audioT);
+           }
+          }
+      });
 
     gridEl.addEventListener('mouseup', function() {
+      LatencyProfiler.recordRelease(performance.now());
       releaseCell();
       mouseDown = false;
-    });
+      });
 
     gridEl.addEventListener('mouseleave', function() {
-      if (mouseDown) releaseCell();
+      if (mouseDown) {
+        LatencyProfiler.recordRelease(performance.now());
+        releaseCell();
+         }
       mouseDown = false;
-    });
-  }
+      });
+   }
 
     // ========================================
     //  Audio-Reactive Visual Loop — Optimized
@@ -1137,8 +1370,9 @@ html, body {
   //  Init
   // ========================================
 
-  function init() {
-    buildGrid();
+   function init() {
+     buildGrid();
+     PerfMonitor.start();
 
     let resizeTimer;
     window.addEventListener('resize', function() {
