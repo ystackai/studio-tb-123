@@ -24,28 +24,57 @@ html, body {
     radial-gradient(ellipse 90% 100% at 50% 50%, #010108 0%, #000003 100%);
 }
 #stage.visible { opacity: 1; }
+
+/* Hero-stage container — locks layout for screenshot at all sizes */
+#grid-wrap {
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
 #grid {
-  display: grid; gap: 5px; padding: 12px; border-radius: 16px;
+  display: grid; gap: var(--grid-gap, 5px); padding: var(--grid-pad, 12px); border-radius: var(--grid-radius, 14px);
   background: rgba(6,6,15,0.95);
-  border: 1px solid rgba(99,102,241,0.08);
+  border: var(--grid-border, 1px) solid rgba(99,102,241,0.08);
   box-shadow:
-    0 0 60px rgba(99,102,241,0.04),
-    0 0 120px rgba(99,102,241,0.025),
-    0 0 200px rgba(99,102,241,0.015),
+     0 0 60px rgba(99,102,241,0.04),
+     0 0 120px rgba(99,102,241,0.025),
+     0 0 200px rgba(99,102,241,0.015),
     inset 0 0 40px rgba(0,0,10,0.5);
   will-change: transform, box-shadow;
   transition: box-shadow 0.15s ease-out;
+  transform-origin: center center;
 }
+
+/* Responsive breakpoints — CSS-driven, no JS resize thrash */
+@media (max-width: 480px) {
+  #grid {
+    --grid-gap: 3px; --grid-pad: 8px; --grid-radius: 10px; --grid-border: 1px;
+  }
+}
+@media (max-width: 370px) {
+  #grid {
+    --grid-gap: 2px; --grid-pad: 5px; --grid-radius: 8px; --grid-border: 1px;
+  }
+}
+@media (min-width: 768px) {
+  #grid { --grid-gap: 6px; --grid-pad: 14px; --grid-radius: 16px; }
+}
+@media (min-width: 1200px) {
+  #grid { --grid-gap: 8px; --grid-pad: 16px; --grid-radius: 18px; }
+}
+
+/* Cell min-touch-target: 44px physical minimum for finger accuracy */
+/* On narrow screens we scale via transform, cells never shrink below min-target */
 .cell {
-  position: relative; border-radius: 8px;
+  position: relative; border-radius: 6px;
   background: rgba(10,10,22,0.95);
-  border: 1px solid rgba(99,102,241,0.05);
+  border: var(--grid-border, 1px) solid rgba(99,102,241,0.05);
   transition: background 0.03s, border-color 0.03s, box-shadow 0.03s;
   cursor: pointer; will-change: background, box-shadow;
+  min-width: 0; min-height: 0;
 }
 .cell::after {
   content: '';
-  position: absolute; inset: 0; border-radius: 8px;
+  position: absolute; inset: 0; border-radius: 6px;
   box-shadow: inset 0 0 6px rgba(99,102,241,0.03);
   pointer-events: none; transition: box-shadow 0.1s;
 }
@@ -53,10 +82,10 @@ html, body {
   background: rgba(99,102,241,0.6);
   border-color: rgba(168,85,247,1);
   box-shadow:
-    0 0 24px rgba(99,102,241,0.9),
-    0 0 55px rgba(99,102,241,0.5),
-    0 0 95px rgba(168,85,247,0.3),
-    0 0 130px rgba(168,85,247,0.12),
+     0 0 24px rgba(99,102,241,0.9),
+     0 0 55px rgba(99,102,241,0.5),
+     0 0 95px rgba(168,85,247,0.3),
+     0 0 130px rgba(168,85,247,0.12),
     inset 0 0 14px rgba(192,132,255,0.6),
     inset 0 0 35px rgba(168,85,247,0.3);
 }
@@ -64,19 +93,19 @@ html, body {
   box-shadow: inset 0 0 10px rgba(255,255,255,0.15);
 }
 @keyframes cellGlow {
-  0%, 100% {
+ 0%, 100% {
     box-shadow:
-      0 0 18px rgba(99,102,241,0.8),
-      0 0 48px rgba(99,102,241,0.4),
-      0 0 80px rgba(168,85,247,0.2),
+       0 0 18px rgba(99,102,241,0.8),
+       0 0 48px rgba(99,102,241,0.4),
+       0 0 80px rgba(168,85,247,0.2),
       inset 0 0 10px rgba(168,85,247,0.35);
   }
   50% {
     box-shadow:
-      0 0 32px rgba(99,102,241,1),
-      0 0 75px rgba(99,102,241,0.7),
-      0 0 120px rgba(168,85,247,0.35),
-      0 0 160px rgba(168,85,247,0.15),
+       0 0 32px rgba(99,102,241,1),
+       0 0 75px rgba(99,102,241,0.7),
+       0 0 120px rgba(168,85,247,0.35),
+       0 0 160px rgba(168,85,247,0.15),
       inset 0 0 20px rgba(192,132,255,0.7),
       inset 0 0 45px rgba(168,85,247,0.4);
   }
@@ -99,8 +128,8 @@ html, body {
   text-transform: uppercase;
   color: rgba(255,255,255,0.75);
   text-shadow:
-    0 0 30px rgba(99,102,241,0.6),
-    0 0 60px rgba(99,102,241,0.25);
+     0 0 30px rgba(99,102,241,0.6),
+     0 0 60px rgba(99,102,241,0.25);
   user-select: none;
 }
 #launch-prompt {
@@ -112,15 +141,8 @@ html, body {
   animation: promptPulse 2.5s ease-in-out infinite;
 }
 @keyframes promptPulse {
-  0%, 100% { opacity: 0.4; }
+ 0%, 100% { opacity: 0.4; }
   50% { opacity: 0.9; }
-}
-
-@media (max-width: 600px) {
-  #grid { gap: 3px; padding: 7px; }
-}
-@media (max-width: 380px) {
-  #grid { gap: 2px; padding: 5px; }
 }
 </style>
 </head>
@@ -131,7 +153,7 @@ html, body {
 </div>
 
 <div id="stage">
-  <div id="grid"></div>
+   <div id="grid-wrap"><div id="grid"></div></div>
 </div>
 
 <script>
@@ -407,27 +429,36 @@ html, body {
   // ========================================
 
   const gridEl = document.getElementById('grid');
+  const gridWrap = document.getElementById('grid-wrap');
   const allCells = [];
+  let gridBuilt = false;
+  const MIN_TOUCH_TARGET = 44;
+  const TOUCH_DEADZONE = 6;
+
+  function getGridGapPx() {
+    const w = window.innerWidth;
+    if (w <= 370) return 2;
+    if (w <= 480) return 3;
+    if (w >= 1200) return 8;
+    if (w >= 768) return 6;
+    return 5;
+  }
+
+  function getGridPadPx() {
+    const w = window.innerWidth;
+    if (w <= 370) return 5;
+    if (w <= 480) return 8;
+    if (w >= 1200) return 16;
+    if (w >= 768) return 14;
+    return 12;
+  }
 
   function buildGrid() {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const maxW = Math.min(vw * 0.88, 620);
-    const cellW = Math.floor((maxW - (COLS + 1) * 5) / COLS);
-    const cellH = cellW * 0.78;
+    if (gridBuilt) return;
+    gridBuilt = true;
 
-    const totalH = ROWS * cellH + (ROWS + 1) * 5;
-    const maxH = vh * 0.62;
-    const scaleFactor = Math.min(1, maxH / totalH);
-
-    const finalCellW = Math.round(cellW * scaleFactor);
-    const finalCellH = Math.round(cellH * scaleFactor);
-
-    gridEl.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + finalCellW + 'px)';
-    gridEl.style.gridTemplateRows = 'repeat(' + ROWS + ', ' + finalCellH + 'px)';
-
-    gridEl.innerHTML = '';
-    allCells.length = 0;
+    gridEl.style.gridTemplateColumns = 'repeat(' + COLS + ', 1fr)';
+    gridEl.style.gridTemplateRows = 'repeat(' + ROWS + ', 1fr)';
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -446,6 +477,47 @@ html, body {
         gridEl.appendChild(el);
         allCells.push(el);
       }
+    }
+
+    resizeGrid();
+  }
+
+  function resizeGrid() {
+    if (!gridBuilt) return;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const pad = getGridPadPx();
+    const gap = getGridGapPx();
+    const borderW = 1;
+
+    const availW = Math.min(vw * 0.92, 680) - 2 * pad - 2 * borderW;
+    const gapTotalW = (COLS - 1) * gap;
+    const rawCellW = (availW - gapTotalW) / COLS;
+    const cellH = rawCellW * 0.78;
+
+    const availH = vh * 0.62;
+    const totalGapH = (ROWS - 1) * gap;
+    const rawTotalH = ROWS * cellH + totalGapH;
+    const hScale = Math.min(1, (availH - 2 * pad) / rawTotalH);
+    const scale = Math.min(1, hScale);
+
+    const finalW = Math.max(MIN_TOUCH_TARGET, rawCellW * scale);
+    const finalH = finalW * 0.78;
+
+    gridEl.style.gridTemplateColumns = 'repeat(' + COLS + ', ' + finalW + 'px)';
+    gridEl.style.gridTemplateRows = 'repeat(' + ROWS + ', ' + finalH + 'px)';
+    gridEl.style.setProperty('--grid-gap', gap + 'px');
+    gridEl.style.setProperty('--grid-pad', pad + 'px');
+
+    if (scale < 0.85) {
+      const borderRadius = Math.max(4, 14 * scale * scale);
+      gridEl.style.setProperty('--grid-radius', borderRadius + 'px');
+      const borderW = Math.max(0, 1 - (0.85 - scale) * 10);
+      gridEl.style.setProperty('--grid-border', borderW + 'px');
+    } else {
+      gridEl.style.setProperty('--grid-radius', '14px');
+      gridEl.style.setProperty('--grid-border', '1px');
     }
   }
 
@@ -577,6 +649,9 @@ html, body {
   let dragCellIndex = -1;
   let mouseDown = false;
   let userHasPlayed = false;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchMoved = false;
 
   function getCellFromEvent(e) {
     const target = e.target || (e.touches && e.touches[0] && e.touches[0].target);
@@ -647,6 +722,9 @@ html, body {
       e.preventDefault();
       ensureAudio();
       userHasPlayed = true;
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+      touchMoved = false;
       const cell = e.target.closest && e.target.closest('.cell');
       if (!cell) return;
       const idx = parseInt(cell.dataset.index);
@@ -664,35 +742,45 @@ html, body {
           getFrequency(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
           getAmplitudeFromPosition(parseInt(cell.dataset.row), parseInt(cell.dataset.col)),
           false
-        );
+          );
         dragCellIndex = idx;
-      }
+        }
       cell.classList.add('active');
       gridEl.setPointerCapture(e.pointerId);
-    });
+      });
 
     gridEl.addEventListener('pointermove', function(e) {
+      if (!touchMoved && Math.abs(e.clientX - touchStartX) < TOUCH_DEADZONE && Math.abs(e.clientY - touchStartY) < TOUCH_DEADZONE) return;
+      touchMoved = true;
       const cell = e.target.closest && e.target.closest('.cell');
       if (cell) hitCell(cell);
-    });
+      });
 
     gridEl.addEventListener('pointerup', function(e) {
       releaseCell();
       try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-    });
+      });
 
     gridEl.addEventListener('pointercancel', function(e) {
       releaseCell();
       try { gridEl.releasePointerCapture(e.pointerId); } catch(ex) {}
-    });
-  } else {
+      });
+    } else {
     function handleTouchStart(e) {
       e.preventDefault();
       ensureAudio();
       userHasPlayed = true;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchMoved = false;
+      }
 
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
+        if (touch.radiusX && touch.radiusX > 50) continue;
+        if (touch.force !== undefined && touch.force < 0.01) continue;
         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         const cell = el && el.closest && el.closest('.cell');
         if (cell) {
@@ -723,11 +811,13 @@ html, body {
       e.preventDefault();
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
+        if (!touchMoved && Math.abs(touch.clientX - touchStartX) < TOUCH_DEADZONE && Math.abs(touch.clientY - touchStartY) < TOUCH_DEADZONE) continue;
+        touchMoved = true;
         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         const cell = el && el.closest && el.closest('.cell');
         if (cell) hitCell(cell);
-      }
-    }
+       }
+       }
 
     function handleTouchEnd(e) {
       e.preventDefault();
@@ -866,8 +956,12 @@ html, body {
     let resizeTimer;
     window.addEventListener('resize', function() {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(buildGrid, 150);
-    });
+      resizeTimer = setTimeout(resizeGrid, 80);
+     });
+    if (window.matchMedia) {
+      window.matchMedia('(orientation: portrait)').addEventListener('change', resizeGrid);
+      window.matchMedia('(orientation: landscape)').addEventListener('change', resizeGrid);
+     }
 
     if (!Element.prototype.closest) {
       Element.prototype.closest = function(s) {
@@ -876,11 +970,11 @@ html, body {
         do {
           if (matchesFn.call(el, s)) return el;
           el = el.parentElement || el.parentNode;
-        } while (el !== null && el.nodeType === 1);
+         } while (el !== null && el.nodeType === 1);
         return null;
-      };
-    }
-  }
+       };
+     }
+   }
 
   init();
 })();
