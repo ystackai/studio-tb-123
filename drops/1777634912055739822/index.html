@@ -607,15 +607,212 @@
        transition: opacity 0.4s;
        text-shadow: 0 0 6px rgba(99,102,241,0.3);
       }
-      #profiler-hud.visible { opacity: 1; }
-      #profiler-hud strong { color: rgba(168,85,247,0.7); }
+        #profiler-hud.visible { opacity: 1; }
+        #profiler-hud strong { color: rgba(168,85,247,0.7); }
+
+        /* ============================================================
+           TUTORIAL OVERLAY — "Dark Stage, Bright Performer" aesthetic
+           High-contrast typography, subtle glow transitions, Cover look.
+           Grid cells highlighted by tutorial phase glow against dark stage.
+        ============================================================ */
+        #tutorial-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.85);
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column;
+        z-index: 9998;
+        opacity: 0;
+        transition: opacity 0.6s ease-in-out;
+        will-change: opacity;
+        pointer-events: none;
+        }
+        #tutorial-overlay.visible { opacity: 1; pointer-events: auto; }
+
+        /* Progress Dots */
+        #tutorial-progress {
+        display: flex; gap: 8px; margin-bottom: 28px;
+        }
+        .tutorial-progress-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: rgba(99,102,241,0.2);
+        border: 1px solid rgba(99,102,241,0.15);
+        transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+        }
+        .tutorial-progress-dot.active {
+        background: rgba(99,102,241,0.8);
+        box-shadow: 0 0 8px rgba(99,102,241,0.6), 0 0 18px rgba(168,85,247,0.3);
+        transform: scale(1.4);
+        }
+        .tutorial-progress-dot.completed {
+        background: rgba(168,85,247,0.5);
+        box-shadow: 0 0 4px rgba(168,85,247,0.3);
+        }
+
+        /* Tutorial Content */
+        #tutorial-content {
+        text-align: center;
+        padding: 0 24px;
+        max-width: 480px;
+        }
+        .tutorial-step {
+        display: none;
+        opacity: 0;
+        transform: translateY(12px);
+        transition: opacity 0.45s ease-out, transform 0.45s ease-out;
+        }
+        .tutorial-step.active {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+        }
+
+        /* Tutorial Title — high contrast, Cover typography */
+        .tutorial-title {
+        font-family: var(--cover-type-display);
+        font-size: clamp(1.1rem, 3vw, 1.5rem);
+        font-weight: 800;
+        letter-spacing: var(--cover-type-track-wide);
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.9);
+        text-shadow:
+             0 0 24px rgba(99,102,241,0.5),
+             0 0 50px rgba(99,102,241,0.2),
+             0 0 80px rgba(168,85,247,0.1);
+        margin-bottom: 0.6rem;
+        user-select: none;
+        }
+
+        /* Tutorial Body — mono, dim, breathing */
+        .tutorial-body {
+        font-family: var(--cover-type-mono);
+        font-size: clamp(0.55rem, 1.3vw, 0.7rem);
+        font-weight: 400;
+        line-height: 1.7;
+        color: rgba(99,102,241,0.6);
+        letter-spacing: 0.12em;
+        max-width: 400px;
+        margin: 0 auto 1.2rem;
+        user-select: none;
+        }
+
+        /* Tutorial Footer */
+        .tutorial-footer {
+        display: flex; justify-content: center; align-items: center;
+        }
+
+        /* Tutorial Button */
+        .tutorial-btn {
+        font-family: var(--cover-type-mono);
+        font-size: 0.5rem;
+        font-weight: 600;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.3);
+        background: transparent;
+        border: 1px solid rgba(99,102,241,0.15);
+        border-radius: 2px;
+        padding: 7px 18px;
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+        user-select: none; -webkit-user-select: none;
+        pointer-events: auto;
+        }
+        .tutorial-btn:hover {
+        color: rgba(255,255,255,0.7);
+        border-color: rgba(99,102,241,0.5);
+        box-shadow: 0 0 8px rgba(99,102,241,0.2), 0 0 20px rgba(168,85,247,0.1);
+        }
+        .tutorial-btn:active {
+        color: rgba(230,225,255,0.95);
+        border-color: rgba(168,85,247,0.8);
+        background: rgba(99,102,241,0.15);
+        box-shadow: 0 0 12px rgba(99,102,241,0.4), 0 0 30px rgba(168,85,247,0.2);
+        }
+
+        /* Tutorial-highlighted cell — glows to show what to touch */
+        .cell.tutorial-highlight {
+        background: rgba(99,102,241,0.25);
+        border-color: rgba(99,102,241,0.6);
+        box-shadow:
+             0 0 14px rgba(99,102,241,0.5),
+             0 0 32px rgba(99,102,241,0.3),
+             0 0 55px rgba(168,85,247,0.2),
+            inset 0 0 10px rgba(192,132,255,0.35);
+        animation: tutorialPulse 1.2s ease-in-out infinite;
+        }
+        .cell.tutorial-highlight .cell-label {
+        color: rgba(230,225,255,0.85);
+        text-shadow: 0 0 8px rgba(192,132,255,0.6), 0 0 18px rgba(99,102,241,0.3);
+        }
+        @keyframes tutorialPulse {
+         0%, 100% { box-shadow: 0 0 14px rgba(99,102,241,0.5), 0 0 32px rgba(99,102,241,0.3), 0 0 55px rgba(168,85,247,0.2), inset 0 0 10px rgba(192,132,255,0.35); }
+         50% { box-shadow: 0 0 20px rgba(99,102,241,0.8), 0 0 42px rgba(99,102,241,0.5), 0 0 70px rgba(168,85,247,0.35), inset 0 0 16px rgba(192,132,255,0.5); }
+        }
+
+        /* Tutorial X-axis sweep indicator */
+        .tutorial-sweep-x {
+        position: absolute; inset: 0;
+        background: linear-gradient(90deg, transparent 20%, rgba(99,102,241,0.15) 50%, transparent 80%);
+        pointer-events: none;
+        animation: sweepX 1.8s ease-in-out infinite;
+        border-radius: var(--cover-cell-radius);
+        }
+        @keyframes sweepX {
+         0%, 100% { opacity: 0.3; transform: translateX(-30%); }
+         50% { opacity: 1; transform: translateX(30%); }
+        }
+
+        /* Tutorial Y-axis sweep indicator */
+        .tutorial-sweep-y {
+        position: absolute; inset: 0;
+        background: linear-gradient(180deg, transparent 20%, rgba(168,85,247,0.15) 50%, transparent 80%);
+        pointer-events: none;
+        animation: sweepY 1.8s ease-in-out infinite;
+        border-radius: var(--cover-cell-radius);
+        }
+        @keyframes sweepY {
+         0%, 100% { opacity: 0.3; transform: translateY(-30%); }
+         50% { opacity: 1; transform: translateY(30%); }
+        }
 </style>
 </head>
 <body>
 <div id="launch-overlay">
-       <div id="launch-label">Open Circuit</div>
-       <div id="launch-sublabel">Browser as Stage — Grid as Instrument</div>
-       <div id="launch-prompt">Tap Anywhere to Open</div>
+         <div id="launch-label">Open Circuit</div>
+         <div id="launch-sublabel">Browser as Stage — Grid as Instrument</div>
+         <div id="launch-prompt">Tap Anywhere to Open</div>
+</div>
+
+<!-- Tutorial Overlay — Guides user through touch mapping, signal chain, and the "Dark Stage, Bright Performer" aesthetic -->
+<div id="tutorial-overlay" style="display:none;">
+     <div id="tutorial-progress"></div>
+     <div id="tutorial-content">
+         <div class="tutorial-step" id="tutorial-step-0">
+             <div class="tutorial-title">The Stage</div>
+             <div class="tutorial-body">Dark stage. Empty. Waiting for the performer.</div>
+         </div>
+         <div class="tutorial-step" id="tutorial-step-1">
+             <div class="tutorial-title">The Instrument</div>
+             <div class="tutorial-body">5 rows · 8 columns · 40 cells. Every cell is a note. Touch to play.</div>
+         </div>
+         <div class="tutorial-step" id="tutorial-step-2">
+             <div class="tutorial-title">X-Axis — Pitch</div>
+             <div class="tutorial-body">Slide left to right within a cell. Each column = a different note. Each row = a different octave.</div>
+         </div>
+         <div class="tutorial-step" id="tutorial-step-3">
+             <div class="tutorial-title">Y-Axis — Filter</div>
+             <div class="tutorial-body">Slide up to open the filter. Down to close it. Top = bright. Bottom = dark.</div>
+         </div>
+         <div class="tutorial-step" id="tutorial-step-4">
+             <div class="tutorial-title">Signal Chain</div>
+             <div class="tutorial-body">Oscillator → Filter → VCA → Decay. Touch shapes the sound. The decay breathes; it never rings.</div>
+         </div>
+         <div class="tutorial-step" id="tutorial-step-5">
+             <div class="tutorial-title">Your Turn</div>
+             <div class="tutorial-body">Sequence is live. Touch the grid. Play it.</div>
+             <div class="tutorial-footer"><button id="tutorial-skip-btn" class="tutorial-btn">SKIP TUTORIAL</button></div>
+         </div>
+     </div>
 </div>
 
 <div id="stage">
@@ -1455,18 +1652,27 @@
           } catch(e) {}
         }
 
-     function launch() {
-       if (launched) return;
-       launched = true;
-       overlay.classList.add('fade-out');
-       getAudioCtxPromise().then(function() {
-         stage.classList.add('visible');
-         startSequence();
-         SignalGraph.start();
-         ProfilerHUD.autoShowOnInteraction();
-       });
-       setTimeout(function() { overlay.style.display = 'none'; }, 1000);
-      }
+      function launch() {
+        if (launched) return;
+        launched = true;
+        overlay.classList.add('fade-out');
+        getAudioCtxPromise().then(function() {
+           stage.classList.add('visible');
+           startSequence();
+           SignalGraph.start();
+           ProfilerHUD.autoShowOnInteraction();
+        });
+        setTimeout(function() { overlay.style.display = 'none'; }, 1000);
+
+         // Launch tutorial after stage reveal (staggered: 1.2s after launch)
+        setTimeout(function() {
+          if (!launched) return;
+          Tutorial.start(function() {
+              // Tutorial complete — resume full audio-reactive visuals
+             console.log('[Tutorial] Complete — stage open, performer ready');
+            });
+          }, 1500);
+       }
 
      document.addEventListener('pointerdown', launch, { passive: true });
      document.addEventListener('touchstart', launch, { passive: true });
@@ -3428,20 +3634,34 @@
      // Active cell micro-reactivity — only update cells that are .active
      // Optimized: skip string concat for boxShadow; use CSS custom property when signal is steady
      var colorFactor = Math.min(1, smoothedHigh * 2.5);
-     var numCells = allCells.length;
-     var domWrites = 0;
-     var MAX_WRITES = 10;
-     _frameSkipCounter++;
+        var numCells = allCells.length;
+          var domWrites = 0;
+          var MAX_WRITES = 10;
+           _frameSkipCounter++;
 
-     // Under heavy load, only touch active cells, skip idle halo updates entirely
-     for (var ci = 0; ci < numCells; ci++) {
-       if (performance.now() - _frameStart > _frameBudgetMs) {
-         requestAnimationFrame(audioVisualLoop);
-         return;
-        }
+          // Tutorial optimization: when tutorial is active, skip all non-highlighted cells
+          // to prevent visual stutter during transitions. Only .tutorial-highlight cells get
+          // audio-reactive updates during tutorial phases.
+         var tutorialActive = Tutorial && Tutorial.isTutorialActive && Tutorial.isTutorialActive();
+         var tutorialHighlights = null;
+         if (tutorialActive && Tutorial.getTutorialCellHighlights) {
+           tutorialHighlights = Tutorial.getTutorialCellHighlights();
+           }
 
-       var cell = allCells[ci];
-       if (cell.classList.contains('feedback-active')) continue;
+          // Under heavy load, only touch active cells, skip idle halo updates entirely
+         for (var ci = 0; ci < numCells; ci++) {
+           if (performance.now() - _frameStart > _frameBudgetMs) {
+             requestAnimationFrame(audioVisualLoop);
+             return;
+             }
+
+           var cell = allCells[ci];
+           if (cell.classList.contains('feedback-active')) continue;
+
+          // During tutorial: skip cells that aren't highlighted or active
+         if (tutorialActive && !cell.classList.contains('tutorial-highlight') && !cell.classList.contains('active')) {
+           continue;
+            }
 
         var isActive = cell.classList.contains('active');
         if (!isActive) {
@@ -3753,59 +3973,290 @@
         // ========================================
         //  Init
         // ========================================
-      function init() {
-          buildStepIndicators();
-         buildGrid();
-         PerfMonitor.start();
-         SignalGraph.init();
-         ProfilerHUD.init();
-         VisibilityManager.init(audioVisualLoop);
-         initHoverListeners();
+          // ========================================
+          //  Tutorial Overlay — Interactive Guide
+          // ========================================
+          // Guides user through touch mapping, signal chain, and the "Dark Stage, Bright Performer" aesthetic.
+          // State machine: STAGE → INSTRUMENT → PITCH → FILTER → SIGNAL → YOUR_TURN → END
+          // Each phase highlights specific grid cells, plays the triad in sync, and transitions
+          // with glow animations matching the Cover aesthetic.
+          //
+          // Tutorial state is wired into the Web Audio signal chain:
+          // - Cell highlights sync with sequencer step timing
+          // - Audio-reactive visual loop skips non-highlighted cells during tutorial for perf
+          // - Signal graph overlay dims to let tutorial text breathe
+          var Tutorial = (function() {
+            var STEPS = [
+              { id: 0, name: 'stage', duration: 3200, highlightCells: [] },
+              { id: 1, name: 'instrument', duration: 3500, highlightCells: function() { var cells = []; for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) cells.push({ r: r, c: c }); return cells; } },
+              { id: 2, name: 'pitch', duration: 4000, highlightCells: function() { var cells = []; for (var c = 0; c < COLS; c++) cells.push({ r: 2, c: c }); return cells; } },
+              { id: 3, name: 'filter', duration: 3500, highlightCells: function() { var cells = []; for (var r = 0; r < ROWS; r++) cells.push({ r: r, c: 2 }); return cells; } },
+              { id: 4, name: 'signal', duration: 3500, highlightCells: [{ r: 2, c: 0 }, { r: 2, c: 2 }, { r: 3, c: 3 }, { r: 2, c: 3 }, { r: 2, c: 4 }] },
+              { id: 5, name: 'your-turn', duration: 99999, highlightCells: [] }
+             ];
 
-           // Invalidate rect cache on resize
-       var resizeTimer;
-       window.addEventListener('resize', function() {
-         clearTimeout(resizeTimer);
-         invalidateRectCache();
-         resizeTimer = setTimeout(resizeGrid, 80);
-           }, { passive: true });
-       if (window.matchMedia) {
-         window.matchMedia('(orientation: portrait)').addEventListener('change', function() {
-           invalidateRectCache(); resizeGrid();
-           });
-         window.matchMedia('(orientation: landscape)').addEventListener('change', function() {
-           invalidateRectCache(); resizeGrid();
-           });
+            var _stepEl = null;
+            var _currentStep = -1;
+            var _isActive = false;
+            var _autoAdvanceTimer = null;
+            var _sweepEl = null;
+            var _onCompleteCallback = null;
+
+            var overlay = null;
+            var progressContainer = null;
+            var dots = [];
+
+            function init() {
+              overlay = document.getElementById('tutorial-overlay');
+              progressContainer = document.getElementById('tutorial-progress');
+
+              if (!overlay || !progressContainer) return;
+
+                // Build progress dots
+              for (var i = 0; i < STEPS.length; i++) {
+                var dot = document.createElement('span');
+                dot.className = 'tutorial-progress-dot';
+                progressContainer.appendChild(dot);
+                dots[i] = dot;
+               }
+
+                // Skip button
+              var skipBtn = document.getElementById('tutorial-skip-btn');
+              if (skipBtn) {
+                skipBtn.addEventListener('pointerdown', function(e) {
+                  e.preventDefault(); e.stopPropagation();
+                  complete();
+                 });
+               }
+
+                 // Click/tap on overlay background (not on a cell) to advance
+              overlay.addEventListener('click', function(e) {
+                if (!_isActive) return;
+                var target = e.target;
+                if (target.classList.contains('tutorial-btn')) return;
+                var cellTarget = target.closest ? target.closest('.cell') : null;
+                 // If clicked on a highlighted cell, play sound and advance
+                if (cellTarget && cellTarget.classList.contains('tutorial-highlight')) {
+                  playTutorialCell(cellTarget);
+                  advance();
+                  return;
+                  }
+                advance();
+                });
+              overlay.addEventListener('touchstart', function(e) {
+                if (!_isActive) return;
+                var target = e.target;
+                if (target && target.classList && target.classList.contains('tutorial-btn')) return;
+                 // If touched on a highlighted cell, play sound and advance
+                var cellTarget = target.closest ? target.closest('.cell') : null;
+                if (cellTarget && cellTarget.classList.contains('tutorial-highlight')) {
+                  playTutorialCell(cellTarget);
+                  advance();
+                  return;
+                  }
+                advance();
+                }, { passive: true });
+
+                 // Keyboard: Escape to skip
+              document.addEventListener('keydown', function(e) {
+                if (!_isActive) return;
+                if (e.key === 'Escape') complete();
+                });
+               }
+
+             function playTutorialCell(cell) {
+               if (!ensureAudio()) return;
+               var r = parseInt(cell.dataset.row);
+               var c = parseInt(cell.dataset.col);
+               var freq = getFrequency(r, c);
+               var amp = calcAmplitude(r, c, 0.7);
+               var idx = r * COLS + c;
+               var voice = createVoice(freq, amp, false, r, c);
+               if (voice) {
+                 var key = 'tut_' + idx;
+                 activeVoices[key] = voice;
+                 cell.classList.add('active');
+                 setTimeout(function() {
+                   cell.classList.remove('active');
+                   delete activeVoices[key];
+                    }, 2000);
+                }
+               }
+
+            function start(callback) {
+              if (!_isActive && overlay) {
+                _isActive = true;
+                _onCompleteCallback = callback;
+                overlay.style.display = 'flex';
+                requestAnimationFrame(function() {
+                  overlay.classList.add('visible');
+                  setTimeout(function() { goStep(0); }, 200);
+                 });
+               }
+              }
+
+            function goStep(idx) {
+              if (idx < 0 || idx >= STEPS.length) { complete(); return; }
+              _currentStep = idx;
+              var step = STEPS[idx];
+
+                // Hide all steps, show current
+              var stepEls = overlay.querySelectorAll('.tutorial-step');
+              for (var i = 0; i < stepEls.length; i++) {
+                stepEls[i].classList.remove('active');
+               }
+              var current = document.getElementById('tutorial-step-' + idx);
+              if (current) {
+                current.classList.add('active');
+                current.style.opacity = '0';
+                current.style.transform = 'translateY(12px)';
+                requestAnimationFrame(function() {
+                  current.style.opacity = '1';
+                  current.style.transform = 'translateY(0)';
+                 });
+               }
+
+                // Update progress dots
+              for (var d = 0; d < dots.length; d++) {
+                dots[d].classList.remove('active', 'completed');
+                if (d < idx) dots[d].classList.add('completed');
+                if (d === idx) dots[d].classList.add('active');
+               }
+
+                // Clear previous sweep
+              clearSweep();
+
+                // Highlight cells for this step
+              clearHighlights();
+              var cellsToHighlight = typeof step.highlightCells === 'function' ? step.highlightCells() : step.highlightCells;
+              for (var h = 0; h < cellsToHighlight.length; h++) {
+                var cell = getCellAt(cellsToHighlight[h].r, cellsToHighlight[h].c);
+                if (cell) cell.classList.add('tutorial-highlight');
+               }
+
+                // X-axis sweep for pitch step
+              if (step.name === 'pitch') {
+                applySweep('tutorial-sweep-x', 2);
+               }
+
+                // Y-axis sweep for filter step
+              if (step.name === 'filter') {
+                applySweep('tutorial-sweep-y', 2);
+               }
+
+                // Auto-advance timer (except last step "your-turn" which waits for user interaction)
+              clearTimeout(_autoAdvanceTimer);
+              if (idx < STEPS.length - 1) {
+                _autoAdvanceTimer = setTimeout(function() { advance(); }, step.duration);
+               }
+              }
+
+            function advance() {
+              goStep(_currentStep + 1);
+              }
+
+            function complete() {
+              _isActive = false;
+              clearTimeout(_autoAdvanceTimer);
+              clearHighlights();
+              clearSweep();
+
+              if (overlay) {
+                overlay.classList.remove('visible');
+                setTimeout(function() { overlay.style.display = 'none'; }, 700);
+               }
+
+              if (_onCompleteCallback) _onCompleteCallback();
+              }
+
+            function isTutorialActive() { return _isActive; }
+
+            function getTutorialCellHighlights() {
+              if (_currentStep < 0 || _currentStep >= STEPS.length) return null;
+              var step = STEPS[_currentStep];
+              return typeof step.highlightCells === 'function' ? step.highlightCells() : (step.highlightCells || []);
+              }
+
+            function applySweep(className, row) {
+              clearSweep();
+              var targetCell = getCellAt(row, 2);
+              if (!targetCell) return;
+              var sweep = document.createElement('div');
+              sweep.className = className;
+              targetCell.appendChild(sweep);
+              _sweepEl = sweep;
+              }
+
+            function clearSweep() {
+              if (_sweepEl && _sweepEl.parentNode) {
+                _sweepEl.parentNode.removeChild(_sweepEl);
+               }
+              _sweepEl = null;
+              }
+
+            function clearHighlights() {
+              for (var i = 0; i < allCells.length; i++) {
+                allCells[i].classList.remove('tutorial-highlight');
+               }
+              }
+
+            return { init: init, start: start, complete: complete, isTutorialActive: isTutorialActive, getTutorialCellHighlights: getTutorialCellHighlights };
+           })();
+
+          function init() {
+              buildStepIndicators();
+             buildGrid();
+             PerfMonitor.start();
+             SignalGraph.init();
+             ProfilerHUD.init();
+             VisibilityManager.init(audioVisualLoop);
+             Tutorial.init();
+             initHoverListeners();
+
+                // Invalidate rect cache on resize
+           var resizeTimer;
+           window.addEventListener('resize', function() {
+             clearTimeout(resizeTimer);
+             invalidateRectCache();
+             resizeTimer = setTimeout(resizeGrid, 80);
+                }, { passive: true });
+           if (window.matchMedia) {
+             window.matchMedia('(orientation: portrait)').addEventListener('change', function() {
+               invalidateRectCache(); resizeGrid();
+               });
+             window.matchMedia('(orientation: landscape)').addEventListener('change', function() {
+               invalidateRectCache(); resizeGrid();
+               });
+               }
+
+                // Stress test keyboard shortcut: Ctrl+Alt+S
+           document.addEventListener('keydown', function(e) {
+             if (e.ctrlKey && e.altKey && e.key === 's') {
+               e.preventDefault();
+               getAudioCtxPromise().then(function() {
+                 if (ensureAudio()) StressTest.start();
+                    });
+                 return;
+                  }
+              if (e.key === 'q' && e.shiftKey) {
+               e.preventDefault();
+               document.getElementById('tempo-slider').focus();
+               return;
+                }
+              if (e.key !== 'F5' && e.key !== 'F12') launch();
+            });
+
+                // Dev-mode: expose stress test to console
+           if (window.location.hash.indexOf('stress') >= 0) {
+             setTimeout(function() {
+               getAudioCtxPromise().then(function() {
+                 if (ensureAudio()) StressTest.start();
+                    });
+                  }, 2000);
+                  }
            }
 
-           // Stress test keyboard shortcut: Ctrl+Alt+S
-       document.addEventListener('keydown', function(e) {
-         if (e.ctrlKey && e.altKey && e.key === 's') {
-           e.preventDefault();
-           getAudioCtxPromise().then(function() {
-             if (ensureAudio()) StressTest.start();
-               });
-             return;
-             }
-          if (e.key === 'q' && e.shiftKey) {
-           e.preventDefault();
-           document.getElementById('tempo-slider').focus();
-           return;
-            }
-          if (e.key !== 'F5' && e.key !== 'F12') launch();
-        });
-
-           // Dev-mode: expose stress test to console
-       if (window.location.hash.indexOf('stress') >= 0) {
-         setTimeout(function() {
-           getAudioCtxPromise().then(function() {
-             if (ensureAudio()) StressTest.start();
-               });
-            }, 2000);
-            }
-      }
-
-    init();
+     init();
 })();
 </script>
 </body>
