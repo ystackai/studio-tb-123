@@ -552,16 +552,19 @@
 
     #launch-sublabel {
       font-family: var(--cover-type-mono);
-      font-size: clamp(0.45rem, 1.1vw, 0.58rem);
+      font-size: clamp(0.6rem, 1.4vw, 0.78rem);
       font-weight: 400;
-      letter-spacing: 0.42em;
+      letter-spacing: 0.32em;
       text-transform: uppercase;
-      color: rgba(99,102,241,0.35);
+      color: rgba(168,170,255,0.7);
       margin-top: 0.8rem;
       margin-bottom: 2rem;
       text-rendering: geometricPrecision;
       user-select: none;
+      text-align: center;
+      line-height: 1.6;
     }
+    #launch-sublabel .b { display: block; color: rgba(168,170,255,0.42); font-size: 0.85em; letter-spacing: 0.42em; margin-top: 0.4rem; }
 
     #launch-prompt {
       font-family: var(--cover-type-mono);
@@ -779,7 +782,7 @@
 <body>
 <div id="launch-overlay">
          <div id="launch-label">Open Circuit</div>
-         <div id="launch-sublabel">Browser as Stage — Grid as Instrument</div>
+         <div id="launch-sublabel">An instrument · No goal · Just play<span class="b">Browser as Stage — Grid as Instrument</span></div>
          <div id="launch-prompt">Tap Anywhere to Open</div>
 </div>
 
@@ -3876,17 +3879,20 @@
       if (signalLevel > 0.001 || highLevel > 0.001) {
         var ringCheck = detectRinging(highLevel, signalLevel);
         if (ringCheck.ringing && ringCheck.shouldMute) {
-          stabilizerState.isStabilizing = true;
-          hardStopRinging();
-          console.log('[Stabilizer] Ringing detected, severity=' + ringCheck.severity.toFixed(2) + ' — hard-stop engaged');
-           } else {
-          if (stabilizerState.isStabilizing && hasActiveTouch()) {
-            resumeFromHardStop();
-            stabilizerState.isStabilizing = false;
-             }
+          if (!stabilizerState.isStabilizing) {
+            stabilizerState.isStabilizing = true;
+            hardStopRinging();
+            console.log('[Stabilizer] Ringing detected, severity=' + ringCheck.severity.toFixed(2) + ' — hard-stop engaged');
+          }
+        } else if (stabilizerState.isStabilizing) {
+          // Ring has settled — resume regardless of touch state. Gating
+          // resume on hasActiveTouch() left the master muted whenever the
+          // user wasn't already touching when the harmonic decayed, with
+          // no path back to audible.
+          resumeFromHardStop();
           stabilizerState.isStabilizing = false;
-           }
         }
+      }
 
       // Feedback Loop Stability Monitor (throttled — 30Hz max)
       if (misuseMode) {
