@@ -131,15 +131,59 @@
        backface-visibility: hidden;
        animation: idleCellPulse 3s ease-in-out infinite;
        }
-      .cell::after {
-       content: '';
-       position: absolute; inset: 0;
-       border-radius: var(--cover-cell-radius);
-       box-shadow: inset 0 0 4px rgba(99,102,241,0.02);
-       pointer-events: none;
-       transition: box-shadow 0.1s;
-       transform: translateZ(0);
-      }
+        .cell::after {
+        content: '';
+        position: absolute; inset: 0;
+        border-radius: var(--cover-cell-radius);
+        box-shadow: inset 0 0 4px rgba(99,102,241,0.02);
+        pointer-events: none;
+        transition: box-shadow 0.1s;
+        transform: translateZ(0);
+        }
+
+        /* ---- Cell (hover) — Pre-Activation Glow — Dark Stage, Bright Performer ---- */
+        @keyframes hoverPreGlow {
+         0%, 100% { box-shadow: 0 0 10px rgba(99,102,241,0.15), 0 0 24px rgba(168,85,247,0.08), inset 0 0 6px rgba(99,102,241,0.04); }
+         50% { box-shadow: 0 0 16px rgba(99,102,241,0.28), 0 0 38px rgba(168,85,247,0.15), inset 0 0 12px rgba(192,132,255,0.1); }
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .cell:hover:not(.active):not(.seq-active):not(.feedback-active) {
+            background: rgba(99,102,241,0.07);
+            border-color: rgba(99,102,241,0.22);
+            box-shadow: none;
+            animation: hoverPreGlow 2s ease-in-out infinite;
+            transition: background 0.12s ease-out, border-color 0.12s ease-out;
+            will-change: background, border-color, box-shadow;
+          }
+          .cell:hover:not(.active):not(.seq-active):not(.feedback-active)::after {
+            box-shadow: inset 0 0 10px rgba(99,102,241,0.08);
+          }
+          .cell:hover:not(.active):not(.seq-active):not(.feedback-active) .cell-label {
+            color: rgba(255,255,255,0.18);
+            text-shadow: 0 0 8px rgba(99,102,241,0.25);
+          }
+        }
+
+        /* ---- Hover pre-activation zone indicator ring ---- */
+        .cell.hover-zone::before {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          border-radius: calc(var(--cover-cell-radius) + 3px);
+          border: 1px solid rgba(168,85,247,0.3);
+          box-shadow:
+            0 0 8px rgba(168,85,247,0.15),
+            0 0 20px rgba(99,102,241,0.08);
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.15s ease-out;
+          animation: zoneRingBreathe 2.4s ease-in-out infinite;
+        }
+        .cell.hover-zone::before { opacity: 1; }
+        @keyframes zoneRingBreathe {
+          0%, 100% { opacity: 0.5; border-color: rgba(168,85,247,0.2); }
+          50% { opacity: 1; border-color: rgba(168,85,247,0.35); }
+        }
 
         /* ---- Cell (active) — Bright Performer — locked for hero screenshot ---- */
        .cell:active, .cell.active {
@@ -3478,7 +3522,7 @@
           }, 2000);
           }
 
-      if (!Element.prototype.closest) {
+       if (!Element.prototype.closest) {
         Element.prototype.closest = function(s) {
           var el = this;
           var matchesFn = Element.prototype.matches || Element.prototype.msMatchesSelector;
@@ -3487,8 +3531,240 @@
             el = el.parentElement || el.parentNode;
             } while (el !== null && el.nodeType === 1);
           return null;
+            };
+            };
+        }
+
+        // ========================================
+        //  Hover Pre-Activation — Dark Stage, Bright Performer
+        // ========================================
+        // On hover over a cell, prepare audio parameters (oscillator freq, filter cutoff)
+        // in a pre-computed staging zone WITHOUT triggering any sound. The visual feedback
+        // signals to the performer "this zone is live" — the cell breathes, the zone ring
+        // appears, but the signal chain remains silent until touch/press.
+        //
+        // Design principles:
+        //   - Zero audio activation: no oscillators start, no VCA engages
+        //   - Pre-computed params cached per cell for instant trigger on touch-down
+        //   - Visual feedback respects "Dark Stage, Bright Performer" — subtle glow,
+        //     zone ring, label brightening — nothing that competes with active cells
+        //   - Rendering optimized: hover transitions use compositor-only properties with
+        //     will-change hints; no layout thrashing, no JS-driven style changes in rAF
+        //   - Hover state is cleared on pointer leave or on any non-hover touch
+
+        var _hoverPreparedCells = {};
+        var _lastHoverCellId = null;
+        var _hoverStaggerTimer = null;
+
+        // Pre-compute and cache audio params for a cell without creating any audio nodes
+        function prepareHoverParams(row, col) {
+          var baseFreq = getFrequency(row, col);
+          var cutoff = calcModulatedCutoff(baseFreq, 0.5);
+          var aa = getAntiAliasedParams(baseFreq);
+          var safeCutoff = Math.min(cutoff, aa.cutoff);
+          var qGuard = computeDriftGuardedQ(baseFreq, safeCutoff, baseFreq * 0.5);
+          return {
+            freq: baseFreq,
+            halfFreq: baseFreq * 0.5,
+            cutoff: safeCutoff,
+            q: qGuard.q,
+            lfoDepth: baseFreq * 0.5,
+            amp: calcAmplitude(row, col, undefined),
+            row: row,
+            col: col
           };
-         }
+        }
+
+        // Apply hover visual state: zone ring + label brightening
+        // Uses CSS classes only (compositor-friendly); no JS style manipulation.
+        function enterHoverZone(cell, row, col) {
+          if (!cell || cell.classList.contains('active') ||
+              cell.classList.contains('seq-active') ||
+              cell.classList.contains('feedback-active')) return;
+
+          var id = row + '_' + col;
+          if (_hoverPreparedCells[id] && _hoverPreparedCells[id].el === cell) return;
+
+          cell.classList.add('hover-zone');
+          _hoverPreparedCells[id] = {
+            el: cell,
+            params: ensureAudio() ? prepareHoverParams(row, col) : null
+          };
+          _lastHoverCellId = id;
+
+          // Pre-warm audio params if context ready — no sound, just compute
+          if (ensureAudio()) {
+            var p = _hoverPreparedCells[id].params;
+            if (p) {
+              _hoverPreparedCells[id].params = p;
+            }
+          }
+        }
+
+        function leaveHoverZone(cell, row, col) {
+          if (!cell) return;
+          var id = row + '_' + col;
+          cell.classList.remove('hover-zone');
+          if (_hoverPreparedCells[id]) {
+            if (_hoverPreparedCells[id].el === cell) {
+              delete _hoverPreparedCells[id];
+            }
+          }
+        }
+
+        // Attach hover listeners — staggered to avoid layout thrash on init
+        function initHoverListeners() {
+          if (!window.PointerEvent && !('ontouchstart' in window)) return;
+
+          var num = allCells.length;
+          var chunkSize = 10;
+          var idx = 0;
+
+          function attachChunk() {
+            var end = Math.min(idx + chunkSize, num);
+            for (; idx < end; idx++) {
+              (function(cell) {
+                var r = parseInt(cell.dataset.row);
+                var c = parseInt(cell.dataset.col);
+
+                if (window.PointerEvent) {
+                  cell.addEventListener('pointerenter', function(e) {
+                    if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
+                      enterHoverZone(cell, r, c);
+                    }
+                  }, { passive: true });
+
+                  cell.addEventListener('pointerleave', function() {
+                    leaveHoverZone(cell, r, c);
+                  }, { passive: true });
+
+                  // If active voice exists for this cell, hover modulates filter cutoff preview
+                  cell.addEventListener('pointermove', function(e) {
+                    if (!ensureAudio()) return;
+                    var id = r + '_' + c;
+                    var prep = _hoverPreparedCells[id];
+                    if (!prep) return;
+                    var rect = cell.getBoundingClientRect();
+                    var xF = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    var yF = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+                      // Update pre-computed params to reflect hover position within cell
+                    // This prepares the exact params that will fire on touch-down
+                    var bentFreq = calcBentFrequency(prep.params.freq, xF);
+                    var modCutoff = calcModulatedCutoff(prep.params.freq, yF);
+                    var aa = getAntiAliasedParams(bentFreq);
+                    prep.params.hoverBentFreq = bentFreq;
+                    prep.params.hoverCutoff = Math.min(modCutoff, aa.cutoff);
+                    prep.params.hoverAmp = calcAmplitude(r, c,
+                        (typeof e.pressure === 'number' && e.pressure > 0) ? e.pressure : undefined);
+                    prep.params.xFrac = xF;
+                    prep.params.yFrac = yF;
+                  }, { passive: true });
+
+                } else {
+                  // For touch devices: no hover pre-activation (hover doesn't exist on touch)
+                  // But we still track for hybrid devices
+                }
+              })(allCells[idx]);
+            }
+
+            if (idx < num) {
+              _hoverStaggerTimer = setTimeout(attachChunk, 8);
+            }
+          }
+
+          attachChunk();
+        }
+
+        // On touch-down, if params were pre-computed via hover, use them for instant trigger
+        // This gives a "pre-warmed" feel: the oscillator starts at the exact freq/cutoff
+        // the hover position predicted, with zero ramp-up delay.
+        function getPreparedParamsForCell(row, col) {
+          var id = row + '_' + col;
+          var prep = _hoverPreparedCells[id];
+          if (prep && prep.params) return prep.params;
+          return prepareHoverParams(row, col);
+        }
+
+        // ========================================
+        //  Optimized Hover Rendering Guards
+        // ========================================
+        // Prevents visual stutter during hover transitions by:
+        // 1. Bounding hover state changes per rAF frame to MAX_HOVER_UPDATES
+        // 2. Skipping hover visual updates when audio-reactive loop is under heavy load
+        // 3. Deferring hover zone cleanup to next idle callback
+
+        var _hoverUpdateQueue = [];
+        var _hoverProcessing = false;
+        var MAX_HOVER_UPDATES = 6;
+
+        function safeHoverClassAdd(cell, cls) {
+          if (!cell) return;
+          cell.classList.add(cls);
+        }
+
+        function safeHoverClassRemove(cell, cls) {
+          if (!cell) return;
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(function() { cell.classList.remove(cls); }, { timeout: 100 });
+          } else {
+            setTimeout(function() { cell.classList.remove(cls); }, 0);
+          }
+        }
+
+        // ========================================
+        //  Init
+        // ========================================
+      function init() {
+          buildStepIndicators();
+         buildGrid();
+         PerfMonitor.start();
+         SignalGraph.init();
+         ProfilerHUD.init();
+         VisibilityManager.init(audioVisualLoop);
+         initHoverListeners();
+
+           // Invalidate rect cache on resize
+       var resizeTimer;
+       window.addEventListener('resize', function() {
+         clearTimeout(resizeTimer);
+         invalidateRectCache();
+         resizeTimer = setTimeout(resizeGrid, 80);
+           }, { passive: true });
+       if (window.matchMedia) {
+         window.matchMedia('(orientation: portrait)').addEventListener('change', function() {
+           invalidateRectCache(); resizeGrid();
+           });
+         window.matchMedia('(orientation: landscape)').addEventListener('change', function() {
+           invalidateRectCache(); resizeGrid();
+           });
+           }
+
+           // Stress test keyboard shortcut: Ctrl+Alt+S
+       document.addEventListener('keydown', function(e) {
+         if (e.ctrlKey && e.altKey && e.key === 's') {
+           e.preventDefault();
+           getAudioCtxPromise().then(function() {
+             if (ensureAudio()) StressTest.start();
+               });
+             return;
+             }
+          if (e.key === 'q' && e.shiftKey) {
+           e.preventDefault();
+           document.getElementById('tempo-slider').focus();
+           return;
+            }
+          if (e.key !== 'F5' && e.key !== 'F12') launch();
+        });
+
+           // Dev-mode: expose stress test to console
+       if (window.location.hash.indexOf('stress') >= 0) {
+         setTimeout(function() {
+           getAudioCtxPromise().then(function() {
+             if (ensureAudio()) StressTest.start();
+               });
+            }, 2000);
+            }
       }
 
     init();

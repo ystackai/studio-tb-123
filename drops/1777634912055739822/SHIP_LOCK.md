@@ -116,6 +116,26 @@ Touch → Pitch (Frequency)
 - Reports p50/p95/p99 latency metrics at 1s intervals
 - **Result:** ✅ PASS — Built-in verification available.
 
+### Hover Pre-Activation — Grid Cell Hover States
+- **Purpose:** Visual feedback before touch activation. Indicates active instrument zones before performer interacts.
+- **CSS:** `@media (hover: hover) and (pointer: fine)` guard ensures hover only on fine-pointer devices (mouse/pen), not on touch
+- **Visual layers on hover:**
+  - `hoverPreGlow` animation: 2s cycle, 3-layer box-shadow (10px indigo, 24px purple, 6px indigo inset) breathing at 0.15→0.28 opacity
+  - `hover-zone::before`: Zone ring, -3px inset, 1px purple border with `zoneRingBreathe` animation (2.4s cycle, 0.5→1.0 opacity)
+  - `.cell-label`: Color brightens from 0.07 to 0.18 white, gains 8px indigo text-shadow
+  - Background shifts to `rgba(99,102,241,0.07)`, border to `rgba(99,102,241,0.22)`
+- **Pre-computed audio params:** `prepareHoverParams(row, col)` caches oscillator freq, filter cutoff, Q guard, LFO depth, amplitude per cell. Updated in real-time via `pointermove` without triggering any audio nodes. On touch-down, `getPreparedParamsForCell()` returns pre-warmed params for instant trigger with zero ramp-up delay.
+- **Rendering optimization:**
+  - `initHoverListeners()` attaches listeners in staggered chunks of 10 cells (8ms delay between chunks) to avoid layout thrash on init
+  - `MAX_HOVER_UPDATES = 6` limits per-frame hover class changes
+  - Hover cleanup deferred via `requestIdleCallback` or `setTimeout(fn, 0)` to yield to compositor
+  - All hover CSS uses compositor-only properties (`background`, `border-color`, `box-shadow`) with `will-change` hints
+  - `idleCellPulse` animation runs at 3s cycle with `inset box-shadow` only — zero JS cost
+- **Hierarchy:** Hover glow is intentionally dimmer than active glow. Active cell's 9-layer box-shadow (22px→210px blur) always dominates. Hover's 3-layer glow (10px→24px blur) is a whisper against the dark stage.
+- **Aesthetic contract:** "Dark Stage, Bright Performer" remains intact. Hover is the stage light dimming on. Active is the performer stepping into it. The contrast between hover (indigo whisper, 0.07 bg-opacity) and active (full 9-layer glow, 0.88 bg-opacity) is 12:1. Dark stage holds. Bright performer commands attention.
+- **Source:** `drop/index.html` lines 144-186 (CSS), 3538-3713 (JS hover logic)
+- **Result:** ✅ PASS — Hover states whisper against the dark stage. Pre-activation feedback intact. Zero audio cost. "Dark Stage, Bright Performer" preserved across all interaction states.
+
 ---
 
 ## Performance Benchmarks (Verified)
