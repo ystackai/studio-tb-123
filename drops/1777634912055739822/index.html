@@ -55,47 +55,63 @@
      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* ---- Stage ---- */
-      #stage {
-       position: relative; width: 100%; height: 100%;
-       display: flex; align-items: center; justify-content: center;
-       flex-direction: column;
-       opacity: 0;
-       transition: opacity 0.8s ease-out;
-       will-change: opacity;
-        background:
-          radial-gradient(ellipse 28% 38% at 50% 12%, rgba(99,102,241,0.045) 0%, rgba(99,102,241,0.012) 30%, transparent 60%),
-          radial-gradient(ellipse 55% 65% at 50% 50%, rgba(168,85,247,0.008) 0%, transparent 50%),
-          radial-gradient(ellipse 85% 95% at 50% 48%, var(--cover-stage) 0%, var(--cover-stage-vignette) 100%);
-    }
+      /* ---- Stage ---- */
+        #stage {
+        position: relative; width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column;
+        opacity: 0;
+        transition: opacity 0.8s ease-out;
+        will-change: opacity;
+         background:
+           radial-gradient(ellipse 28% 38% at 50% 12%, rgba(99,102,241,0.045) 0%, rgba(99,102,241,0.012) 30%, transparent 60%),
+           radial-gradient(ellipse 55% 65% at 50% 50%, rgba(168,85,247,0.008) 0%, transparent 50%),
+           radial-gradient(ellipse 85% 95% at 50% 48%, var(--cover-stage) 0%, var(--cover-stage-vignette) 100%);
+         /* Deep perimeter vignette — locks dark stage contrast at edges */
+         overflow: hidden;
+      }
+      /* Perimeter vignette overlay — pure CSS, no JS cost */
+      #stage::after {
+         content: '';
+         position: absolute; inset: 0;
+         background: radial-gradient(ellipse 70% 60% at 50% 48%, transparent 40%, rgba(0,0,0,0.7) 100%);
+         pointer-events: none;
+         z-index: 0;
+      }
     #stage.visible { opacity: 1; }
 
     /* ---- Grid Container ---- */
-    #grid-container {
-      display: flex; flex-direction: column; align-items: center; gap: 12px;
-    }
+       #grid-container {
+       display: flex; flex-direction: column; align-items: center; gap: 12px;
+       position: relative;
+       z-index: 1;
+       }
 
-    #grid-wrap {
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
-    }
+       #grid-wrap {
+       display: flex; align-items: center; justify-content: center;
+       position: relative;
+       }
 
-    #grid {
-      display: grid;
-      gap: var(--grid-gap, var(--cover-gap));
-      padding: var(--grid-pad, var(--cover-pad));
-      border-radius: var(--grid-radius, var(--cover-frame-radius));
-      background: var(--cover-frame-bg);
-      border: var(--grid-border, 1px) solid var(--cover-frame-border);
-      box-shadow:
-          0 0 50px rgba(99,102,241,0.03),
-          0 0 100px rgba(99,102,241,0.02),
-          0 0 180px rgba(99,102,241,0.012),
-        inset 0 0 30px rgba(0,0,0,0.6);
-      will-change: transform, box-shadow;
-      transition: box-shadow 0.15s ease-out;
-      transform-origin: center center;
-    }
+        #grid {
+       display: grid;
+       gap: var(--grid-gap, var(--cover-gap));
+       padding: var(--grid-pad, var(--cover-pad));
+       border-radius: var(--grid-radius, var(--cover-frame-radius);
+       background: rgba(3,3,8,0.9);
+       border: var(--grid-border, 1px) solid rgba(99,102,241,0.06);
+       box-shadow:
+            /* Tight perimeter — no bleed past frame */
+             0 0 40px rgba(99,102,241,0.025),
+             0 0 90px rgba(99,102,241,0.015),
+             0 0 160px rgba(168,85,247,0.008),
+             /* Deep inset shadow — locks the frame against the stage floor */
+          inset 0 0 24px rgba(0,0,0,0.7),
+          inset 0 0 60px rgba(0,0,0,0.3);
+       will-change: transform, box-shadow;
+       transition: box-shadow 0.15s ease-out;
+       transform-origin: center center;
+       isolation: isolate;
+      }
 
     @media (max-width: 480px) {
        #grid { --grid-gap: 3px; --grid-pad: 7px; --grid-radius: 2px; --grid-border: 1px; }
@@ -116,21 +132,23 @@
           50% { box-shadow: inset 0 0 8px rgba(99,102,241,0.1); }
        }
 
-         /* ---- Cell (idle) ---- */
-       .cell {
-       position: relative;
-       border-radius: var(--cover-cell-radius);
-       background: var(--cover-cell-idle-bg);
-       border: var(--grid-border, 1px) solid var(--cover-cell-idle-border);
-       transition: background 0.03s, border-color 0.03s, box-shadow 0.03s;
-       cursor: pointer;
-       will-change: transform, background, box-shadow;
-       transform: translateZ(0);
-       min-width: 0; min-height: 0;
-       overflow: hidden;
-       backface-visibility: hidden;
-       animation: idleCellPulse 3s ease-in-out infinite;
-       }
+        /* ---- Cell (idle) ---- */
+        /* Edge glow refinement: tighter idle border, deeper idle fill, sharper boundary against stage */
+        .cell {
+        position: relative;
+        border-radius: var(--cover-cell-radius);
+        background: rgba(2,2,6,0.99);
+        border: var(--grid-border, 1px) solid rgba(99,102,241,0.04);
+        transition: background 0.03s, border-color 0.03s, box-shadow 0.03s;
+        cursor: pointer;
+        will-change: transform, background, box-shadow;
+        transform: translateZ(0);
+        min-width: 0; min-height: 0;
+        overflow: hidden;
+        backface-visibility: hidden;
+        isolation: isolate;
+        animation: idleCellPulse 3s ease-in-out infinite;
+        }
         .cell::after {
         content: '';
         position: absolute; inset: 0;
@@ -185,36 +203,48 @@
           50% { opacity: 1; border-color: rgba(168,85,247,0.35); }
         }
 
-        /* ---- Cell (active) — Bright Performer — locked for hero screenshot ---- */
-       .cell:active, .cell.active {
-       background: rgba(99,102,241,0.88);
-       border-color: rgba(192,132,255,1);
-       box-shadow:
-            0 0 22px rgba(99,102,241,1),
-            0 0 50px rgba(99,102,241,0.85),
-            0 0 90px rgba(168,85,247,0.65),
-            0 0 130px rgba(139,92,246,0.42),
-            0 0 175px rgba(139,92,246,0.25),
-            0 0 210px rgba(217,169,255,0.12),
-         inset 0 0 18px rgba(255,255,255,0.55),
-         inset 0 0 42px rgba(192,132,255,0.65),
-         inset 0 0 70px rgba(217,169,255,0.32);
-       }
-       .cell:active::after, .cell.active::after {
-       box-shadow: inset 0 0 14px rgba(255,255,255,0.42);
-       }
+         /* ---- Cell (active) — Bright Performer — edge glow refined, bleed locked ---- */
+         /* Tighter core glow, sharper edge falloff. Each shadow layer stops before adjacent
+            cell boundary. Dark stage perimeter contrast locked for hero screenshot. */
+         .cell:active, .cell.active {
+        background: rgba(99,102,241,0.9);
+        border-color: rgba(192,132,255,0.95);
+        box-shadow:
+             /* Tight core glow — edge glow, no bleed past cell boundary */
+              0 0 16px rgba(99,102,241,0.95),
+             /* Mid halo — controlled falloff */
+              0 0 36px rgba(99,102,241,0.7),
+             /* Outer wash — subtle purple */
+              0 0 65px rgba(168,85,247,0.45),
+             /* Deep ambient — barely perceptible at stage edge */
+              0 0 100px rgba(139,92,246,0.25),
+              0 0 140px rgba(139,92,246,0.12),
+             /* Center-hot inset — bright performer core */
+            inset 0 0 12px rgba(255,255,255,0.6),
+            inset 0 0 30px rgba(192,132,255,0.55),
+            inset 0 0 50px rgba(217,169,255,0.28);
+        /* Clip shadow to cell boundary — prevents visual bleed into adjacent cells */
+        clip-path: inset(0 round var(--cover-cell-radius));
+         }
+         .cell:active::after, .cell.active::after {
+        box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
+         }
 
-      /* ---- Cell (sequencer pattern step) ---- */
-      .cell.seq-active {
-       background: rgba(168,85,247,0.35);
-       border-color: rgba(168,85,247,0.8);
-       box-shadow:
-           0 0 14px rgba(168,85,247,0.6),
-           0 0 32px rgba(99,102,241,0.3),
-           0 0 55px rgba(139,92,246,0.15),
-         inset 0 0 8px rgba(192,132,255,0.4),
-         inset 0 0 20px rgba(168,85,247,0.2);
-      }
+        /* ---- Cell (sequencer pattern step) ---- */
+        /* Tighter edge glow, no bleed into adjacent cell */
+        .cell.seq-active {
+        background: rgba(168,85,247,0.32);
+        border-color: rgba(168,85,247,0.75);
+        box-shadow:
+            /* Tight core — stops at cell boundary */
+             0 0 12px rgba(168,85,247,0.55),
+             0 0 26px rgba(99,102,241,0.25),
+             0 0 45px rgba(139,92,246,0.12),
+            /* Inset glow — contained, no bleed */
+           inset 0 0 6px rgba(192,132,255,0.35),
+           inset 0 0 16px rgba(168,85,247,0.15);
+        clip-path: inset(0 round var(--cover-cell-radius));
+        }
 
       /* ---- Cell (misuse / feedback loop active) ---- */
       @keyframes feedbackPulse {
@@ -659,11 +689,11 @@
         FEEDBACK_DELAY_BASE_MS: 80,
         FEEDBACK_LOWPASS_Q: 4,
         FEEDBACK_LOWPASS_FREQ: 4500,
-        BUILD_SHA: 'open-circuit-v4-feedback',
+        BUILD_SHA: 'open-circuit-v5-edge-glow-polish-final',
         DROP_ID: '1777634912055739822',
         AESTHETIC: 'Dark Stage, Bright Performer',
-        COVER_LOOK: 'v1-feedback',
-        LOCKED_AT: '2026-05-01T00:00:00Z'
+        COVER_LOOK: 'v2-edge-glow-locked',
+        LOCKED_AT: '2026-05-02T00:00:00Z'
          };
 
     const ROWS = ENV.GRID_ROWS;
@@ -3413,57 +3443,65 @@
        var cell = allCells[ci];
        if (cell.classList.contains('feedback-active')) continue;
 
-       var isActive = cell.classList.contains('active');
-       if (!isActive) {
-         // Idle cells: only write when signal is strong enough to be perceptible
-         if (glowIntensity < 0.25) continue;
-         var row = cellMeta[ci].row;
-         var reactive = Math.sin(lfoPhase + row * 0.7) * 0.5 + 0.5;
-         var edgeGlow = glowIntensity * reactive * 1.4;
-         if (Math.abs(edgeGlow - cellLastGlow[ci]) < 0.03) continue;
-         cellLastGlow[ci] = edgeGlow;
-         if (domWrites >= MAX_WRITES) { requestAnimationFrame(audioVisualLoop); return; }
-         if (edgeGlow > 0.05) {
-           cell.style.borderColor = 'rgba(99,102,241,' + (0.06 + edgeGlow * 0.18).toFixed(3) + ')';
-           cell.style.boxShadow = '0 0 ' + (5 + edgeGlow * 10 | 0) + 'px rgba(99,102,241,' + (edgeGlow * 0.09).toFixed(3) + ')';
-           domWrites++;
-          } else {
-           cell.style.borderColor = '';
-           cell.style.boxShadow = '';
+        var isActive = cell.classList.contains('active');
+        if (!isActive) {
+           // Idle cells: tighter edge threshold; glow clamped to prevent bleed past cell boundary
+          if (glowIntensity < 0.25) continue;
+          var row = cellMeta[ci].row;
+          var reactive = Math.sin(lfoPhase + row * 0.7) * 0.5 + 0.5;
+          var edgeGlow = Math.min(1, glowIntensity * reactive * 1.2);
+          if (Math.abs(edgeGlow - cellLastGlow[ci]) < 0.03) continue;
+          cellLastGlow[ci] = edgeGlow;
+          if (domWrites >= MAX_WRITES) { requestAnimationFrame(audioVisualLoop); return; }
+          if (edgeGlow > 0.05) {
+            var edgeBlur = 4 + (edgeGlow * 7 | 0);
+            var edgeOp = (0.04 + edgeGlow * 0.12).toFixed(3);
+            var borderOp = (0.05 + edgeGlow * 0.15).toFixed(3);
+            cell.style.borderColor = 'rgba(99,102,241,' + borderOp + ')';
+            cell.style.boxShadow = '0 0 ' + edgeBlur + 'px rgba(99,102,241,' + edgeOp + ')';
+            cell.style.clipPath = 'inset(0 round var(--cover-cell-radius))';
+            domWrites++;
+            } else {
+            cell.style.borderColor = '';
+            cell.style.boxShadow = '';
+            cell.style.clipPath = '';
+            }
+          continue;
           }
-         continue;
+
+        // Active cell — micro-reactive glow, edge clamped to prevent bleed
+        var breathe = Math.sin(lfoPhase + cellMeta[ci].row * 1.1) * 0.15 + 0.85;
+        var cGlow = Math.min(1, (glowIntensity + 0.35) * breathe);
+        if (Math.abs(cGlow - cellLastGlow[ci]) < 0.025) continue;
+        cellLastGlow[ci] = cGlow;
+        if (domWrites >= MAX_WRITES) { requestAnimationFrame(audioVisualLoop); return; }
+
+        var iR = 99 + colorFactor * 93 | 0;
+        var iG = 102 + colorFactor * 31 | 0;
+        var iB = 241 + colorFactor * 14 | 0;
+        var vR = 168 + colorFactor * 40 | 0;
+        var vG = 85 + colorFactor * 60 | 0;
+        var vB = 247 + colorFactor * 8 | 0;
+
+        // Tighter blur radii — each layer stops before adjacent cell boundary
+        var b1 = 14 + cGlow * 22 | 0;
+        var b2 = 32 + cGlow * 35 | 0;
+        var b3 = 55 + cGlow * 42 | 0;
+        var b4 = 85 + cGlow * 35 | 0;
+        var ib1 = 10 + cGlow * 15 | 0;
+        var ib2 = 24 + cGlow * 22 | 0;
+
+        cell.style.boxShadow =
+          '0 0 ' + b1 + 'px rgba(' + iR + ',' + iG + ',' + iB + ',' + (0.75 + cGlow * 0.25).toFixed(2) + '),' +
+          '0 0 ' + b2 + 'px rgba(' + iR + ',' + iG + ',' + iB + ',' + (0.4 + cGlow * 0.2).toFixed(2) + '),' +
+          '0 0 ' + b3 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.22 + cGlow * 0.15).toFixed(2) + '),' +
+          '0 0 ' + b4 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.06 + cGlow * 0.06).toFixed(2) + '),' +
+          'inset 0 0 ' + ib1 + 'px rgba(' + (vR + 24) + ',' + (vG + 47) + ',' + (vB + 8) + ',' + (0.45 + cGlow * 0.3).toFixed(2) + '),' +
+          'inset 0 0 ' + ib2 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.18 + cGlow * 0.18).toFixed(2) + ')';
+        // Clip to cell boundary — prevents glow bleed into adjacent cells
+        cell.style.clipPath = 'inset(0 round var(--cover-cell-radius))';
+        domWrites++;
         }
-
-       // Active cell — micro-reactive glow
-       var breathe = Math.sin(lfoPhase + cellMeta[ci].row * 1.1) * 0.15 + 0.85;
-       var cGlow = Math.min(1, (glowIntensity + 0.35) * breathe);
-       if (Math.abs(cGlow - cellLastGlow[ci]) < 0.025) continue;
-       cellLastGlow[ci] = cGlow;
-       if (domWrites >= MAX_WRITES) { requestAnimationFrame(audioVisualLoop); return; }
-
-       var iR = 99 + colorFactor * 93 | 0;
-       var iG = 102 + colorFactor * 31 | 0;
-       var iB = 241 + colorFactor * 14 | 0;
-       var vR = 168 + colorFactor * 40 | 0;
-       var vG = 85 + colorFactor * 60 | 0;
-       var vB = 247 + colorFactor * 8 | 0;
-
-       var b1 = 22 + cGlow * 28 | 0;
-       var b2 = 48 + cGlow * 45 | 0;
-       var b3 = 80 + cGlow * 55 | 0;
-       var b4 = 115 + cGlow * 45 | 0;
-       var ib1 = 12 + cGlow * 18 | 0;
-       var ib2 = 30 + cGlow * 28 | 0;
-
-       cell.style.boxShadow =
-         '0 0 ' + b1 + 'px rgba(' + iR + ',' + iG + ',' + iB + ',' + (0.72 + cGlow * 0.28).toFixed(2) + '),' +
-         '0 0 ' + b2 + 'px rgba(' + iR + ',' + iG + ',' + iB + ',' + (0.38 + cGlow * 0.22).toFixed(2) + '),' +
-         '0 0 ' + b3 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.2 + cGlow * 0.18).toFixed(2) + '),' +
-         '0 0 ' + b4 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.07 + cGlow * 0.08).toFixed(2) + '),' +
-         'inset 0 0 ' + ib1 + 'px rgba(' + (vR + 24) + ',' + (vG + 47) + ',' + (vB + 8) + ',' + (0.42 + cGlow * 0.35).toFixed(2) + '),' +
-         'inset 0 0 ' + ib2 + 'px rgba(' + vR + ',' + vG + ',' + vB + ',' + (0.16 + cGlow * 0.22).toFixed(2) + ')';
-       domWrites++;
-       }
 
      requestAnimationFrame(audioVisualLoop);
     }

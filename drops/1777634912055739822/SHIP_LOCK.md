@@ -7,12 +7,13 @@
 | Field | Value |
 |---|---|
 | Drop ID | 1777634912055739822 |
-| Build SHA | open-circuit-v5-hero-locked |
+| Build SHA | open-circuit-v5-edge-glow-polish-final |
 | Branch | director/1777634912055739822/1777634912055739822-build-1-director-3742 |
-| Locked At | 2026-05-01T00:00:00Z |
+| Locked At | 2026-05-02T00:00:00Z |
 | Aesthetic | Dark Stage, Bright Performer |
-| Cover Look | v2-hero-locked |
+| Cover Look | v2-edge-glow-locked |
 | Render Budget | 6ms per frame; 10 max DOM writes |
+| Edge Glow | clip-path:inset(0 round var(--cover-cell-radius)) — zero bleed |
 | Status | **SHIPPABLE** |
 
 ---
