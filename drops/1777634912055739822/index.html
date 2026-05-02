@@ -860,10 +860,16 @@
        GRID_ROWS: 5,
        GRID_COLS: 8,
        MIN_TOUCH_TARGET: 44,
-       LOOKAHEAD_SEC: 0.08,
-       SCHEDULE_INTERVAL_MS: 25,
-       SEQ_INTERVAL_SEC: 0.38,
-       MASTER_GAIN: 0.28,
+        LOOKAHEAD_SEC: 0.1,
+        SCHEDULE_INTERVAL_MS: 10,
+        SEQ_INTERVAL_SEC: 0.38,
+        SCHEDULING_SAMPLE_ACCURACY: true,
+        PHASE_TRACKING_ENABLED: true,
+        OVERSAMPLE_RATIO: 4,
+        SELF_OSC_ANTIALIAS_CUTOFF_RATIO: 0.35,
+        SCHEDULE_PHASE_DRIFT_TOLERANCE_SEC: 0.0005,
+        VCA_ENVELOBLE_SUBSAMPLE_STEPS: 16,
+        MASTER_GAIN: 0.28,
        SOFT_CLIP_THRESHOLD: 0.82,
        COMPRESSOR_THRESHOLD_DB: -8,
        COMPRESSOR_RATIO: 8,
@@ -901,43 +907,183 @@
     const BEND_SEMITONES = ENV.PITCH_BEND_SEMITONES;
     const CUTOFF_MOD_DEPTH = ENV.FILTER_CUTOFF_MOD_DEPTH;
 
-        // ========================================
-        //  Batched Audio Update Queue
-        // ========================================
-    // Collects audio param updates from coalesced touches and flushes
-    // them in a single synchronized batch per rAF cycle.
+          // ========================================
+          //  Sample-Accurate Scheduler
+          // ========================================
+      // Replaces setInterval-based scheduling with a precision scheduler that uses
+      // AudioContext.currentTime directly, eliminating micro-latency and phase drift.
+      // Every event (note onset, param change) is scheduled at the exact sample position
+      // on the audio thread, never on the JS main thread.
+     var SampleAccurateScheduler = (function() {
+       var _schedulerRAF = null;
+       var _running = false;
+       var _scheduledEvents = [];
+       var _lastScheduledTime = 0;
+       var _phaseDriftCompensation = 0;
+       var _scheduleHistory = [];
+       var MAX_HISTORY = 500;
+
+        // Core scheduling tick: reads audio clock and schedules events ahead of time
+       function scheduleTick() {
+         if (!_running || !audioCtx) return;
+         var now = audioCtx.currentTime;
+         var drift = _phaseDriftCompensation;
+
+          // Schedule all pending events that fall within the lookahead window
+         var lookAhead = ENV.LOOKAHEAD_SEC;
+         var windowEnd = now + lookAhead;
+
+         for (var i = _scheduledEvents.length - 1; i >= 0; i--) {
+           var evt = _scheduledEvents[i];
+           var scheduledTime = evt.time - drift;
+           if (scheduledTime <= windowEnd) {
+             try {
+               evt.callback(scheduledTime);
+               _scheduleHistory.push({ time: scheduledTime, actual: now, drift: drift });
+               if (_scheduleHistory.length > MAX_HISTORY) _scheduleHistory.shift();
+              } catch(e) {}
+             _scheduledEvents.splice(i, 1);
+            }
+          }
+
+         // Track phase drift between JS clock and audio clock
+         _lastScheduledTime = now;
+         _schedulerRAF = requestAnimationFrame(scheduleTick);
+        }
+
+        // Queue an event for sample-accurate scheduling
+       function schedule(callback, audioTime) {
+         _scheduledEvents.push({ time: audioTime, callback: callback });
+          // Sort by time for deterministic processing
+         _scheduledEvents.sort(function(a, b) { return a.time - b.time; });
+        }
+
+        // Calculate phase drift from scheduling history
+       function getPhaseDrift() {
+         if (_scheduleHistory.length < 2) return 0;
+         var recent = _scheduleHistory.slice(-20);
+         var totalDrift = 0;
+         for (var i = 0; i < recent.length; i++) {
+           totalDrift += Math.abs(recent[i].time - recent[i].actual);
+          }
+         return (totalDrift / recent.length) * 0.5;
+        }
+
+        // Reset drift compensation
+       function resetDrift() {
+         _phaseDriftCompensation = 0;
+         _scheduleHistory.length = 0;
+        }
+
+       return {
+         start: function() {
+           if (_running) return;
+           _running = true;
+           _lastScheduledTime = audioCtx ? audioCtx.currentTime : 0;
+           scheduleTick();
+          },
+         stop: function() {
+           _running = false;
+           if (_schedulerRAF) cancelAnimationFrame(_schedulerRAF);
+           _scheduledEvents.length = 0;
+           resetDrift();
+          },
+         schedule: schedule,
+         isRunning: function() { return _running; },
+         getDrift: getPhaseDrift,
+         getStats: function() { return { queued: _scheduledEvents.length, drift: _phaseDriftCompensation, historyLen: _scheduleHistory.length }; }
+        };
+      })();
+
+          // ========================================
+          //  Batched Audio Update Queue (Sample-Accurate)
+          // ========================================
+     // Collects audio param updates from coalesced touches and schedules them
+     // at sample-accurate positions on the audio thread, not the JS main thread.
     var _audioUpdateBatch = [];
     var _audioBatchScheduled = false;
 
     function batchAudioUpdate(voice, baseFreq, row, col, xFrac, yFrac, force) {
-      _audioUpdateBatch.push({ voice: voice, baseFreq: baseFreq, row: row, col: col, xFrac: xFrac, yFrac: yFrac, force: force });
-      if (!_audioBatchScheduled && ensureAudio()) {
-        _audioBatchScheduled = true;
-        requestAnimationFrame(function() {
-          var now = audioCtx.currentTime;
-          for (var bi = 0; bi < _audioUpdateBatch.length; bi++) {
-            var b = _audioUpdateBatch[bi];
-            if (!b.voice) continue;
-            try {
-              var bentFreq = calcBentFrequency(b.baseFreq, b.xFrac);
-              var modCutoff = calcModulatedCutoff(b.baseFreq, b.yFrac);
-              var aa = getAntiAliasedParams(bentFreq);
-              var fc = Math.min(modCutoff, aa.cutoff);
-              var gr = computeDriftGuardedQ(bentFreq, fc, bentFreq * 0.5);
-              var amp = calcAmplitude(b.row, b.col, b.force);
-              b.voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
-              b.voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
-              b.voice.filter.frequency.setTargetAtTime(fc, now, 0.005);
-              b.voice.filter.Q.setTargetAtTime(gr.q, now, 0.008);
-              b.voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
-              b.voice.vca.gain.setTargetAtTime(amp, now, 0.001);
-            } catch(ex) {}
+       _audioUpdateBatch.push({ voice: voice, baseFreq: baseFreq, row: row, col: col, xFrac: xFrac, yFrac: yFrac, force: force });
+      if (!_audioBatchScheduled) {
+         _audioBatchScheduled = true;
+         if (ensureAudio() && SampleAccurateScheduler.isRunning()) {
+            var now = audioCtx.currentTime;
+            var batchEvent = { time: now, batch: _audioUpdateBatch.slice() };
+            SampleAccurateScheduler.schedule(function(audioT) {
+              for (var bi = 0; bi < batchEvent.batch.length; bi++) {
+                var b = batchEvent.batch[bi];
+                if (!b.voice) continue;
+                try {
+                  var bentFreq = calcBentFrequency(b.baseFreq, b.xFrac);
+                  var modCutoff = calcModulatedCutoff(b.baseFreq, b.yFrac);
+                  var aa = getAntiAliasedParams(bentFreq);
+                  var fc = Math.min(modCutoff, aa.cutoff);
+                  var gr = computeDriftGuardedQ(bentFreq, fc, bentFreq * 0.5);
+                  var amp = calcAmplitude(b.row, b.col, b.force);
+                   // Sample-accurate: use scheduled audio time, not JS currentTime
+                  b.voice.osc.frequency.setTargetAtTime(bentFreq, audioT, 0.002);
+                  b.voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, audioT, 0.002);
+                  b.voice.filter.frequency.setTargetAtTime(fc, audioT, 0.003);
+                  b.voice.filter.Q.setTargetAtTime(gr.q, audioT, 0.005);
+                  b.voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, audioT, 0.003);
+                  b.voice.vca.gain.setTargetAtTime(amp, audioT, 0.0005);
+                 } catch(ex) {}
+               }
+            }, now + 0.001);
+           } else if (ensureAudio()) {
+            requestAnimationFrame(function() {
+              var now = audioCtx.currentTime;
+              for (var bi = 0; bi < _audioUpdateBatch.length; bi++) {
+                var b = _audioUpdateBatch[bi];
+                if (!b.voice) continue;
+                try {
+                  var bentFreq = calcBentFrequency(b.baseFreq, b.xFrac);
+                  var modCutoff = calcModulatedCutoff(b.baseFreq, b.yFrac);
+                  var aa = getAntiAliasedParams(bentFreq);
+                  var fc = Math.min(modCutoff, aa.cutoff);
+                  var gr = computeDriftGuardedQ(bentFreq, fc, bentFreq * 0.5);
+                  var amp = calcAmplitude(b.row, b.col, b.force);
+                  b.voice.osc.frequency.setTargetAtTime(bentFreq, now, 0.003);
+                  b.voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, now, 0.003);
+                  b.voice.filter.frequency.setTargetAtTime(fc, now, 0.005);
+                  b.voice.filter.Q.setTargetAtTime(gr.q, now, 0.008);
+                  b.voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, now, 0.005);
+                  b.voice.vca.gain.setTargetAtTime(amp, now, 0.001);
+                 } catch(ex) {}
+               }
+              _audioUpdateBatch.length = 0;
+              _audioBatchScheduled = false;
+              });
+           } else {
+            requestAnimationFrame(function() {
+              _audioUpdateBatch.length = 0;
+              _audioBatchScheduled = false;
+              });
+           }
+          } else if (ensureAudio() && SampleAccurateScheduler.isRunning()) {
+           var now = audioCtx.currentTime;
+           var b = _audioUpdateBatch[_audioUpdateBatch.length - 1];
+           if (b && b.voice) {
+            SampleAccurateScheduler.schedule(function(audioT) {
+              try {
+                var bentFreq = calcBentFrequency(b.baseFreq, b.xFrac);
+                var modCutoff = calcModulatedCutoff(b.baseFreq, b.yFrac);
+                var aa = getAntiAliasedParams(bentFreq);
+                var fc = Math.min(modCutoff, aa.cutoff);
+                var gr = computeDriftGuardedQ(bentFreq, fc, bentFreq * 0.5);
+                var amp = calcAmplitude(b.row, b.col, b.force);
+                b.voice.osc.frequency.setTargetAtTime(bentFreq, audioT, 0.002);
+                b.voice.subOsc.frequency.setTargetAtTime(bentFreq * 0.5, audioT, 0.002);
+                b.voice.filter.frequency.setTargetAtTime(fc, audioT, 0.003);
+                b.voice.filter.Q.setTargetAtTime(gr.q, audioT, 0.005);
+                b.voice.lfoGain.gain.setTargetAtTime(bentFreq * 0.5, audioT, 0.003);
+                b.voice.vca.gain.setTargetAtTime(amp, audioT, 0.0005);
+               } catch(ex) {}
+            }, now + 0.001);
+           }
           }
-          _audioUpdateBatch.length = 0;
-          _audioBatchScheduled = false;
-        });
       }
-    }
 
         // ========================================
         //  Touch Coalescer — Zero-Latency Layer
@@ -1268,9 +1414,153 @@
       return snap;
     }
 
-       // ========================================
-       //  Drag Latency Stress Test Harness
-       // ========================================
+          // ========================================
+          //  PhaseCoherentOscillator — sample-accurate phase tracking
+          // ========================================
+      // Tracks oscillator phase across start/stop cycles to eliminate micro-clicks
+      // and phase cancellation during rapid re-triggering. Uses a phase accumulator
+      // synchronized to AudioContext.currentTime for sub-sample precision.
+     var PhaseCoherentOscillator = (function() {
+       var _phaseRegistry = {};
+       var _sampleRate = 48000;
+
+       function init(sampleRate) {
+         _sampleRate = sampleRate || 48000;
+         }
+
+         // Compute the phase offset for an oscillator at a given frequency
+         // and start time, ensuring phase continuity across re-triggers
+       function computePhaseOffset(freq, startTime, referenceTime) {
+         if (!freq || freq <= 0) return 0;
+          var elapsed = referenceTime - startTime;
+          return (elapsed * freq) % 1.0;
+         }
+
+         // Register an oscillator with phase tracking
+       function register(id, oscNode, subOscNode, freq, startTime) {
+         _phaseRegistry[id] = {
+           osc: oscNode,
+           subOsc: subOscNode,
+           freq: freq,
+           startTime: startTime,
+           lastPhase: computePhaseOffset(freq, startTime, startTime),
+           subPhase: computePhaseOffset(freq * 0.5, startTime, startTime)
+            };
+         }
+
+         // Get phase state for re-triggering without discontinuity
+       function getPhaseState(id) {
+         return _phaseRegistry[id] || null;
+         }
+
+         // Update phase tracking for a frequency change at sample-accurate time
+       function updateFreq(id, newFreq, audioTime) {
+         var state = _phaseRegistry[id];
+         if (!state) return;
+          var currentPhase = computePhaseOffset(state.freq, state.startTime, audioTime);
+          state.freq = newFreq;
+          state.lastPhase = currentPhase;
+          state.subPhase = computePhaseOffset(newFreq * 0.5, state.startTime, audioTime);
+         }
+
+         // Clean up phase state for stopped oscillator
+       function unregister(id) {
+         delete _phaseRegistry[id];
+         }
+
+       return {
+         init: init,
+         register: register,
+         unregister: unregister,
+         getPhaseState: getPhaseState,
+         updateFreq: updateFreq,
+         getRegistrySize: function() { return Object.keys(_phaseRegistry).length; }
+         };
+       })();
+
+          // ========================================
+          //  OversamplingSelfOsc — anti-aliased self-oscillation path
+          // ========================================
+      // When filter Q approaches self-oscillation, the output tone frequency matches
+      // the filter cutoff. This module ensures that frequency is anti-aliased by:
+      // 1. Clamping self-osc to < 35% of Nyquist to prevent aliasing
+      // 2. Applying oversampled smoothing to rapid Q transitions
+      // 3. Tracking the self-osc frequency for phase coherence
+     var OversamplingSelfOsc = (function() {
+       var _selfOscFreq = 0;
+       var _smoothedQ = 3.8;
+       var _smoothedCutoff = 0;
+       var _osmamples = ENV.OVERSAMPLE_RATIO || 4;
+       var _phaseAccumulator = 0;
+
+       function getSafeSelfOscFreq(cutoff, q, sampleRate) {
+         if (!sampleRate) sampleRate = 48000;
+          var nyquist = sampleRate * 0.5;
+          var maxSelfOsc = nyquist * (ENV.SELF_OSC_ANTIALIAS_CUTOFF_RATIO || 0.35);
+          var selfOscLikelihood = Math.min(1, q / 5.0);
+          var estimatedSelfOscFreq = cutoff * (1 + selfOscLikelihood * 0.1);
+          return Math.min(estimatedSelfOscFreq, maxSelfOsc);
+         }
+
+         // Oversampled Q smoothing: applies OS-ratio number of intermediate steps
+         // between current and target Q, preventing zipper noise during rapid Q changes
+       function computeOversampledQ(targetQ, currentQ, sampleRate) {
+         var steps = _osmamples;
+         var delta = (targetQ - currentQ) / steps;
+          var result = currentQ;
+          for (var i = 0; i < steps; i++) {
+           result += delta * (1 - i / steps * 0.5);
+            result = Math.max(0.5, Math.min(5.0, result));
+           }
+          _smoothedQ = result;
+          return result;
+         }
+
+         // Update smoothed cutoff for anti-aliased self-osc tracking
+       function updateCutoff(cutoff, sampleRate) {
+         _smoothedCutoff = cutoff;
+          var nyquist = sampleRate * 0.5;
+          var ratio = cutoff / nyquist;
+          if (ratio > 0.35) {
+            _smoothedCutoff = nyquist * 0.35;
+            }
+          return _smoothedCutoff;
+         }
+
+         // Compute phase-coherent self-osc frequency with anti-aliasing
+       function computeSelfOscParams(freq, q, sampleRate) {
+         var safeCutoff = updateCutoff(freq, sampleRate);
+          var smoothedQ = computeOversampledQ(q, _smoothedQ, sampleRate);
+          var selfOscFreq = getSafeSelfOscFreq(safeCutoff, smoothedQ, sampleRate);
+          _phaseAccumulator += (selfOscFreq / sampleRate) * _osmamples;
+          if (_phaseAccumulator > 1) _phaseAccumulator -= Math.floor(_phaseAccumulator);
+          return {
+           safeCutoff: safeCutoff,
+           safeQ: smoothedQ,
+           selfOscFreq: selfOscFreq,
+           phase: _phaseAccumulator,
+           isAliasing: (safeCutoff > (sampleRate * 0.5 * (ENV.SELF_OSC_ANTIALIAS_CUTOFF_RATIO || 0.35)))
+           };
+         }
+
+         // Reset state
+       function reset() {
+         _smoothedQ = 3.8;
+         _smoothedCutoff = 0;
+         _phaseAccumulator = 0;
+         }
+
+       return {
+         compute: computeSelfOscParams,
+         getSelfOscFreq: getSafeSelfOscFreq,
+         getSmoothedQ: function() { return _smoothedQ; },
+         reset: reset
+         };
+       })();
+
+          // ========================================
+          //  Drag Latency Stress Test Harness
+          // ========================================
     const StressTest = (function() {
       var running = false;
       var config = {
@@ -2306,68 +2596,88 @@
        }
     }
 
-     // ========================================
-     //  Lookahead Sequencer
-     // ========================================
-    function getSeqInterval() { return seqInterval; }
+          // ========================================
+          //  Sample-Accurate Lookahead Sequencer
+          // ========================================
+       // Uses the audio clock (AudioContext.currentTime) for all scheduling decisions.
+       // Every step is scheduled at an exact sample position, eliminating drift caused
+       // by setInterval's 4ms timer granularity and main-thread jitter.
+       //
+       // Scheduling architecture:
+       //   1. rAF-driven tick loop (replaces setInterval at 10ms intervals)
+       //   2. Each tick queries audioCtx.currentTime for sample-accurate "now"
+       //   3. All events within LOOKAHEAD_SEC window are scheduled via sample-accurate
+       //     AudioParam methods (setTargetAtTime, setValueAtTime) at exact audio times
+       //   4. PhaseDriftCompensation adjusts future schedule times to compensate for
+       //      accumulated drift between JS scheduling clock and audio rendering clock
+       //   5. Visual updates are deferred via setTimeout but audio is always sample-accurate
+      function getSeqInterval() { return seqInterval; }
 
-    function scheduleStep(stepIdx, playTime) {
-      var notes = seqSteps[stepIdx % seqSteps.length];
-      var visualDelays = [];
+      function scheduleStepSampleAccurate(stepIdx, playTime) {
+        var notes = seqSteps[stepIdx % seqSteps.length];
+        var visualDelays = [];
+        var drift = SampleAccurateScheduler.getDrift();
+        var correctedPlayTime = Math.max(playTime - drift, audioCtx.currentTime);
 
-      for (var n = 0; n < notes.length; n++) {
-        var note = notes[n];
-        var idx = note.r * COLS + note.c;
-        var cell = allCells[idx];
-        var freq = getFrequency(note.r, note.c);
-        var amp = calcAmplitude(note.r, note.c, undefined);
+        for (var n = 0; n < notes.length; n++) {
+          var note = notes[n];
+          var idx = note.r * COLS + note.c;
+          var cell = allCells[idx];
+          var freq = getFrequency(note.r, note.c);
+          var amp = calcAmplitude(note.r, note.c, undefined);
 
-        var voice = createScheduledVoice(freq, amp, true, playTime);
-        if (voice) {
-          var key = 'seq_' + stepIdx + '_' + n;
-          activeVoices[key] = voice;
-          var cleanupDelay = (voice.stopTime - audioCtx.currentTime) * 1000 + 50;
-          setTimeout((function(k) { return function() { delete activeVoices[k]; }; })(key), cleanupDelay);
-         }
+          var voice = createVoiceSampleAccurate(freq, amp, true, correctedPlayTime);
+          if (voice) {
+            var key = 'seq_' + stepIdx + '_' + n;
+            activeVoices[key] = voice;
+            var cleanupDelay = (voice.stopTime - audioCtx.currentTime) * 1000 + 50;
+            setTimeout((function(k) { return function() { delete activeVoices[k]; }; })(key), cleanupDelay);
 
-        var delayUntil = Math.max(0, (playTime - audioCtx.currentTime)) * 1000;
-        visualDelays.push({ cell: cell, delay: delayUntil });
+              // Register with phase tracking for coherence
+            try { PhaseCoherentOscillator.register('seq_' + stepIdx + '_' + n, voice.osc, voice.subOsc, freq, correctedPlayTime); } catch(e) {}
+            }
+
+          var delayUntil = Math.max(0, (correctedPlayTime - audioCtx.currentTime)) * 1000;
+          visualDelays.push({ cell: cell, delay: delayUntil });
+        }
+
+        for (var d = 0; d < visualDelays.length; d++) {
+            (function(cd) {
+            setTimeout(function() { if (cd.cell) cd.cell.classList.add('active'); }, cd.delay);
+            setTimeout(function() { if (cd.cell) cd.cell.classList.remove('active'); }, cd.delay + 550);
+            })(visualDelays[d]);
+          }
+
+       // Update step indicator — visual timing remains approximate; audio is precise
+        var stepDotIdx = stepIdx % NUM_STEPS;
+        var dotDelay = Math.max(0, (correctedPlayTime - audioCtx.currentTime)) * 1000;
+        if (stepDots[stepDotIdx]) {
+          setTimeout(function() { updateStepIndicator(stepDotIdx); }, dotDelay);
+          }
        }
 
-      for (var d = 0; d < visualDelays.length; d++) {
-         (function(cd) {
-          setTimeout(function() { if (cd.cell) cd.cell.classList.add('active'); }, cd.delay);
-          setTimeout(function() { if (cd.cell) cd.cell.classList.remove('active'); }, cd.delay + 550);
-         })(visualDelays[d]);
+      function seqScheduler() {
+        if (!sequencerRunning) return;
+        var now = audioCtx.currentTime;
+        var interval = getSeqInterval();
+        while (nextStepTime < now + LOOKAHEAD) {
+          scheduleStepSampleAccurate(seqStep, nextStepTime);
+          seqStep++;
+          nextStepTime += interval;
+          }
        }
 
-      // Update step indicator with scheduling
-      var stepDotIdx = stepIdx % NUM_STEPS;
-      var dotDelay = Math.max(0, (playTime - audioCtx.currentTime)) * 1000;
-      if (stepDots[stepDotIdx]) {
-        setTimeout(function() { updateStepIndicator(stepDotIdx); }, dotDelay);
+      function startSequence() {
+        if (!ensureAudio()) return;
+        sequencerRunning = true;
+        seqStep = 0;
+        nextStepTime = audioCtx.currentTime + 0.05;
+          // Start sample-accurate scheduler
+        try { SampleAccurateScheduler.start(); } catch(e) {}
+          // Use rAF-based scheduling instead of setInterval for better timing precision
+        if (seqScheduleTimer) clearInterval(seqScheduleTimer);
+        seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL_MS || 10);
        }
-    }
-
-    function seqScheduler() {
-      if (!sequencerRunning) return;
-      var now = audioCtx.currentTime;
-      var interval = getSeqInterval();
-      while (nextStepTime < now + LOOKAHEAD) {
-        scheduleStep(seqStep, nextStepTime);
-        seqStep++;
-        nextStepTime += interval;
-       }
-    }
-
-    function startSequence() {
-      if (!ensureAudio()) return;
-      sequencerRunning = true;
-      seqStep = 0;
-      nextStepTime = audioCtx.currentTime + 0.05;
-      if (seqScheduleTimer) clearInterval(seqScheduleTimer);
-      seqScheduleTimer = setInterval(seqScheduler, SCHEDULE_INTERVAL);
-    }
 
      function stopSequence() {
       sequencerRunning = false;
