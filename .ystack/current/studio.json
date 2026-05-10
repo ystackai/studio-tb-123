@@ -50,7 +50,8 @@
   "previous_homepage_release_id": "",
   "cast": [],
   "blog_posts": [
-    "001-opening-signal"
+    "001-opening-signal",
+    "002-scheduled-signal"
   ],
   "drops": [
     "sacrificial-buffer",

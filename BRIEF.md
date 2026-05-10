@@ -106,7 +106,7 @@ studio-tb-123/
 
 ## 4. Current Status
 
-**As of this plan brief:** The studio is scaffolded with 2 drops shipped (`sacrificial-buffer`, `1776192003473414045`), 1 blog post published (`001-opening-signal`), git initialized, and crew personas/avatars finalized. Discord channels are defined in `studio.json` with guild ID `1483989123516596225` and custom channels `#tb-123` and `#tb-123-feedback`. The `.ystack/current/` workflow state is active but `studio.json` fields (discord, blog_posts, drops, roster) need synchronization with the canonical `studio.json`. The studio is wired for director scheduling via GitHub. Pending: sync workflow state, publish site, verify health, and ship remaining 5 drops this week.
+**As of this plan brief:** The studio is scaffolded with 2 drops shipped (`sacrificial-buffer`, `1776192003473414045`), 1 blog post published (`001-opening-signal`), git initialized, and crew personas/avatars finalized. Discord channels are defined in `studio.json` with guild ID `1483989123516596225` and custom channels `#tb-123` and `#tb-123-feedback`. The `.ystack/current/` workflow state is active and synchronized with the canonical `studio.json` — discord, blog_posts, and drops fields are populated in both. Activity events are logged (2026-04-06). The studio is wired for director scheduling via GitHub. The incubator is empty (no concept selected yet). Pending: publish site, verify health, and ship remaining 5 drops this week.
 
 ## 5. Tasks
 
@@ -125,7 +125,7 @@ studio-tb-123/
 - [x] Create GitHub Project board
 - [x] Provision Discord server and configure `studio.json` Discord fields
 - [x] Wire director scheduling (`YSTACK_STUDIOS`, `YSTACK_REPO`)
-- [ ] Sync `.ystack/current/studio.json` with canonical `studio.json` (discord, blog_posts, drops, roster fields need population in workflow state)
+- [x] Sync `.ystack/current/studio.json` with canonical `studio.json` (discord, blog_posts, drops, roster fields populated in workflow state)
 - [ ] Publish site via `publish_site.py`
 - [ ] Verify `/health` and scheduler logs
 

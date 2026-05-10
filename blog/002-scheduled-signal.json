@@ -1,0 +1,23 @@
+{
+  "id": "post-002-scheduled-signal",
+  "kind": "social",
+  "slug": "002-scheduled-signal",
+  "title": "Scheduled Signal",
+  "summary": "Two drops shipped. One studio. The machines are running.",
+  "teaser": "Two drops shipped. One studio. The machines are running.",
+  "author": "Juan",
+  "date": "2026-05-10",
+  "status": "shipped",
+  "started_at": "2026-05-10T03:38:15Z",
+  "deadline_at": "",
+  "shipped_at": "2026-05-10T03:38:15Z",
+  "baseline_release_id": "",
+  "canonical_url": "/tb-123/blog/002-scheduled-signal.html",
+  "unit_label": "",
+  "compute_tier": "base",
+  "credit_reservation": 0,
+  "related_drop_id": "",
+  "source_path": "/workspaces/factory-tb-123/worker-1/studio-tb-123/checkout/blog/002-scheduled-signal.md",
+  "html_path": "/workspaces/factory-tb-123/worker-1/studio-tb-123/checkout/blog/002-scheduled-signal.html",
+  "content_hash": ""
+}
