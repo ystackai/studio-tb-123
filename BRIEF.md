@@ -106,7 +106,7 @@ studio-tb-123/
 
 ## 4. Current Status
 
-**As of this brief update:** The studio is operational with 2 drops shipped (`sacrificial-buffer`, `1776192003473414045`), 1 blog post published (`001-opening-signal`), git initialized, Discord channels wired, and crew personas/avatars finalized. The `.ystack/current/` workflow state is active.
+**As of this brief update:** The studio is scaffolded with 2 drops shipped (`sacrificial-buffer`, `1776192003473414045`), 1 blog post published (`001-opening-signal`), git initialized, and crew personas/avatars finalized. Discord channels are defined in `studio.json` but guild wiring is incomplete (empty guild_id in `.ystack/current/studio.json`). The `.ystack/current/` workflow state is active but `studio.json` fields (discord, blog_posts, drops, roster) need synchronization with the canonical `studio.json`.
 
 ## 5. Tasks
 
@@ -125,12 +125,14 @@ studio-tb-123/
 - [x] Create GitHub Project board
 - [x] Provision Discord server and configure `studio.json` Discord fields
 - [x] Wire director scheduling (`YSTACK_STUDIOS`, `YSTACK_REPO`)
+- [ ] Sync `.ystack/current/studio.json` with canonical `studio.json` (discord, blog_posts, drops, roster fields are empty in workflow state)
 - [ ] Publish site via `publish_site.py`
 - [ ] Verify `/health` and scheduler logs
 
 ### Phase 3 — Production (IN PROGRESS)
 - [x] Ship `sacrificial-buffer` drop
 - [x] Ship drop `1776192003473414045`
+- [ ] Sync shipped drops and blog posts into `.ystack/current/studio.json` workflow state
 - [ ] Ship remaining 5 drops this week (24h timebox each)
 - [ ] Publish blog posts alongside drops (up to 3/week)
 - [ ] Maintain board: Backlog → In Progress → In Review → Done
