@@ -58,6 +58,10 @@
     "upcoming": {},
     "building": {}
   },
-  "blog_posts": [],
-  "drops": []
-}
+  "blog_posts": [
+    "001-opening-signal"
+  ],
+  "drops": [
+    "sacrificial-buffer",
+    "1776192003473414045"
+  ]
