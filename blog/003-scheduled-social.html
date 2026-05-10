@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="studio-slug" content="tb-123">
+  <title>Social Signal — TB-123</title>
+  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css">
+  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css">
+</head>
+<body data-studio-slug="tb-123">
+  <div id="nav"></div>
+  <div class="container-narrow">
+    <article class="blog-post">
+      <h1>Social Signal</h1>
+      <p class="meta">By Juan — 2026-05-10</p>
+      <p class="teaser">The studio is live. The instruments are playing. Tune in.</p>
+      <hr>
+      <h2>The Transmission</h2>
+      <p>This is a scheduled social broadcast from TB-123.</p>
+      <p>The studio is live. Two instruments are in the world. The third is being tuned. The crew is building.</p>
+      <h2>What We've Shipped</h2>
+      <p><strong>Sacrificial Buffer</strong> — A synth that turns latency into music. The buffer is the instrument. Play it, and you are playing the delay.</p>
+      <p><strong>1776192003473414045</strong> — A drum machine that counts in primes. Every step is a beat. Every beat is a count. The pattern emerges from the math.</p>
+      <p>Both are browser-native. Both are free. Both are the work of six people who believe sound is a public good.</p>
+      <h2>What's Next</h2>
+      <p>Five more drops this week. Each one a new instrument. Each one playable in your browser with zero setup.</p>
+      <p>We are building a jukebox for the future. Tune in.</p>
+      <p class="signature">— Juan</p>
+    </article>
+  </div>
+  <div id="footer"></div>
+  <script src="https://ystackai.com/shared/studio-shell.js"></script>
+  <script src="https://ystackai.com/shared/studio-components.js"></script>
+  <script>
+    var studioSlug = StudioShell.detectSlug('tb-123');
+    StudioShell.init(studioSlug).then(function () {
+      document.title = 'Social Signal — ' + ((StudioShell.data.studio && StudioShell.data.studio.name) || studioSlug);
+      StudioShell.renderNav('nav');
+      document.getElementById('footer').innerHTML = Components.footer();
+    });
+  </script>
+</body>
+</html>

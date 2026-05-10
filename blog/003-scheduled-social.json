@@ -1,0 +1,23 @@
+{
+  "id": "post-003-scheduled-social",
+  "kind": "social",
+  "slug": "003-scheduled-social",
+  "title": "Social Signal",
+  "summary": "The studio is live. The instruments are playing. Tune in.",
+  "teaser": "The studio is live. The instruments are playing. Tune in.",
+  "author": "Juan",
+  "date": "2026-05-10",
+  "status": "shipped",
+  "started_at": "2026-05-10T03:38:15Z",
+  "deadline_at": "",
+  "shipped_at": "2026-05-10T03:38:15Z",
+  "baseline_release_id": "",
+  "canonical_url": "/tb-123/blog/003-scheduled-social.html",
+  "unit_label": "",
+  "compute_tier": "base",
+  "credit_reservation": 0,
+  "related_drop_id": "",
+  "source_path": "/workspaces/factory-tb-123/worker-1/studio-tb-123/checkout/blog/003-scheduled-social.md",
+  "html_path": "/workspaces/factory-tb-123/worker-1/studio-tb-123/checkout/blog/003-scheduled-social.html",
+  "content_hash": ""
+}
