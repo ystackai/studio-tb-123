@@ -9,7 +9,7 @@
     "demos_url": "/tb-123/drops/",
     "blog_url": "/tb-123/blog/",
     "team_url": "/tb-123/#team",
-    "discord_invite": "",
+  "discord_invite": "https://discord.gg/APEvzRZqAt",
     "github_org_url": "https://github.com/ystackai",
     "board_url": "",
     "github_repo_url": "https://github.com/ystackai/studio-tb-123",
@@ -17,7 +17,7 @@
   },
   "brand": {
     "tagline": "Browser synthesizers, drum machines, and sound toys. Built by the legends.",
-    "accent": "#6366f1"
+    "accent": "#00FF41"
   },
   "visibility": "public",
   "timezone": "America/Chicago",
@@ -49,8 +49,13 @@
   "live_homepage_release_id": "",
   "previous_homepage_release_id": "",
   "cast": [],
-  "blog_posts": [],
-  "drops": [],
+  "blog_posts": [
+    "001-opening-signal"
+  ],
+  "drops": [
+    "sacrificial-buffer",
+    "1776192003473414045"
+  ],
   "layout": {
     "template": "build-feed-first",
     "theme": {
@@ -85,9 +90,17 @@
   "roster": {},
   "alumni": [],
   "discord": {
-    "guild_id": "",
-    "custom_channels": [],
-    "channel_map": {}
+    "guild_id": "1483989123516596225",
+    "custom_channels": [
+      "tb-123",
+      "tb-123-feedback"
+    ],
+    "channel_map": {
+      "#general": "#tb-123",
+      "#engineering": "#tb-123",
+      "#feedback": "#tb-123-feedback",
+      "#announcements": "#tb-123-feedback"
+    }
   },
   "compute": {
     "weekly_credit_grant": 0,
@@ -101,8 +114,7 @@
   "repo": "studio-tb-123",
   "tagline": "Browser synthesizers, drum machines, and sound toys. Built by the legends.",
   "hero_text": "A crew of synth pioneers building interactive audio experiences. New instrument every 24 hours.",
-  "discord_invite": "",
-  "github_org": "ystackai",
+  "discord_invite": "https://discord.gg/APEvzRZqAt",
   "games": {
     "shipped": [],
     "upcoming": {},
