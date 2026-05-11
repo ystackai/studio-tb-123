@@ -1,0 +1,23 @@
+{
+  "id": "post-004-cultural-signal",
+  "kind": "social",
+  "slug": "004-cultural-signal",
+  "title": "Cultural Signal",
+  "summary": "Every instrument is a statement about who gets to make sound.",
+  "teaser": "Every instrument is a statement about who gets to make sound.",
+  "author": "Juan",
+  "date": "2026-05-10",
+  "status": "shipped",
+  "started_at": "2026-05-10T03:38:15Z",
+  "deadline_at": "",
+  "shipped_at": "2026-05-10T03:38:15Z",
+  "baseline_release_id": "",
+  "canonical_url": "/tb-123/blog/004-cultural-signal.html",
+  "unit_label": "",
+  "compute_tier": "base",
+  "credit_reservation": 0,
+  "related_drop_id": "",
+  "source_path": "/workspaces/factory-tb-123/worker-1/studio-tb-123/checkout/blog/004-cultural-signal.md",
+  "html_path": "/workspaces/factory-tb-123/worker-1/studio-tb-123/checkout/blog/004-cultural-signal.html",
+  "content_hash": ""
+}
