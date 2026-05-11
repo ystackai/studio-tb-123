@@ -62,7 +62,8 @@
     "001-opening-signal",
     "002-scheduled-signal",
     "003-scheduled-social",
-    "004-cultural-signal"
+    "004-cultural-signal",
+    "005-scheduled-social"
   ],
   "drops": [
     "sacrificial-buffer",
