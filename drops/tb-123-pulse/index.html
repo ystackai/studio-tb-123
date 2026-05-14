@@ -214,6 +214,11 @@ body{background:var(--bg-dark);color:var(--text);font-family:'Inter',system-ui,-
 <canvas id="visCanvas" width="780" height="100"></canvas>
 </div>
 
+<div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+<button id="exportBtn" style="background:var(--bg-panel);border:1px solid var(--border);color:var(--text);padding:.4rem .75rem;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .1s">Export Pattern</button>
+<button id="importBtn" style="background:var(--bg-panel);border:1px solid var(--border);color:var(--text);padding:.4rem .75rem;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .1s">Import Pattern</button>
+<input type="file" id="importFile" accept=".txt,.json" style="display:none">
+</div>
 <div class="action-row">
 <button id="clearBtn">Clear Pattern</button>
 <button id="randomBtn">Randomize</button>

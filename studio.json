@@ -66,6 +66,13 @@
     "upcoming": {},
     "building": {}
   },
-  "blog_posts": [],
+  "blog_posts": [
+    {
+      "title": "Pulse \u2014 A Step Sequencer for TB-123",
+      "slug": "002-pulse-drop",
+      "date": "2026-05-14",
+      "summary": "Our second drop is Pulse \u2014 a playable 6-track step sequencer and drum machine instrument built entirely in the browser with Web Audio."
+    }
+  ],
   "drops": []
 }

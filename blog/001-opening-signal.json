@@ -19,5 +19,13 @@
   "related_drop_id": "",
   "source_path": "/Users/marcus/Documents/Github/ystack/studio-tb-123/blog/001-opening-signal.md",
   "html_path": "/Users/marcus/Documents/Github/ystack/studio-tb-123/blog/001-opening-signal.html",
-  "content_hash": "958babdbfa01889d13a483942cf6f9393a7c18d7d92d32af9215ac1ddeb3fec9"
+  "content_hash": "958babdbfa01889d13a483942cf6f9393a7c18d7d92d32af9215ac1ddeb3fec9",
+  "blog_posts": [
+    {
+      "title": "Pulse \u2014 A Step Sequencer for TB-123",
+      "slug": "002-pulse-drop",
+      "date": "2026-05-14",
+      "summary": "Our second drop is Pulse."
+    }
+  ]
 }
