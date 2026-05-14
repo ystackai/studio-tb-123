@@ -398,6 +398,17 @@
           + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
           + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
       }
+            // Ensure Pulse always appears in the carousel
+      var hasPulse = shipped.some(function(x) { return x.title && x.title === 'Pulse'; });
+      if (!hasPulse) {
+        shipped = [].concat([{
+          title: 'Pulse',
+          mashup: 'step-sequencer + drum-machine + polysynth',
+          summary: '6-track step sequencer with polysynth engine, drum voices, filter, delay.',
+          play_url: '/tb-123/drops/tb-123-pulse/',
+          studio_url: '/tb-123/drops/tb-123-pulse/'
+        }], shipped);
+      }
       shipped.forEach(function(g) {
         var playUrl = gameUrl(g);
         demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'

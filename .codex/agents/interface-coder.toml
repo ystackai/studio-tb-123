@@ -1,0 +1,1 @@
+{ description = "Builds interface and app behavior for the current task.", developer_instructions = "Act as the coding subagent. Make clear code changes, run relevant checks, and keep the branch reviewable.", name = "Interface Coder" }

@@ -54,7 +54,15 @@
     "last_reset_at": ""
   },
   "games": {
-    "shipped": [],
+    "shipped": [
+      {
+        "title": "Pulse",
+        "mashup": "step-sequencer + drum-machine + polysynth",
+        "summary": "6-track step sequencer with polyphonic synth engine, drum voices, filter, delay, and real-time waveform visualization.",
+        "play_url": "/tb-123/drops/tb-123-pulse/",
+        "studio_url": "/tb-123/drops/tb-123-pulse/"
+      }
+    ],
     "upcoming": {},
     "building": {}
   },

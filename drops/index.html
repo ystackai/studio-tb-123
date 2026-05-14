@@ -19,6 +19,10 @@
     .game-info .tag { display: inline-block; margin-top: 0.6rem; font-size: 0.72rem; color: #999; background: #f3f1fa; padding: 0.2rem 0.6rem; border-radius: 20px; }
     .play-btn { display: inline-block; margin-top: 0.75rem; color: #6366f1; text-decoration: none; font-weight: 600; font-size: 0.88rem; }
     .play-btn:hover { color: #818cf8; }
+    .pulse-card { background: linear-gradient(135deg, #0a0a0f, #1a1a2e); border: 1px solid #00FF41; }
+    .pulse-card .game-info h3 { color: #00FF41; }
+    .pulse-card .play-btn { color: #00FF41; }
+    .pulse-card .play-btn:hover { color: #63f27a; }
   </style>
 </head>
 <body data-studio-slug="tb-123">
@@ -59,7 +63,34 @@
       StudioShell.renderNav('nav');
       document.getElementById('demos-copy').textContent = 'Public drops from ' + ((data.studio && data.studio.name) || 'the crew') + '.';
 
+      // Manual Pulse drop entry for the catalog
+      var pulseDrop = {
+        title: 'Pulse',
+        mashup: 'step-sequencer + drum-machine + polysynth',
+        summary: '6-track step sequencer with polyphonic synth engine, drum voices, filter, delay, and real-time waveform visualization.',
+        play_url: '/tb-123/drops/tb-123-pulse/',
+        studio_url: '/tb-123/drops/tb-123-pulse/'
+      };
+
       var demos = [];
+
+      // Add Pulse first (newest)
+      demos.push(
+        '<article class="card pulse-card">' +
+          '<div class="game-thumb" style="background:linear-gradient(135deg,#0a0a0f,#1a1a2e);display:flex;align-items:center;justify-content:center;padding:1rem">' +
+            '<svg width="80" height="80" viewBox="0 0 100 100" style="opacity:0.9"><circle cx="50" cy="50" r="40" fill="none" stroke="#00FF41" stroke-width="3"/><circle cx="50" cy="50" r="20" fill="none" stroke="#00FF41" stroke-width="2"/><line x1="10" y1="50" x2="90" y2="50" stroke="#00FF41" stroke-width="1.5"/><line x1="50" y1="10" x2="50" y2="90" stroke="#00FF41" stroke-width="1.5"/><circle cx="50" cy="50" r="4" fill="#00FF41"/></svg>' +
+          '</div>' +
+          '<div class="game-info">' +
+            '<h3>Pulse</h3>' +
+            '<div class="mashup">step-sequencer + drum-machine + polysynth</div>' +
+            '<p>6-track step sequencer with polyphonic synth engine, drum voices, filter, delay, and real-time waveform visualization.</p>' +
+            '<span class="tag" style="background:rgba(0,255,65,0.15);color:#00FF41">fresh drop</span>' +
+            '<br><a href="/tb-123/drops/tb-123-pulse/" class="play-btn">Play →</a>' +
+          '</div>' +
+        '</article>'
+      );
+
+      // Existing drops from data
       (data.games.shipped || []).forEach(function (game) {
         demos.push(
           '<article class="card">' +
@@ -74,22 +105,6 @@
           '</article>'
         );
       });
-
-      if (data.games.upcoming) {
-        var game = data.games.upcoming;
-        demos.push(
-          '<article class="card">' +
-            '<div class="game-thumb"><img src="' + esc(gameScreenshot(game)) + '" alt="' + esc(game.title) + '" onerror="this.style.display=\'none\'"></div>' +
-            '<div class="game-info">' +
-              '<h3>' + esc(game.title) + '</h3>' +
-              '<div class="mashup">now building</div>' +
-              '<p>' + esc(game.summary || '') + '</p>' +
-              '<span class="tag">current build</span>' +
-              '<br><a href="' + esc(gameUrl(game)) + '" class="play-btn">Open current build →</a>' +
-            '</div>' +
-          '</article>'
-        );
-      }
 
       document.getElementById('demo-grid').innerHTML = demos.join('') || '<div class="empty-state">No drops published yet.</div>';
       document.getElementById('footer').innerHTML = Components.footer();
