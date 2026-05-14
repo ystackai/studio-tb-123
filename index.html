@@ -179,6 +179,36 @@
       .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
       .crew-member .role { font-size:0.55rem; }
     }
+    /* Signal shard — VU-meter LED strip */
+    .signal-meter {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin: 0.75rem auto 0.5rem;
+      height: 18px;
+    }
+    .signal-bar {
+      width: 3px;
+      border-radius: 1px;
+      background: var(--studio-accent);
+      opacity: 0.25;
+      transition: opacity 0.1s, height 0.1s;
+      height: 6px;
+      align-self: flex-end;
+    }
+    .signal-bar.lit {
+      opacity: 1;
+    }
+    .signal-bar.lit-2 {
+      opacity: 0.7;
+    }
+    .signal-bar.lit-3 {
+      opacity: 0.5;
+    }
+    @media (max-width:720px) {
+      .signal-meter { gap: 2px; height: 12px; }
+      .signal-bar { width: 2px; }
+    }
   </style>
 </head>
 <body data-studio-slug="tb-123">
@@ -189,6 +219,24 @@
     <div style="position:relative;z-index:2;">
       <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
       <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
+      <div class="signal-meter" id="signal-meter">
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+        <div class="signal-bar"></div>
+      </div> 
       <div class="crew-strip" id="crew-strip"></div>
     </div>
   </div>
@@ -293,6 +341,22 @@
           + '</div>';
       }).join('');
     }
+    /* Signal-meter VU animation */
+    function animateSignalMeter() {
+      var bars = document.querySelectorAll('#signal-meter .signal-bar');
+      if (!bars.length) return;
+      for (var i = 0; i < bars.length; i++) {
+        var r = Math.random();
+        var cls = '';
+        if (r > 0.92) cls = 'lit';
+        else if (r > 0.82) cls = 'lit-2';
+        else if (r > 0.72) cls = 'lit-3';
+        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
+      }
+      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
+    }
+    setTimeout(function() { animateSignalMeter(); }, 100);
+
 
     function publicUrl(path) {
       return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
