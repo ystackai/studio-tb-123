@@ -196,6 +196,9 @@ body{background:var(--bg-dark);color:var(--text);font-family:'Inter',system-ui,-
 <div class="ctrl-row"><label>Delay</label><input type="range" id="delayMix" min="0" max="100" value="30" step="1"><span class="val" id="delayVal">30%</span></div>
 <div class="ctrl-row"><label>Decay</label><input type="range" id="decay" min="10" max="500" value="150" step="1"><span class="val" id="decayVal">150</span></div>
 <div class="ctrl-row"><label>Drive</label><input type="range" id="drive" min="0" max="100" value="0" step="1"><span class="val" id="driveVal">0</span></div>
+<div class="ctrl-row"><label>Reverb</label><input type="range" id="reverbMix" min="0" max="100" value="20" step="1"><span class="val" id="reverbVal">20%</span></div>
+<div class="ctrl-row"><label>LFO Rate</label><input type="range" id="lfoRate" min="0" max="200" value="40" step="1"><span class="val" id="lfoRateVal">0.4Hz</span></div>
+<div class="ctrl-row"><label>LFO Amt</label><input type="range" id="lfoAmt" min="0" max="100" value="20" step="1"><span class="val" id="lfoAmtVal">20%</span></div>
 </div>
 <div class="synth-section">
 <h3>Synth</h3>
@@ -241,7 +244,7 @@ var trackVolumes=[1,.8,.6,.6,.5,.7];
 var trackMuted=[false,false,false,false,false,false];
 var trackSoloed=[false,false,false,false,false,false];
 
-var waveType='sawtooth',cutoffHz=800,resonance=10,delayMix=0.3,decayMs=150,bpm=140,swing=0,drive=0;
+var waveType='sawtooth',cutoffHz=800,resonance=10,delayMix=0.3,decayMs=150,bpm=140,swing=0,drive=0,reverbMix=0.2,lfoRate=0.4,lfoAmt=0,lfoPhase=0;
 var selectedTrack=0;
 
 // MIDI state
@@ -254,8 +257,8 @@ melody:[[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0
 experimental:[[1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1],[0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0]]};
 function loadPreset(n){var p=presets[n];if(!p)return;for(var t=0;t<6;t++)for(var s=0;s<16;s++)pattern[t][s]=!!(p[t]&&p[t][s]);renderGrid();renderTrackCtrl();document.querySelectorAll('.preset-btn').forEach(function(b){b.classList.remove('active')});var a=document.querySelector('.preset-btn[data-preset="'+n+'"]');if(a)a.classList.add('active')}
 
-function initAudio(){if(audioCtx)return;audioCtx=new(window.AudioContext||window.webkitAudioContext)();masterGain=audioCtx.createGain();masterGain.gain.value=.8;filterNode=audioCtx.createBiquadFilter();filterNode.type='lowpass';filterNode.frequency.value=cutoffHz;filterNode.Q.value=resonance;delayGain=audioCtx.createGain();delayGain.gain.value=delayMix;delayFeedback=audioCtx.createGain();delayFeedback.gain.value=.35;delayNode=audioCtx.createDelay(1);delayNode.delayTime.value=.25;driveNode=audioCtx.createWaveShaper();driveNode.curve=makeDistCurve(0);
-masterGain.connect(filterNode);filterNode.connect(driveNode);driveNode.connect(delayNode);delayNode.connect(delayGain);delayGain.connect(audioCtx.destination);delayGain.connect(delayFeedback);delayFeedback.connect(delayNode);driveNode.connect(audioCtx.destination);analyserNode=audioCtx.createAnalyser();analyserNode.fftSize=256;driveNode.connect(analyserNode);analyserNode.connect(audioCtx.destination);
+function initAudio(){if(audioCtx)return;audioCtx=new(window.AudioContext||window.webkitAudioContext)();masterGain=audioCtx.createGain();masterGain.gain.value=.8;filterNode=audioCtx.createBiquadFilter();filterNode.type='lowpass';filterNode.frequency.value=cutoffHz;filterNode.Q.value=resonance;delayGain=audioCtx.createGain();delayGain.gain.value=delayMix;delayFeedback=audioCtx.createGain();delayFeedback.gain.value=.35;delayNode=audioCtx.createDelay(1);delayNode.delayTime.value=.25;var revNode=audioCtx.createConvolver();var revBuf=audioCtx.createBuffer(1,audioCtx.sampleRate*1.5,audioCtx.sampleRate);var revData=revBuf.getChannelData(0);for(var ri=0;ri<revBuf.length;ri++){revData[ri]=((Math.random()*2-1)*Math.exp(-ri/(audioCtx.sampleRate*.3))*0.6)}revNode.buffer=revBuf;var revGain=audioCtx.createGain();revGain.gain.value=reverbMix;driveNode=audioCtx.createWaveShaper();driveNode.curve=makeDistCurve(0);
+masterGain.connect(filterNode);filterNode.connect(driveNode);driveNode.connect(delayNode);delayNode.connect(delayGain);delayGain.connect(audioCtx.destination);delayGain.connect(delayFeedback);delayFeedback.connect(delayNode);var revDry=audioCtx.createGain();revDry.gain.value=1-reverbMix;driveNode.connect(revDry);revDry.connect(audioCtx.destination);driveNode.connect(revGain);revGain.connect(revNode);revNode.connect(audioCtx.destination);analyserNode=audioCtx.createAnalyser();analyserNode.fftSize=256;driveNode.connect(analyserNode);analyserNode.connect(audioCtx.destination);
 document.addEventListener('click',function(){if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume()})}
 function makeDistCurve(amt){var n=256,crv=new Float32Array(n);for(var i=0;i<n;i++){var x=(i/(n-1))*2-1;var v=amt>0?Math.tanh(x*amt*2+(1-amt)*x):x;crv[i]=v}return crv}
 function updateDrive(v){drive=v;if(driveNode)driveNode.curve=makeDistCurve(v/100)}
@@ -270,7 +273,10 @@ else if(track===2){var bs2=audioCtx.sampleRate*.04;var buf2=audioCtx.createBuffe
 else if(track===5){var fq=440*Math.pow(2,(trackPitches[5]-69)/12);var osc2=audioCtx.createOscillator();osc2.type='sawtooth';osc2.frequency.value=fq;var eB=audioCtx.createGain();eB.gain.setValueAtTime(vol*.4,now);eB.gain.linearRampToValueAtTime(0,now+.25);var fB=audioCtx.createBiquadFilter();fB.type='lowpass';fB.frequency.value=160;osc2.connect(fB);fB.connect(eB);eB.connect(masterGain);osc2.start();osc2.stop(now+.3)}
 else{var fq2=440*Math.pow(2,(trackPitches[track]-69)/12);createSynthVoice(fq2,vol)}}
 
-function sequencerTick(){if(!isPlaying)return;for(var t=0;t<6;t++){if(pattern[t][stepIndex])createDrumVoice(t,1)}updateStepHighlight(stepIndex);stepIndex=(stepIndex+1)%16;var intervalMs=(60/bpm)*1000/4;if(stepIndex%4===0&&swing>0)intervalMs+=intervalMs*(swing/200);timerID=setTimeout(sequencerTick,intervalMs)}
+function sequencerTick(){if(!isPlaying)return;
+// LFO modulation on filter cutoff
+lfoPhase+=1;var lfo=Math.sin(lfoPhase*0.1*lfoRate)*lfoAmt;var modulatedCutoff=cutoffHz*(1+lfo);if(filterNode)filterNode.frequency.value=Math.max(20,Math.min(2000,modulatedCutoff));
+for(var t=0;t<6;t++){if(pattern[t][stepIndex])createDrumVoice(t,1)}updateStepHighlight(stepIndex);stepIndex=(stepIndex+1)%16;var intervalMs=(60/bpm)*1000/4;if(stepIndex%4===0&&swing>0)intervalMs+=intervalMs*(swing/200);timerID=setTimeout(sequencerTick,intervalMs)}
 function startSequencer(){if(isPlaying)return;if(!audioCtx)initAudio();isPlaying=true;stepIndex=0;document.getElementById('playBtn').textContent='■ Stop';document.getElementById('playBtn').classList.add('playing');sequencerTick()}
 function stopSequencer(){isPlaying=false;if(timerID){clearTimeout(timerID);timerID=null}document.getElementById('playBtn').textContent='▶ Play';document.getElementById('playBtn').classList.remove('playing');removeStepHighlight()}
 function toggleSequencer(){if(isPlaying)stopSequencer();else startSequencer()}
@@ -303,6 +309,9 @@ document.getElementById('resonance').addEventListener('input',function(){resonan
 document.getElementById('delayMix').addEventListener('input',function(){delayMix=parseInt(this.value)/100;document.getElementById('delayVal').textContent=this.value+'%';if(delayGain)delayGain.gain.value=delayMix});
 document.getElementById('decay').addEventListener('input',function(){decayMs=parseInt(this.value);document.getElementById('decayVal').textContent=decayMs});
 document.getElementById('drive').addEventListener('input',function(){var v=parseInt(this.value);document.getElementById('driveVal').textContent=v;updateDrive(v)});
+document.getElementById('reverbMix').addEventListener('input',function(){reverbMix=parseInt(this.value)/100;document.getElementById('reverbVal').textContent=this.value+'%';if(revGain)revGain.gain.value=reverbMix;if(revDry)revDry.gain.value=1-reverbMix});
+document.getElementById('lfoRate').addEventListener('input',function(){lfoRate=parseInt(this.value)/100;document.getElementById('lfoRateVal').textContent=lfoRate.toFixed(1)+'Hz'});
+document.getElementById('lfoAmt').addEventListener('input',function(){lfoAmt=parseInt(this.value)/100;document.getElementById('lfoAmtVal').textContent=this.value+'%'});
 var waveMap={saw:'sawtooth',square:'square',sine:'sine',triangle:'triangle'},waveBtns=document.querySelectorAll('.wave-btn');
 waveBtns.forEach(function(btn){btn.addEventListener('click',function(){waveBtns.forEach(function(b){b.classList.remove('active')});btn.classList.add('active');waveType=waveMap[btn.dataset.wave]||'sawtooth'})});
 document.getElementById('clearBtn').addEventListener('click',function(){for(var t=0;t<6;t++)for(var s=0;s<16;s++)pattern[t][s]=false;renderGrid();renderTrackCtrl();document.querySelectorAll('.preset-btn').forEach(function(b){b.classList.remove('active')})});
