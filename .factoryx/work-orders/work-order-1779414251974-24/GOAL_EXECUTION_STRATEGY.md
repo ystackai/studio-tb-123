@@ -15,7 +15,7 @@ The concrete brief asks for a small game slice with scoring, progression, or dis
 
 Planning inspection on 2026-05-22 found a dependency-light static studio repository. The visible public surface is built from plain HTML files including `index.html`, `games/index.html`, `drops/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state. No `WORKFLOW.md` was present. `rg` is not installed in the workspace, so file discovery used `find`.
 
-The branch is already the required canonical Work Order branch, `factoryx/factory-tb-123/work-order`. The current guarded source head for this refreshed strategy gate is `888deb21862ff2d43f95151e171914db6f6edb6a`. `gh pr view` reported no pull request for this branch during the gate, so there were no live PR reviews, comments, status checks, or requested changes to triage. Do not create a PR during this planning gate.
+The branch is already the required canonical Work Order branch, `factoryx/factory-tb-123/work-order`. The current guarded source head for this refreshed strategy gate is `481d077f9ac68d100d86626225413882d3a7365b`. `gh pr view --json ...` reported no pull request for this branch during the gate, so there were no live PR reviews, comments, status checks, or requested changes to triage. Do not create a PR during this planning gate.
 
 The referenced primary playtest feedback path, `.factoryx/work-orders/work-order-1779413526418-1/FEEDBACK.md`, was not materialized in this refreshed workspace. The previous strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` was present and provides useful product direction: build **TB-123 Synthesizer Signal Lab**, a playable music/signal-recovery game rather than a generic browser game. It also records the important prior blocker: a file-based browser runtime check failed because `https://ystackai.com/shared/studio-shell.js` threw `Uncaught (in promise) TypeError: Failed to fetch`.
 
@@ -28,6 +28,8 @@ Implementation milestone order after this strategy gate:
 3. Replace central placeholders with intentional assets: authored or procedural hardware texture, readable module/signal silhouettes, stateful patch cables/meters, and a documented musical identity.
 4. Verify desktop and mobile runtime with screenshots, console checks, audio unlock behavior, and interaction smoke tests.
 5. Open or update the single canonical PR only after the slice is reviewable, with FactoryX Work Order Context, implementation summary, verification output, preview instructions, and known risks.
+
+This strategy refresh is the only artifact intended for this planning gate. Production files, preview entrypoints, verification notes, and PR state should remain unchanged until implementation begins after strategy acceptance.
 
 ## Vision And Player Fantasy
 
@@ -150,7 +152,7 @@ Verification plan:
 - Git status before editing and after implementation to identify unrelated changes.
 - Static smoke: ensure the preview entrypoint is valid HTML and does not append links after a closed document.
 - Browser smoke through local HTTP, plus direct-file behavior if FactoryX preview automation requires it.
-- Regression check for the prior `studio-shell.js` `Failed to fetch` issue on the review entrypoint.
+- Regression check for the prior `studio-shell.js` `Failed to fetch` issue on the review entrypoint. This should happen before art/audio polish: load the intended preview artifact and confirm the console does not include `https://ystackai.com/shared/studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch`.
 - Interaction smoke: start audio, toggle a sequencer step, move at least one tuning/filter control, change one source/route, and observe score/clarity/state updates.
 - Canvas or screenshot check: desktop and mobile screenshots show nonblank signal visuals and no text/control overlap.
 - Audio behavior check: Web Audio initializes only after user gesture, mute/stop works, and parameter changes are ramped.
