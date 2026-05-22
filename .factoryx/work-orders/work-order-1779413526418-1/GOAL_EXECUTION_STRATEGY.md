@@ -18,7 +18,15 @@ Planning-gate repo inspection on 2026-05-22 found no `WORKFLOW.md`, no existing 
 
 Planning-gate update on 2026-05-22: `gh pr view` reported no pull request for the canonical branch, so there were no unresolved PR comments, review decisions, or check failures to triage beyond the supervisor-provided browser runtime failure. Treat that failure as blocking implementation feedback: the first implementation milestone must prove the preview entrypoint can load without the remote shared Studio shell fetch path before spending time on peripheral polish.
 
-Strategy-gate execution status on 2026-05-22: this document is the only planned artifact for the gate. Production implementation, preview rewiring, and PR creation are intentionally deferred until after strategy acceptance. The next coding pass should begin from current branch head `4bcc1d0a4453fa7042445480652235d9fe355903` unless the canonical branch advances, in which case fetch and rebase/merge forward before editing.
+Strategy-gate refresh on 2026-05-22: the repo still has no open PR for the canonical branch, and current branch head is `beb26ee238dafe22e8808961729489aa964c6542`. This document is the only planned artifact for the gate. Production implementation, preview rewiring, and PR creation are intentionally deferred until after strategy acceptance. The next coding pass should begin from the latest canonical branch head unless it advances, in which case fetch and rebase/merge forward before editing.
+
+Implementation milestone order after the strategy gate:
+
+1. Establish the self-contained review entrypoint and runtime-check path first, proving it does not load `https://ystackai.com/shared/studio-shell.js` and therefore cannot reproduce the prior `Failed to fetch` blocker.
+2. Build the playable first-screen instrument loop: audio unlock, signal source, filter/tuning controls, step sequencing, patch state, and visible transmission objective.
+3. Deepen audio/visual coupling: analyser-driven scope/spectrum, meters, cable states, motif unlocks, clarity/score pressure, and browser-audio fallback copy.
+4. Wire the artifact into the static site only where needed for discovery, while keeping the direct Work Order preview path canonical for review.
+5. Run and document verification in Work Order notes, then open or update the single canonical PR only after implementation is reviewable.
 
 ## Vision And Player Fantasy
 
