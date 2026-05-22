@@ -14,6 +14,8 @@ The repository currently contains a static TB-123 studio site and an existing dr
 
 Blocking prior-run issue to address before peripheral polish: browser runtime verification failed for a `file://` preview because `https://ystackai.com/shared/studio-shell.js` attempted a fetch and produced `Uncaught (in promise) TypeError: Failed to fetch`. Implementation must avoid relying on the shared Studio shell for the review entrypoint/runtime-check page. The preview artifact should be self-contained or served through a local HTTP server during verification, with a direct entry file that opens the playable experience rather than a remote-data studio catalog.
 
+Planning-gate repo inspection on 2026-05-22 found no `WORKFLOW.md`, no existing open GitHub PR for `factoryx/factory-tb-123/work-order`, and a dependency-light static site structure (`index.html`, `games/index.html`, `drops/`, `blog/`, `personas/`, `team/`). The implementation phase should keep that static-site shape unless new evidence shows a local build pipeline is already available.
+
 ## Vision And Player Fantasy
 
 The game should be **TB-123 Synthesizer Signal Lab**: a strange live electronic instrument disguised as a numbers-station recovery console. The player sits at warm failing hardware and turns interference into a coherent transmission by patching, tuning, sequencing, filtering, and sampling signal fragments.
@@ -21,6 +23,8 @@ The game should be **TB-123 Synthesizer Signal Lab**: a strange live electronic 
 The player fantasy is not "winning a generic arena." It is "I am operating unknown analog equipment, and my decisions make the signal become music." A reviewer should open the preview and immediately see controls that invite performance: patch nodes, step sequencer lanes, tuning/frequency knobs, filter controls, sample capture/hold actions, and a visible transmission objective.
 
 Audience: reviewers and players who will evaluate the slice in a short browser session. They need to understand within seconds how to make sound, how their actions affect the signal art, and what progression means. The experience should be legible without a long tutorial, but it can feel mysterious through labels, call signs, signal fragments, and reactive instrumentation.
+
+Admin/reviewer experience: the preview should load the instrument directly, with controls visible above the fold on desktop and mobile. A reviewer should be able to verify the loop in under two minutes: unlock audio, patch or select a route, edit a step or motif, tune/filter the signal, see the clarity/transmission objective react, and capture enough notes for review without reading external documentation first.
 
 ## Mood, World, References, And Emotional Target
 
@@ -32,6 +36,8 @@ Reference directions:
 - Classic modular synth workflow: patch cables, attenuators, filters, sequencer steps, envelopes, and meters that reveal current routing.
 - Oscilloscope and spectrum analysis visuals: traces, Lissajous-style motion, spectral bands, VU meters, tape loops, and phase drift.
 - Music games with performative feedback: progress should be felt through groove stability, motif unlocks, signal clarity, score/combo, and richer musical layers.
+
+Evidence from the current repo supports a static, authored browser artifact rather than a bundled app rewrite: existing playable/drop surfaces are plain HTML documents, assets are committed directly, and there is no visible package/build configuration in the inspected file list. The strategy therefore favors self-contained Web Audio, canvas, and CSS over introducing a framework unless implementation uncovers a stronger local convention.
 
 Emotional target: "The machine is unstable, but every correct patch and timing choice makes the noise cohere into a transmission I am performing."
 
