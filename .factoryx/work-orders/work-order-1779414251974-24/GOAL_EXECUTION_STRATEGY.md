@@ -13,9 +13,9 @@ This is the durable strategy artifact for the Continuous Work Order selected by 
 
 The concrete brief asks for a small game slice with scoring, progression, or discovery instead of a static presentation. Every meaningful user action needs feedback through motion, state, and deliberate sound or music direction. The eventual review PR must explain the brief, implemented scope, verification output, preview instructions, and remaining risks.
 
-Planning inspection on 2026-05-22 found a dependency-light static studio repository. The visible public surface is built from plain HTML files including `index.html`, `games/index.html`, `drops/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state. No `WORKFLOW.md` was present. `rg` is not installed in the workspace, so file discovery used `find`.
+Planning inspection on 2026-05-22 found a dependency-light static studio repository. The visible public surface is built from plain HTML files including `index.html`, `games/index.html`, `drops/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state. No `WORKFLOW.md` was present. Hidden FactoryX files were inspected with `find` because `rg --files` does not list hidden paths by default.
 
-The branch is already the required canonical Work Order branch, `factoryx/factory-tb-123/work-order`. The current guarded source head for this refreshed strategy gate is `23b744658c9b28544ccb35f9502cb3208ec14d0c`. `gh pr view --json ...` reported no pull request for this branch during the gate, so there were no live PR reviews, comments, status checks, or requested changes to triage. Do not create a PR during this planning gate.
+The branch is already the required canonical Work Order branch, `factoryx/factory-tb-123/work-order`. The current guarded source head for this refreshed strategy gate is `6d094772be31c26cb7a51a1da7663b40dda5d91a`. `gh pr view --json ...` reported no pull request for this branch during the gate, so there were no live PR reviews, comments, status checks, or requested changes to triage. Do not create a PR during this planning gate.
 
 The referenced primary playtest feedback path, `.factoryx/work-orders/work-order-1779413526418-1/FEEDBACK.md`, was not materialized in this refreshed workspace. The previous strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` was present and provides useful product direction: build **TB-123 Synthesizer Signal Lab**, a playable music/signal-recovery game rather than a generic browser game. It also records the important prior blocker: a file-based browser runtime check failed because `https://ystackai.com/shared/studio-shell.js` threw `Uncaught (in promise) TypeError: Failed to fetch`.
 
@@ -29,7 +29,7 @@ Implementation milestone order after this strategy gate:
 4. Verify desktop and mobile runtime with screenshots, console checks, audio unlock behavior, and interaction smoke tests.
 5. Open or update the single canonical PR only after the slice is reviewable, with FactoryX Work Order Context, implementation summary, verification output, preview instructions, and known risks.
 
-This strategy refresh is the only artifact intended for this planning gate. Production files, preview entrypoints, verification notes, and PR state should remain unchanged until implementation begins after strategy acceptance. The implementation pass should start by re-checking branch freshness, because the pre-push hook rejects stale Work Order branch pushes.
+This strategy refresh is the only artifact intended for this planning gate. Production files, preview entrypoints, verification notes, and PR state should remain unchanged until implementation begins after strategy acceptance. The implementation pass should start by re-checking branch freshness, because the pre-push hook rejects stale Work Order branch pushes. If `PREVIEW.md` or `VERIFICATION.md` are materialized for this Work Order later, keep them under `.factoryx/work-orders/work-order-1779414251974-24`.
 
 ## Vision And Player Fantasy
 
