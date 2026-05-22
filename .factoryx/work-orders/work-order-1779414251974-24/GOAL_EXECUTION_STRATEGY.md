@@ -16,17 +16,24 @@ The concrete brief asks for a small game slice with scoring, progression, or dis
 Current planning-gate inspection on 2026-05-22:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `b3a44911f2eea3e81e011d8f047fa2d22f9b29da`.
+- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `7afc6b382060c8f678ac9d5ef47a282bba17ecaa`.
 - `git status --short --branch` showed a clean branch before this strategy update.
-- `gh pr view --json number,title,state,url,headRefName,baseRefName,body,reviewDecision,statusCheckRollup,comments,reviews` reported no pull requests found for this branch, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
+- `gh pr view --json number,url,state,title,headRefName,baseRefName,reviewDecision,comments,reviews,statusCheckRollup` reported no pull requests found for this branch, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
-- `find .factoryx/work-orders -maxdepth 3 -type f` showed only the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
+- `find .factoryx/work-orders -maxdepth 2 -type f` showed only the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
 - Because the referenced feedback files were absent locally, the available product and art-direction inputs are the supervisor prompt, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and the explicit previous-run runtime failure.
-- The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
+- The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
 - No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build or test harness exists before adding one.
 - Crew-agent definitions are present under `.codex/agents` for signal direction, interface coding, systems review, and copy writing. They can be used in the later implementation phase if the scope grows, but this strategy gate does not need a delegated agent pass.
 
 The previous run issue is blocking and must be addressed before peripheral polish: browser runtime verification failed for `file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html` with `Uncaught (in promise) TypeError: Failed to fetch` from `https://ystackai.com/shared/studio-shell.js` line 62. The first implementation milestone must create or select a direct preview entrypoint for the playable artifact that does not depend on the remote shared Studio shell. Verification must prove that the review entrypoint does not reproduce this failure before time is spent on art flourishes, navigation polish, or PR-body-only work.
+
+Targeted rework priority for the implementation phase:
+
+- Create a direct preview root for the playable artifact, preferably a self-contained file under `drops/tb-123-signal-lab/` or `games/tb-123-signal-lab/`, instead of routing review through the Factory homepage or remote Studio shell.
+- If a `.factoryx-runtime-check-*.html` file or equivalent preview wrapper is needed, keep it valid and minimal: no appended content after `</html>`, no remote `studio-shell.js`, and no fetch path that can fail under `file://`.
+- Preserve existing drops and studio pages unless a small discovery link is needed, but do not let any existing shared-shell page be the review entrypoint for this Work Order.
+- Document the preview path and the regression result in this Work Order's `PREVIEW.md` and `VERIFICATION.md` during implementation, because the previous browser failure is the first acceptance concern.
 
 Implementation milestone order after this strategy gate:
 
@@ -157,7 +164,7 @@ Verification plan:
 - Static smoke: ensure the preview entrypoint is valid HTML and does not append links after a closed document.
 - Browser smoke through local HTTP, plus direct-file behavior if FactoryX preview automation requires it.
 - Regression check for the prior `studio-shell.js` `Failed to fetch` issue on the review entrypoint. Load the intended preview artifact and confirm the console does not include `https://ystackai.com/shared/studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch`.
-- File-preview regression check: reproduce the failing verification shape with a small local runtime-check HTML file or the FactoryX preview harness when available. If `file://` is intentionally unsupported, the preview notes must state the local HTTP command and explain why no remote shared-shell fetch path is involved.
+- File-preview regression check: reproduce the failing verification shape with a small local runtime-check HTML file or the FactoryX preview harness when available. The preferred outcome is that the direct artifact works under both local HTTP and direct file loading because it has no network fetch dependency. If any feature is intentionally HTTP-only, the preview notes must state the local HTTP command and explain why no remote shared-shell fetch path is involved.
 - Interaction smoke: start audio, toggle a sequencer step, move at least one tuning/filter control, change one source/route, and observe score/clarity/state updates.
 - Canvas or screenshot check: desktop and mobile screenshots show nonblank signal visuals and no text/control overlap.
 - Audio behavior check: Web Audio initializes only after user gesture, mute/stop works, and parameter changes are ramped.
