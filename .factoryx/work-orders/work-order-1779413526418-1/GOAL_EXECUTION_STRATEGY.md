@@ -14,7 +14,9 @@ The repository currently contains a static TB-123 studio site and an existing dr
 
 Blocking prior-run issue to address before peripheral polish: browser runtime verification failed for a `file://` preview because `https://ystackai.com/shared/studio-shell.js` attempted a fetch and produced `Uncaught (in promise) TypeError: Failed to fetch`. Implementation must avoid relying on the shared Studio shell for the review entrypoint/runtime-check page. The preview artifact should be self-contained or served through a local HTTP server during verification, with a direct entry file that opens the playable experience rather than a remote-data studio catalog.
 
-Planning-gate repo inspection on 2026-05-22 found no `WORKFLOW.md`, no existing open GitHub PR for `factoryx/factory-tb-123/work-order`, and a dependency-light static site structure (`index.html`, `games/index.html`, `drops/`, `blog/`, `personas/`, `team/`). The implementation phase should keep that static-site shape unless new evidence shows a local build pipeline is already available.
+Planning-gate repo inspection on 2026-05-22 found no `WORKFLOW.md`, no existing open GitHub PR for `factoryx/factory-tb-123/work-order`, no current `PREVIEW.md` or `VERIFICATION.md` in this Work Order directory, and a dependency-light static site structure (`index.html`, `games/index.html`, `drops/`, `blog/`, `personas/`, `team/`). The implementation phase should keep that static-site shape unless new evidence shows a local build pipeline is already available.
+
+Planning-gate update on 2026-05-22: `gh pr view` reported no pull request for the canonical branch, so there were no unresolved PR comments, review decisions, or check failures to triage beyond the supervisor-provided browser runtime failure. Treat that failure as blocking implementation feedback: the first implementation milestone must prove the preview entrypoint can load without the remote shared Studio shell fetch path before spending time on peripheral polish.
 
 ## Vision And Player Fantasy
 
@@ -154,7 +156,7 @@ Verification plan:
 
 - Static inspection: verify no production change touches unrelated studio content except necessary navigation/preview links.
 - Browser smoke: load the artifact through local HTTP and, if needed, direct file path; assert no console errors.
-- Regression for prior issue: verify the preview entrypoint does not throw `Failed to fetch` from `studio-shell.js`.
+- Regression for prior issue: verify the preview entrypoint does not throw `Failed to fetch` from `studio-shell.js`, especially for any `file://` runtime-check artifact used by FactoryX automation.
 - Interaction smoke: unlock audio via user gesture, toggle a sequence step, move at least one knob, change one patch route, and confirm visible state changes.
 - Canvas/signal check: screenshot or pixel check confirms nonblank scope/spectrum output and active meter states.
 - Audio behavior check: document that Web Audio initializes only after gesture, nodes are created, mute works, and parameter changes are scheduled/ramped.
