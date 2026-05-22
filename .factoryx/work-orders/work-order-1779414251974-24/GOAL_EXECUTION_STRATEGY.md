@@ -16,11 +16,11 @@ The concrete brief asks for a small creative-game slice with scoring, progressio
 Planning-gate inspection on 2026-05-22:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The current guarded branch head is `2ba0c3f105889b23c89884a210f80dfe7f0e7dfc` (`2ba0c3f Refresh Work Order execution strategy`).
+- The current guarded branch head for this gate is `da8b067484e4721bb98abe6fba27d578fce00318` (`da8b067 Refresh Work Order execution strategy`).
 - `git status --short --branch` showed no uncommitted changes before this strategy update.
-- `gh pr list --head factoryx/factory-tb-123/work-order --json number,title,state,url,reviewDecision` returned `[]`, so there is no open PR for this branch to update or triage during this strategy gate.
+- `gh pr view --json number,title,state,url,headRefName,baseRefName,reviewDecision,mergeStateStatus,comments,reviews,statusCheckRollup` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there is no open PR for this branch to update or triage during this strategy gate.
 - No `WORKFLOW.md` was found in the materialized workspace.
-- The materialized FactoryX files are `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior `FEEDBACK.md`, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not present in the checkout during this gate.
+- The materialized FactoryX files are `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The prompt references prior playtest feedback plus current `PREVIEW.md` and `VERIFICATION.md`, but those note files were not present in the checkout during this gate; implementation must create or update the current Work Order's note files when verification and preview evidence exists.
 - The available product and art-direction inputs are therefore the supervisor prompt, the prior strategy, the current repo shape, and the explicit previous-run runtime failure.
 - The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, and `studio.json`.
 - No `package.json`, `vite.config.*`, `playwright.config.*`, or other obvious build/test harness was found in shallow inspection, so the implementation should preserve the static-site shape unless later inspection reveals a stronger local convention.
@@ -32,7 +32,7 @@ This strategy refresh is the only intended artifact for the planning gate. Produ
 
 The previous run issue is blocking and must be addressed before peripheral polish:
 
-`browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html: [13608:13608:0522/022429.336785:INFO:CONSOLE:62] "Uncaught (in promise) TypeError: Failed to fetch", source: https://ystackai.com/shared/studio-shell.js (62)`
+`browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html: [14355:14355:0522/022554.132269:INFO:CONSOLE:62] "Uncaught (in promise) TypeError: Failed to fetch", source: https://ystackai.com/shared/studio-shell.js (62)`
 
 Targeted rework priority for the implementation phase:
 
