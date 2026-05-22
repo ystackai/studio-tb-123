@@ -17,7 +17,9 @@ Repo inspection on 2026-05-22 found a dependency-light static studio site: `inde
 
 The referenced primary feedback file, `.factoryx/work-orders/work-order-1779413526418-1/FEEDBACK.md`, was not present in this refreshed workspace during planning inspection. The previous Work Order's strategy exists at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` and identifies a strong direction: **TB-123 Synthesizer Signal Lab**, a playable music/signal-recovery game. It also records a prior browser-runtime blocker where a `file://` preview attempted to fetch `https://ystackai.com/shared/studio-shell.js` and failed. Treat that as blocking implementation feedback until the new preview entrypoint proves it can load without the shared shell fetch path.
 
-`gh pr view` reported no open pull request for `factoryx/factory-tb-123/work-order` during this gate, so there were no live PR comments, reviews, status checks, or requested changes to triage. The refreshed guarded source head for this planning pass is `607ba4c75ff2eb92a107cf52e1775b13bbe15373`. Implementation should still use the same canonical branch and create or update only one review PR after the playable scope is ready.
+`gh pr view` reported no open pull request for `factoryx/factory-tb-123/work-order` during this gate, so there were no live PR comments, reviews, status checks, or requested changes to triage. The refreshed guarded source head for this planning pass is `ffb96f1ca90eea6247afea1f15968850f1aa854a`. Implementation should still use the same canonical branch and create or update only one review PR after the playable scope is ready.
+
+Planning refresh on 2026-05-22 also confirmed that the current checked-out branch already contains prior strategy-gate commits and remains aligned with `origin/factoryx/factory-tb-123/work-order`. This update is intentionally strategy-only: it does not alter production HTML, runtime assets, preview wiring, or PR state before the gate is accepted.
 
 Implementation milestone order after this gate:
 
