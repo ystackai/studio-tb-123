@@ -9,50 +9,44 @@ Planning gate status: strategy only; no production implementation changes yet.
 
 ## FactoryX Work Order Context
 
-This strategy is the durable planning artifact for the Continuous Work Order selected by automation because no active model lease or pending Work Order was available. Durable planning, feedback, preview, verification, and worklog notes for this pass belong under `.factoryx/work-orders/work-order-1779414251974-24`.
+This is the durable strategy artifact for the Continuous Work Order selected by automation. All durable planning, feedback, preview, verification, and worklog notes for this pass must stay under `.factoryx/work-orders/work-order-1779414251974-24`.
 
-The concrete brief asks for a small game slice with scoring, progression, or discovery instead of static presentation. Every meaningful user action must receive feedback through motion, state, and deliberate sound or music direction. The eventual PR must be easy to review, with the brief, implementation, verification, and remaining risks clearly documented.
+The concrete brief asks for a small game slice with scoring, progression, or discovery instead of a static presentation. Every meaningful user action needs feedback through motion, state, and deliberate sound or music direction. The eventual review PR must explain the brief, implemented scope, verification output, preview instructions, and remaining risks.
 
-Repo inspection on 2026-05-22 found a dependency-light static studio site: `index.html`, `games/index.html`, `drops/`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state. No `WORKFLOW.md` was present. Existing playable/drop artifacts include `drops/sacrificial-buffer/index.html` and `drops/1776192003473414045/index.html`; preserve them unless a tiny discovery link is needed, but do not treat either as sufficient for this Work Order's creative-game bar. The studio homepage currently relies on remote shared shell/theme assets, so the reviewable game entrypoint should be self-contained or locally served during verification. The current Work Order context directory only contained this strategy file during the gate inspection; `FEEDBACK.md`, `PREVIEW.md`, and `VERIFICATION.md` were not materialized yet and should be created during implementation when there are durable playtest, preview, and verification facts to record.
+Planning inspection on 2026-05-22 found a dependency-light static studio repository. The visible public surface is built from plain HTML files including `index.html`, `games/index.html`, `drops/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state. No `WORKFLOW.md` was present. `rg` is not installed in the workspace, so file discovery used `find`.
 
-The referenced primary feedback file, `.factoryx/work-orders/work-order-1779413526418-1/FEEDBACK.md`, was not present in this refreshed workspace during planning inspection. The previous Work Order's strategy exists at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` and identifies a strong direction: **TB-123 Synthesizer Signal Lab**, a playable music/signal-recovery game. It also records a prior browser-runtime blocker where a `file://` preview attempted to fetch `https://ystackai.com/shared/studio-shell.js` and failed. Treat that as blocking implementation feedback until the new preview entrypoint proves it can load without the shared shell fetch path.
+The branch is already the required canonical Work Order branch, `factoryx/factory-tb-123/work-order`. The current guarded source head for this strategy gate is `f1c0a3ac4a2ea40d5accae2eed7974afc7248900`. `gh pr view` reported no pull request for this branch during the gate, so there were no live PR reviews, comments, status checks, or requested changes to triage. Do not create a PR during this planning gate.
 
-`gh pr view` reported no open pull request for `factoryx/factory-tb-123/work-order` during this gate, so there were no live PR comments, reviews, status checks, or requested changes to triage. The refreshed guarded source head supplied for this planning pass, and confirmed by local branch inspection before this strategy update, is `086607e93823a28627f9ccd39064d26652220f50`. Implementation should still use the same canonical branch and create or update only one review PR after the playable scope is ready.
+The referenced primary playtest feedback path, `.factoryx/work-orders/work-order-1779413526418-1/FEEDBACK.md`, was not materialized in this refreshed workspace. The previous strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` was present and provides useful product direction: build **TB-123 Synthesizer Signal Lab**, a playable music/signal-recovery game rather than a generic browser game. It also records the important prior blocker: a file-based browser runtime check failed because `https://ystackai.com/shared/studio-shell.js` threw `Uncaught (in promise) TypeError: Failed to fetch`.
 
-Planning refresh on 2026-05-22 also confirmed that the current checked-out branch is `factoryx/factory-tb-123/work-order` at `086607e93823a28627f9ccd39064d26652220f50` before this document refresh. This update is intentionally strategy-only: it does not alter production HTML, runtime assets, preview wiring, or PR state before the gate is accepted.
+That runtime failure is blocking implementation feedback. The first implementation milestone must create or select a direct preview entrypoint for the playable artifact that does not rely on the remote shared Studio shell. Before peripheral polish, verification must prove the preview does not reproduce the `studio-shell.js` `Failed to fetch` error under the review/runtime-check style that previously failed. The preview root should open the current artifact directly or through a small valid redirect/index page; do not append review links after a closed HTML document and do not rely on the Factory homepage as the game entrypoint.
 
-This strategy refresh supersedes the stale planning metadata from earlier passes while preserving the same product direction. The only expected artifact for this gate is this strategy document committed under `.factoryx/work-orders/work-order-1779414251974-24`; production implementation, preview HTML changes, verification screenshots, and PR creation remain out of scope until the strategy gate is accepted.
+Implementation milestone order after this strategy gate:
 
-Targeted rework priority for the implementation phase: the first runnable preview must bypass the remote Studio shell path that caused `Uncaught (in promise) TypeError: Failed to fetch` from `https://ystackai.com/shared/studio-shell.js` during the previous file-based runtime check. Do not spend time on peripheral polish until a direct game entrypoint has been verified under the same preview style that failed before.
-
-Acceptance gate for the next implementation pass: before adding secondary polish, run a targeted browser check against the direct preview entrypoint and record in this Work Order's `VERIFICATION.md` that no console error originates from `studio-shell.js` and no `Failed to fetch` occurs during startup. The preview should open the current playable artifact directly or through a small valid redirect/index page; do not rely on the Factory homepage or append review links after a closed HTML document.
-
-Implementation milestone order after this gate:
-
-1. Establish a direct, self-contained review entrypoint for the playable artifact and prove it does not reproduce the prior shared-shell fetch failure.
-2. Build the first-screen playable loop: audio unlock, tuning, routing, sequencing, score/clarity objective, and visible progression.
-3. Replace central placeholders with intentional assets: authored/generated hardware textures, readable module/signal silhouettes, stateful patch cables/meters, and a documented musical identity.
+1. Establish a direct, self-contained review entrypoint for the playable game and verify startup without the shared-shell fetch failure.
+2. Build the first-screen playable loop: audio unlock, tuning, routing or source selection, sequencing, score/clarity objective, and visible progression.
+3. Replace central placeholders with intentional assets: authored or procedural hardware texture, readable module/signal silhouettes, stateful patch cables/meters, and a documented musical identity.
 4. Verify desktop and mobile runtime with screenshots, console checks, audio unlock behavior, and interaction smoke tests.
-5. Open or update the single canonical PR with FactoryX Work Order Context, implementation summary, verification output, preview instructions, and remaining risks.
+5. Open or update the single canonical PR only after the slice is reviewable, with FactoryX Work Order Context, implementation summary, verification output, preview instructions, and known risks.
 
 ## Vision And Player Fantasy
 
-The release should make TB-123 feel like a browser-native synth game rather than a static studio page. The recommended product direction is **TB-123 Synthesizer Signal Lab**: a compact signal-recovery performance game where the player tunes, patches, sequences, and filters unstable transmissions until noise becomes a musical broadcast.
+The release should make TB-123 feel like a browser-native synth game. The recommended product direction is **TB-123 Synthesizer Signal Lab**: a compact signal-recovery performance game where the player tunes, patches, sequences, and filters unstable transmissions until noise becomes a musical broadcast.
 
-The player fantasy is: "I am operating strange analog hardware, and every adjustment I make turns interference into music." A reviewer should open the preview and immediately understand that they can start audio, touch controls, hear the instrument change, see the signal respond, and improve a visible score or clarity meter.
+The player fantasy is: "I am operating strange analog hardware, and every adjustment I make turns interference into music." A reviewer should open the preview and immediately understand that they can start audio, touch controls, hear the instrument change, see the signal respond, and improve a visible clarity or lock score.
 
-Audience and reviewer experience matter. The experience should be evaluable in a two-minute browser session without external instructions: start audio, route or select a source, adjust tuning/filter controls, toggle sequencer steps, see the waveform/spectrum react, and reach a clearer transmission state.
+Audience and reviewer experience matter. The slice should be evaluable in a short browser session without external instructions: start audio, select a signal route, adjust tuning/filter controls, toggle sequencer steps, see waveform or spectrum response, and reach a clearer transmission state.
 
 ## Mood, World, References, And Emotional Target
 
-Mood target: warm analog tension, shortwave mystery, and precise signal analysis. The surface should feel like a field synthesizer, numbers-station receiver, tape loop, and oscilloscope bench sharing one compact panel.
+Mood target: warm analog tension, shortwave mystery, and precise signal analysis. The surface should feel like a field synthesizer, numbers-station receiver, tape loop, and oscilloscope bench sharing one compact chassis.
 
 Reference directions:
 
 - Shortwave and numbers-station operation: call signs, buried carriers, coded fragments, tuning drift, and lock-on moments.
-- Modular synthesizer workflow: patch sockets, cable routes, sequencer steps, envelopes, filters, attenuators, meters, and gain staging.
-- Oscilloscope and spectral analysis visuals: traces, Lissajous motion, spectral bands, lamp states, tape-position readouts, and phase drift.
-- Music-game feedback: progression should be felt through groove stability, motif unlocks, clearer layers, score, combo, and transmission lock.
+- Modular synthesizer workflow: patch sockets, cable routes, sequencer steps, filters, envelopes, attenuators, meters, and gain staging.
+- Oscilloscope and spectrum analysis visuals: traces, Lissajous motion, spectral bands, lamp states, tape-position readouts, and phase drift.
+- Music-game feedback: progression should be felt through groove stability, motif unlocks, cleaner layers, score, combo, and transmission lock.
 
 Emotional target: "The machine is unstable, but my timing and tuning make it cohere."
 
@@ -68,14 +62,14 @@ Primary loop:
 
 Every meaningful action needs multi-channel feedback:
 
-- Start/stop or mute: audio graph state, transport lamps, waveform activity, and clear locked/unlocked state.
-- Patch/source change: audible routing change, cable glow/path state, module meters, and score eligibility.
+- Start, stop, or mute: audio graph state, transport lamps, waveform activity, and clear locked/unlocked state.
+- Patch or source change: audible routing change, cable glow/path state, module meters, and score eligibility.
 - Knob or slider movement: smooth Web Audio parameter ramp plus immediate trace/spectrum deformation.
 - Sequencer step toggle: audible note/rest change, step light state, beat cursor, and motif score update.
-- Successful lock: cleaner harmony or voice layer, decoded phrase fragment, clarity boost, and celebratory but restrained motion.
+- Successful lock: cleaner harmony or voice layer, decoded phrase fragment, clarity boost, and restrained completion motion.
 - Drift or overload: detune/noise, warning lamp, trace instability, and score pressure.
 
-Progression can stay small. A strong reviewable slice only needs one meaningful arc: calibrate carrier, discover/lock two or three motif fragments, and complete a final transmission score.
+Progression can stay small. A reviewable slice only needs one meaningful arc: calibrate carrier, discover or lock two or three motif fragments, and complete a final transmission score.
 
 ## Art, Audio, And Interaction Direction
 
@@ -104,7 +98,7 @@ Procedural rendering is allowed for live signal materials, but central visuals a
 
 Runtime asset plan:
 
-- `asset-manifest` or equivalent documentation listing procedural and authored runtime assets.
+- Asset manifest or equivalent documentation listing procedural and authored runtime assets.
 - Hardware panel texture produced through CSS/canvas or committed raster art: worn labels, screws, lamps, grained metal/plastic, and module separators.
 - Patch cable assets as stateful canvas/SVG-style paths with route colors, endpoint sockets, and glow/disabled states.
 - Scope/spectrum renderer driven by current game/audio state rather than decorative animation.
@@ -125,7 +119,7 @@ Do not spend initial implementation budget on avatars, mascots, enemy sprites, o
 Do not call the game review-worthy while any central placeholder remains:
 
 - The preview entrypoint is a static studio catalog, marketing page, or unrelated homepage.
-- The preview depends on remote shared-shell fetches that can fail under direct/file-based review.
+- The preview depends on remote shared-shell fetches that can fail under direct or file-based review.
 - Audio is a single raw oscillator beep without sequencing, filtering, or musical identity.
 - Visuals are decorative and disconnected from current synth/game state.
 - Player actions change only sound or only visuals, instead of sound, motion, and state together.
@@ -166,7 +160,7 @@ Verification plan:
 
 - A coherent playable loop beats broad but shallow feature coverage.
 - Preserve existing static studio pages and the current `sacrificial-buffer` drop unless a small link is needed for discovery.
-- Use authored/procedural assets that feel intentional before adding more modes.
+- Use authored or final-intent procedural assets before adding more modes.
 - Make audio/visual coupling the product, not a decorative layer.
 - Prefer direct reviewability over platform integration complexity.
 - Treat verification as part of the release, especially browser audio unlock and preview loading behavior.
