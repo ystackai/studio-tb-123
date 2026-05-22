@@ -16,16 +16,16 @@ The concrete brief asks for a small game slice with scoring, progression, or dis
 Current planning-gate inspection on 2026-05-22 for this strategy gate refresh:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `12922445ffff8f1c7a9fb97d1a9c6f972ee58260` (`1292244 Refresh FactoryX goal execution strategy`).
+- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `4323a8bd66279347109695eae474d8ab03811db8` (`4323a8b Refresh FactoryX goal execution strategy`).
 - `git status --short --branch` showed the branch checked out with no uncommitted production changes before this strategy update.
-- `gh pr view --json number,title,state,headRefName,baseRefName,url,body,reviewDecision,latestReviews,comments,statusCheckRollup` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
+- `gh pr view --json number,title,state,url,headRefName,baseRefName,body,comments,reviews,statusCheckRollup` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
 - `find .factoryx -type f` showed `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
 - Because the referenced feedback files were absent locally, the available product and art-direction inputs are the supervisor prompt, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, this refreshed strategy file, and the explicit previous-run runtime failure.
 - The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
 - No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build, dev server, or test harness exists before adding one.
 - Crew-agent definitions are present under `.codex/agents` for signal direction, interface coding, systems review, and copy writing. They can be used in the later implementation phase if the scope grows, but this strategy gate does not need a delegated agent pass.
-- `rg --files .factoryx .codex` returned no paths in this runtime, so file discovery used `find`; later implementation should use `rg` when it returns useful results, otherwise continue with `find` and direct file reads.
+- `rg` is not installed in this runtime (`/bin/bash: rg: command not found`), so file discovery used `find`; later implementation should use `rg` if it becomes available, otherwise continue with `find` and direct file reads.
 
 This strategy refresh is the only intended artifact for the planning gate. Production implementation, preview rewiring, runtime-check changes, and PR creation remain deferred until the strategy gate is accepted.
 
