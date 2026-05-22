@@ -1,63 +1,53 @@
 # Goal Execution Strategy: Continuous Work Order TB-123
 
-Work Order: `work-order-1779414251974-24`
-Implementation Work Order: `Continuous Work Order: TB-123`
-Canonical branch: `factoryx/factory-tb-123/work-order`
-Target repo: `ystackai/studio-tb-123`
-Archetype: `creative_game`
+Work Order: `work-order-1779414251974-24`  
+Implementation Work Order: `Continuous Work Order: TB-123`  
+Canonical branch: `factoryx/factory-tb-123/work-order`  
+Target repo: `ystackai/studio-tb-123`  
+Archetype: `creative_game`  
 Planning protocol: strategy gate only; do not implement production changes or open a PR from this gate.
 
 ## FactoryX Work Order Context
 
-This is the durable strategy artifact for the Continuous Work Order selected by automation. Keep all durable planning, feedback, preview, verification, and worklog notes for this pass under `.factoryx/work-orders/work-order-1779414251974-24`.
+This is the durable strategy artifact for the Continuous Work Order selected by automation. Keep all planning, feedback, preview notes, verification notes, asset checkpoints, and worklog material for this pass under `.factoryx/work-orders/work-order-1779414251974-24`.
 
-The concrete brief asks for a small game slice with scoring, progression, or discovery instead of static presentation. Every meaningful player action should produce feedback through motion, state, and deliberate sound or music direction. The later review PR must make the request easy to evaluate by explaining the Work Order context, implemented scope, verification output, preview instructions, screenshots or asset checkpoints, and remaining risks.
+The concrete brief asks for a small creative-game slice with scoring, progression, or discovery rather than a static presentation. Every meaningful player action should produce feedback through motion, state, and a deliberate sound or music direction. The eventual review PR must explain the Work Order context, implemented scope, verification output, preview instructions, screenshots or asset checkpoints, and remaining risks.
 
-Current planning-gate inspection on 2026-05-22 for this strategy gate refresh:
+Planning-gate inspection on 2026-05-22:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX for this pass is `43f6ccd39b1a091a0a57f8c9cf985534be11c790` (`43f6ccd Refresh Work Order execution strategy`), confirmed with `git log -1 --oneline`.
-- `git status --short --branch` showed the branch checked out with no uncommitted production changes before this strategy update.
-- `gh pr view --json number,title,state,url,headRefName,baseRefName,body,comments,reviews,statusCheckRollup` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
-- No `WORKFLOW.md` was materialized in the workspace.
-- `find .factoryx -maxdepth 4 -type f` showed `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
-- Because the referenced feedback files were absent locally, the available product and art-direction inputs are the supervisor prompt, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, this refreshed strategy file, and the explicit previous-run runtime failure.
-- The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
-- No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build, dev server, or test harness exists before adding one.
-- Crew-agent definitions are present under `.codex/agents` for signal direction, interface coding, systems review, and copy writing. They can be used in the later implementation phase if the scope grows, but this strategy gate does not need a delegated agent pass.
-- `rg` is not installed in this runtime (`/bin/bash: rg: command not found`), so file discovery used `find`; later implementation should use `rg` if it becomes available, otherwise continue with `find` and direct file reads.
+- The current guarded branch head is `2ba0c3f105889b23c89884a210f80dfe7f0e7dfc` (`2ba0c3f Refresh Work Order execution strategy`).
+- `git status --short --branch` showed no uncommitted changes before this strategy update.
+- `gh pr list --head factoryx/factory-tb-123/work-order --json number,title,state,url,reviewDecision` returned `[]`, so there is no open PR for this branch to update or triage during this strategy gate.
+- No `WORKFLOW.md` was found in the materialized workspace.
+- The materialized FactoryX files are `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior `FEEDBACK.md`, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not present in the checkout during this gate.
+- The available product and art-direction inputs are therefore the supervisor prompt, the prior strategy, the current repo shape, and the explicit previous-run runtime failure.
+- The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, and `studio.json`.
+- No `package.json`, `vite.config.*`, `playwright.config.*`, or other obvious build/test harness was found in shallow inspection, so the implementation should preserve the static-site shape unless later inspection reveals a stronger local convention.
+- Crew-agent definitions are available from Factory context for signal direction, interface coding, systems review, and copy writing. They can be used in the implementation phase if useful, but this planning gate does not need delegated production work.
 
-This strategy refresh is the only intended artifact for the planning gate. Production implementation, preview rewiring, runtime-check changes, and PR creation remain deferred until the strategy gate is accepted.
+This strategy refresh is the only intended artifact for the planning gate. Production implementation, preview rewiring, runtime-check changes, generated assets, and PR creation are deferred until the strategy gate is accepted.
 
-Strategy-gate status: this document is intentionally the only durable change for this pass. The next implementation pass should start from the latest canonical branch head, re-check for a PR or fresh review comments, and then address the preview/runtime failure before adding new game features or polish.
+## Blocking Feedback To Address First
 
-The previous run issue is blocking and must be addressed before peripheral polish: browser runtime verification failed for `file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html` with `Uncaught (in promise) TypeError: Failed to fetch` from `https://ystackai.com/shared/studio-shell.js` line 62. The first implementation milestone must create or select a direct preview entrypoint for the playable artifact that does not depend on the remote shared Studio shell. Verification must prove that the exact intended review entrypoint starts without this console failure before time is spent on art flourishes, navigation polish, PR-body-only work, or secondary discovery links.
+The previous run issue is blocking and must be addressed before peripheral polish:
+
+`browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html: [13608:13608:0522/022429.336785:INFO:CONSOLE:62] "Uncaught (in promise) TypeError: Failed to fetch", source: https://ystackai.com/shared/studio-shell.js (62)`
 
 Targeted rework priority for the implementation phase:
 
-- Create a direct preview root for the playable artifact, preferably a self-contained file under `drops/tb-123-signal-lab/` or `games/tb-123-signal-lab/`, instead of routing review through the Factory homepage or remote Studio shell.
-- If a `.factoryx-runtime-check-*.html` file or equivalent preview wrapper is needed, keep it valid and minimal: no appended content after `</html>`, no remote `studio-shell.js`, and no fetch path that can fail under `file://`.
-- The implementation should make the review preview target load the game document itself, or a tiny same-repo redirect/index page, and should not rely on `index.html`, `games/index.html`, or the existing Studio shell as the acceptance path.
-- Preserve existing drops and studio pages unless a small discovery link is needed, but do not let any existing shared-shell page be the review entrypoint for this Work Order.
-- Document the preview path and the regression result in this Work Order's `PREVIEW.md` and `VERIFICATION.md` during implementation, because the previous browser failure is the first acceptance concern.
-- Treat a browser console failure containing either `https://ystackai.com/shared/studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch` on the intended preview entrypoint as a release blocker, even if the game slice otherwise looks playable.
-- Before adding peripheral art polish, run a small browser smoke that opens the exact review entrypoint and captures console output; this is the acceptance gate that must pass before later polish has value.
-
-Implementation milestone order after this strategy gate:
-
-1. Establish a direct, self-contained review entrypoint for the playable game and verify startup without loading or failing through `https://ystackai.com/shared/studio-shell.js`, including a `file://`-shaped regression check when feasible.
-2. Build the first-screen playable loop: audio unlock, tuning, routing or source selection, sequencing, score/clarity objective, and visible progression.
-3. Replace central placeholders with intentional assets: authored or final-intent procedural hardware texture, readable module/signal silhouettes, stateful patch cables/meters, and documented musical identity.
-4. Verify desktop and mobile runtime with screenshots, console checks, audio unlock behavior, interaction smoke tests, and the prior fetch-failure regression.
-5. Open or update the single canonical PR only after the slice is reviewable, using this branch and including the required FactoryX Work Order Context, implementation summary, verification output, preview instructions, and known risks.
+1. Create or select a direct review preview entrypoint for the playable artifact that does not depend on `https://ystackai.com/shared/studio-shell.js`.
+2. Verify the exact intended preview path before art polish. A console failure containing `studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch` on the intended preview entrypoint is a release blocker.
+3. If a `.factoryx-runtime-check-*.html` wrapper is needed, keep it valid and minimal: no appended content after `</html>`, no remote Studio shell, and no fetch path that can fail under `file://`.
+4. Document the selected preview path and regression result in this Work Order's `PREVIEW.md` and `VERIFICATION.md` during implementation.
 
 ## Vision And Player Fantasy
 
-The recommended product direction remains **TB-123 Synthesizer Signal Lab**: a browser-native signal-recovery music game where the player operates strange analog hardware and turns interference into a coherent transmission by patching, tuning, sequencing, filtering, and capturing motifs.
+The recommended product direction is **TB-123 Synthesizer Signal Lab**: a browser-native signal-recovery music game where the player operates strange analog hardware and turns interference into a coherent transmission by patching, tuning, sequencing, filtering, and capturing motifs.
 
 The player fantasy is: "I am operating unknown field-synth equipment, and my decisions make noise become music." A reviewer should open the preview and immediately understand that they can start audio, manipulate controls, hear the instrument change, see the signal react, and improve a visible clarity or lock score.
 
-The audience is a short-session reviewer or player. The experience should teach itself through labels, direct manipulation, immediate feedback, and a compact objective, not through a marketing landing page or long instruction screen.
+The primary audience is a short-session reviewer or player. The admin/reviewer experience should be direct: open one artifact, unlock audio, change a route or step, tune/filter the signal, and see score or transmission progress in under two minutes without reading external documentation first.
 
 ## Mood, World, References, And Emotional Target
 
@@ -69,6 +59,8 @@ Reference directions:
 - Modular synthesizer workflow: patch sockets, cable routes, sequencer steps, filters, envelopes, attenuators, meters, and gain staging.
 - Oscilloscope and spectrum analysis visuals: traces, spectral bands, VU meters, tape-position readouts, lamps, phase drift, and signal lock.
 - Music-game feedback: progression should be felt through groove stability, motif unlocks, cleaner layers, score, combo, and transmission lock.
+
+Evidence from the repo supports a static, authored browser artifact rather than a bundled app rewrite. Existing public surfaces are plain HTML documents, and no local build pipeline is visible from the planning inspection.
 
 Emotional target: "The machine is unstable, but every correct patch and timing choice makes the signal cohere."
 
@@ -173,16 +165,24 @@ Verification plan:
 - Browser smoke through local HTTP, plus direct-file behavior if FactoryX preview automation requires it.
 - Regression check for the prior `studio-shell.js` `Failed to fetch` issue on the review entrypoint before peripheral polish. Load the intended preview artifact and confirm the console does not include `https://ystackai.com/shared/studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch`.
 - Source inspection check: search the new preview artifact and any Work Order runtime-check wrapper for `studio-shell.js`, remote `fetch(` calls, and appended markup after `</html>`.
-- File-preview regression check: reproduce the failing verification shape with a small local runtime-check HTML file or the FactoryX preview harness when available. The preferred outcome is that the direct artifact works under both local HTTP and direct file loading because it has no network fetch dependency. If any feature is intentionally HTTP-only, the preview notes must state the local HTTP command and explain why no remote shared-shell fetch path is involved.
+- File-preview regression check: reproduce the failing verification shape with a small local runtime-check HTML file or the FactoryX preview harness when available. The preferred outcome is that the direct artifact works under both local HTTP and direct file loading because it has no network fetch dependency.
 - Interaction smoke: start audio, toggle a sequencer step, move at least one tuning/filter control, change one source/route, and observe score/clarity/state updates.
 - Canvas or screenshot check: desktop and mobile screenshots show nonblank signal visuals and no text/control overlap.
 - Audio behavior check: Web Audio initializes only after user gesture, mute/stop works, and parameter changes are ramped.
 - Documentation: update this Work Order's `PREVIEW.md` and `VERIFICATION.md` with commands, outputs, screenshots or asset checkpoints, and known limitations.
 
+## Implementation Milestone Order
+
+1. Establish a direct, self-contained review entrypoint for the playable game and verify startup without loading or failing through `https://ystackai.com/shared/studio-shell.js`, including a `file://`-shaped regression check when feasible.
+2. Build the first-screen playable loop: audio unlock, tuning, routing or source selection, sequencing, score/clarity objective, and visible progression.
+3. Replace central placeholders with intentional assets: authored or final-intent procedural hardware texture, readable module/signal silhouettes, stateful patch cables/meters, and documented musical identity.
+4. Verify desktop and mobile runtime with screenshots, console checks, audio unlock behavior, interaction smoke tests, and the prior fetch-failure regression.
+5. Open or update the single canonical PR only after the slice is reviewable, using this branch and including the required FactoryX Work Order Context, implementation summary, verification output, preview instructions, and known risks.
+
 ## Guiding Tradeoffs
 
 - A coherent playable loop beats broad but shallow feature coverage.
-- Preserve existing static studio pages and the current `sacrificial-buffer` drop unless a small link is needed for discovery.
+- Preserve existing static studio pages and the current drops unless a small discovery link is needed.
 - Use authored or final-intent procedural assets before adding more modes.
 - Make audio/visual coupling the product, not a decorative layer.
 - Prefer direct reviewability over platform integration complexity.
