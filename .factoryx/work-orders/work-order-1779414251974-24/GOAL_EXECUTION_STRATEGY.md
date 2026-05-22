@@ -16,11 +16,11 @@ The concrete brief asks for a small game slice with scoring, progression, or dis
 Current planning-gate inspection on 2026-05-22 for this strategy gate refresh:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `4323a8bd66279347109695eae474d8ab03811db8` (`4323a8b Refresh FactoryX goal execution strategy`).
+- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `1332e7f01e2e6ed98c475b878397f1f704248174` (`1332e7f Refresh Work Order execution strategy`).
 - `git status --short --branch` showed the branch checked out with no uncommitted production changes before this strategy update.
 - `gh pr view --json number,title,state,url,headRefName,baseRefName,body,comments,reviews,statusCheckRollup` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
-- `find .factoryx -type f` showed `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
+- `find .factoryx -maxdepth 3 -type f` showed `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
 - Because the referenced feedback files were absent locally, the available product and art-direction inputs are the supervisor prompt, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, this refreshed strategy file, and the explicit previous-run runtime failure.
 - The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
 - No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build, dev server, or test harness exists before adding one.
@@ -28,6 +28,8 @@ Current planning-gate inspection on 2026-05-22 for this strategy gate refresh:
 - `rg` is not installed in this runtime (`/bin/bash: rg: command not found`), so file discovery used `find`; later implementation should use `rg` if it becomes available, otherwise continue with `find` and direct file reads.
 
 This strategy refresh is the only intended artifact for the planning gate. Production implementation, preview rewiring, runtime-check changes, and PR creation remain deferred until the strategy gate is accepted.
+
+Strategy-gate status: this document is intentionally the only durable change for this pass. The next implementation pass should start from the latest canonical branch head, re-check for a PR or fresh review comments, and then address the preview/runtime failure before adding new game features or polish.
 
 The previous run issue is blocking and must be addressed before peripheral polish: browser runtime verification failed for `file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html` with `Uncaught (in promise) TypeError: Failed to fetch` from `https://ystackai.com/shared/studio-shell.js` line 62. The first implementation milestone must create or select a direct preview entrypoint for the playable artifact that does not depend on the remote shared Studio shell. Verification must prove that the exact intended review entrypoint starts without this console failure before time is spent on art flourishes, navigation polish, PR-body-only work, or secondary discovery links.
 
