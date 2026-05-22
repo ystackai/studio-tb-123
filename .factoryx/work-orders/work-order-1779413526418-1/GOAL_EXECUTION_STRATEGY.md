@@ -18,7 +18,7 @@ Planning-gate repo inspection on 2026-05-22 found no `WORKFLOW.md`, no existing 
 
 Planning-gate update on 2026-05-22: `gh pr view` reported no pull request for the canonical branch, so there were no unresolved PR comments, review decisions, or check failures to triage beyond the supervisor-provided browser runtime failure. Treat that failure as blocking implementation feedback: the first implementation milestone must prove the preview entrypoint can load without the remote shared Studio shell fetch path before spending time on peripheral polish.
 
-Strategy-gate refresh on 2026-05-22: the repo still has no open PR for the canonical branch, and current branch head is `b293f9ace8166071f0e561e1b819118a5f811412`. This document is the only planned artifact for the gate. Production implementation, preview rewiring, and PR creation are intentionally deferred until after strategy acceptance. The next coding pass should begin from the latest canonical branch head unless it advances, in which case fetch and rebase/merge forward before editing.
+Strategy-gate refresh on 2026-05-22: `gh pr list --head factoryx/factory-tb-123/work-order` returned no open PR for the canonical branch, and the guarded source head for this planning pass was `36579fc901e03958d3a03b13d51d831dff5fe21a`. This document is the only planned artifact for the gate. Production implementation, preview rewiring, and PR creation are intentionally deferred until after strategy acceptance. The next coding pass should begin from the latest canonical branch head unless it advances, in which case fetch and rebase/merge forward before editing.
 
 Implementation milestone order after the strategy gate:
 
