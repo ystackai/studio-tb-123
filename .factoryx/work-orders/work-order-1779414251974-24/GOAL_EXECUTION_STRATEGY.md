@@ -16,13 +16,14 @@ The concrete brief asks for a small game slice with scoring, progression, or dis
 Current planning-gate inspection on 2026-05-22:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed branch head for this strategy gate is `356ba7afa44a7b64498abb61ed92a50e7275bd63`.
+- The refreshed guarded branch head for this strategy gate is `b43ebf02b1b620272cb344d60d45dad2c4edcdb0`.
 - `git status --short --branch` showed a clean branch before this strategy update.
 - `gh pr view --json number,title,state,headRefName,url,reviewDecision,comments,reviews,statusCheckRollup` reported no pull requests found for this branch, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
-- `find .factoryx -maxdepth 4 -type f -print` showed only `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
+- `find .factoryx -maxdepth 3 -type f` showed `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
 - Because the referenced feedback files were absent locally, the available product and art-direction inputs are the supervisor prompt, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and the explicit previous-run runtime failure.
 - The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
+- Crew-agent definitions are present under `.codex/agents` for signal direction, interface coding, systems review, and copy writing. They can be used in the later implementation phase if the scope grows, but this strategy gate does not need a delegated agent pass.
 
 The previous run issue is blocking and must be addressed before peripheral polish: browser runtime verification failed for `file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html` with `Uncaught (in promise) TypeError: Failed to fetch` from `https://ystackai.com/shared/studio-shell.js` line 62. The first implementation milestone must create or select a direct preview entrypoint for the playable artifact that does not depend on the remote shared Studio shell. Verification must prove that the review entrypoint does not reproduce this failure before time is spent on art flourishes, navigation polish, or PR-body-only work.
 
