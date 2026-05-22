@@ -18,6 +18,8 @@ Planning-gate repo inspection on 2026-05-22 found no `WORKFLOW.md`, no existing 
 
 Planning-gate update on 2026-05-22: `gh pr view` reported no pull request for the canonical branch, so there were no unresolved PR comments, review decisions, or check failures to triage beyond the supervisor-provided browser runtime failure. Treat that failure as blocking implementation feedback: the first implementation milestone must prove the preview entrypoint can load without the remote shared Studio shell fetch path before spending time on peripheral polish.
 
+Strategy-gate execution status on 2026-05-22: this document is the only planned artifact for the gate. Production implementation, preview rewiring, and PR creation are intentionally deferred until after strategy acceptance. The next coding pass should begin from current branch head `4bcc1d0a4453fa7042445480652235d9fe355903` unless the canonical branch advances, in which case fetch and rebase/merge forward before editing.
+
 ## Vision And Player Fantasy
 
 The game should be **TB-123 Synthesizer Signal Lab**: a strange live electronic instrument disguised as a numbers-station recovery console. The player sits at warm failing hardware and turns interference into a coherent transmission by patching, tuning, sequencing, filtering, and sampling signal fragments.
