@@ -16,7 +16,7 @@ The concrete brief asks for a small game slice with scoring, progression, or dis
 Current planning-gate inspection on 2026-05-22 for this strategy gate refresh:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `dee64fbdeacb321fd0c110caa2634bd8db7cc53f` (`dee64fb Refresh FactoryX goal execution strategy`).
+- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `f2477df11065d0c3971abee6cbf7779a8a381974` (`f2477df Refresh FactoryX goal execution strategy`).
 - `git status --short --branch` showed the branch checked out with no uncommitted production changes before this strategy update.
 - `gh pr view --json number,url,state,headRefName,reviewDecision,comments,reviews,statusCheckRollup,title,body` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
@@ -25,6 +25,7 @@ Current planning-gate inspection on 2026-05-22 for this strategy gate refresh:
 - The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
 - No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build, dev server, or test harness exists before adding one.
 - Crew-agent definitions are present under `.codex/agents` for signal direction, interface coding, systems review, and copy writing. They can be used in the later implementation phase if the scope grows, but this strategy gate does not need a delegated agent pass.
+- `rg` was not installed in the runtime, so file discovery used `find`; later implementation should use `rg` if available, otherwise continue with `find` and direct file reads.
 
 This strategy refresh is the only intended artifact for the planning gate. Production implementation, preview rewiring, runtime-check changes, and PR creation remain deferred until the strategy gate is accepted.
 
@@ -38,6 +39,7 @@ Targeted rework priority for the implementation phase:
 - Preserve existing drops and studio pages unless a small discovery link is needed, but do not let any existing shared-shell page be the review entrypoint for this Work Order.
 - Document the preview path and the regression result in this Work Order's `PREVIEW.md` and `VERIFICATION.md` during implementation, because the previous browser failure is the first acceptance concern.
 - Treat a browser console failure containing either `https://ystackai.com/shared/studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch` on the intended preview entrypoint as a release blocker, even if the game slice otherwise looks playable.
+- Before adding peripheral art polish, run a small browser smoke that opens the exact review entrypoint and captures console output; this is the acceptance gate that must pass before later polish has value.
 
 Implementation milestone order after this strategy gate:
 
