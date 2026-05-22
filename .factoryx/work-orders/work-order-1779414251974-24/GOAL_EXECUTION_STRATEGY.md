@@ -13,14 +13,14 @@ This is the durable strategy artifact for the Continuous Work Order selected by 
 
 The concrete brief asks for a small game slice with scoring, progression, or discovery instead of static presentation. Every meaningful player action should produce feedback through motion, state, and deliberate sound or music direction. The later review PR must make the request easy to evaluate by explaining the Work Order context, implemented scope, verification output, preview instructions, screenshots or asset checkpoints, and remaining risks.
 
-Current planning-gate inspection on 2026-05-22:
+Current planning-gate inspection on 2026-05-22 for this strategy refresh:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `7afc6b382060c8f678ac9d5ef47a282bba17ecaa`.
+- The refreshed guarded branch head supplied by FactoryX and confirmed with `git rev-parse HEAD` is `0c3d9b3f736359c882b3f5cc37010dcfa2f870fb`.
 - `git status --short --branch` showed a clean branch before this strategy update.
 - `gh pr view --json number,url,state,title,headRefName,baseRefName,reviewDecision,comments,reviews,statusCheckRollup` reported no pull requests found for this branch, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
-- `find .factoryx/work-orders -maxdepth 2 -type f` showed only the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
+- `find .factoryx/work-orders -type f` showed only the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md` and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
 - Because the referenced feedback files were absent locally, the available product and art-direction inputs are the supervisor prompt, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and the explicit previous-run runtime failure.
 - The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
 - No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build or test harness exists before adding one.
