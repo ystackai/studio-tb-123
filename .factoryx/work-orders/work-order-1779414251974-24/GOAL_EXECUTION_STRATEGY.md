@@ -13,10 +13,10 @@ This is the durable strategy artifact for the Continuous Work Order selected by 
 
 The concrete brief asks for a small game slice with scoring, progression, or discovery instead of static presentation. Every meaningful player action should produce feedback through motion, state, and deliberate sound or music direction. The later review PR must make the request easy to evaluate by explaining the Work Order context, implemented scope, verification output, preview instructions, screenshots or asset checkpoints, and remaining risks.
 
-Current planning-gate inspection on 2026-05-22 for this strategy refresh:
+Current planning-gate inspection on 2026-05-22 for this strategy gate:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX and confirmed with `git log -1 --oneline` / `git rev-parse HEAD` is `9a8c0cb6d75600dac2505d4cb27a3bf0f4e777cd` (`9a8c0cb Refresh FactoryX goal execution strategy`).
+- The refreshed guarded branch head supplied by FactoryX and confirmed with `git log -1 --oneline` / `git rev-parse HEAD` is `ced7696df63ff4c09281ac3b794d8fce53984a78` (`ced7696 Refresh FactoryX strategy for work order 1779414251974`).
 - `git status --short --branch` showed a clean branch before this strategy update, with no uncommitted production changes.
 - `gh pr view --json number,title,state,url,headRefName,baseRefName,reviewDecision,statusCheckRollup,comments,reviews` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
