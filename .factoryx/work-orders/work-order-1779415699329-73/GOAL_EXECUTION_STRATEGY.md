@@ -14,11 +14,11 @@ This document is the durable strategy artifact for the automation-selected Conti
 
 The concrete brief asks for a coherent small game slice with scoring, progression, or discovery instead of a static presentation. Every meaningful player action should produce feedback through motion, state, and a deliberate sound or music direction. The eventual review PR must make the work easy to evaluate by explaining the brief, implemented scope, verification, remaining risks, and preview instructions.
 
-Planning-gate inspection refreshed on 2026-05-22:
+Planning-gate inspection refreshed on 2026-05-22 for the current `/goal` request:
 
 - Workspace: `/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout`.
 - Current branch: `factoryx/factory-tb-123/work-order`.
-- Guarded source head for this gate: `d720f755272e37fe6892982b11649e16e1f2b1ab` (`d720f75 Add strategy for work order 1779415699329`).
+- Guarded source head for this gate: `ed62084695ef98551baa6ec105293389799a26df` (`ed62084 Refresh strategy for work order 1779415699329`).
 - `gh pr view` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there is no open PR to update, no review decision to triage, and no PR checks/comments available during this planning gate.
 - No `WORKFLOW.md` was present in the materialized workspace.
 - `rg` is unavailable in this environment; inspection used `find`, `sed`, and Git/GitHub CLI commands.
@@ -35,7 +35,7 @@ This strategy file is the only intended artifact for the planning gate. Producti
 
 The most important carried-forward feedback is a browser runtime failure from prior FactoryX context:
 
-`browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html: [19088:19088:0522/023310.674217:INFO:CONSOLE:62] "Uncaught (in promise) TypeError: Failed to fetch", source: https://ystackai.com/shared/studio-shell.js (62)`
+`browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html: [19844:19844:0522/023410.780473:INFO:CONSOLE:62] "Uncaught (in promise) TypeError: Failed to fetch", source: https://ystackai.com/shared/studio-shell.js (62)`
 
 Implementation must address that before unrelated polish:
 
@@ -43,6 +43,7 @@ Implementation must address that before unrelated polish:
 2. Verify the intended preview entrypoint before art polish. Any console failure containing `studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch` on the review path is a release blocker.
 3. If FactoryX runtime verification uses a `.factoryx-runtime-check-*.html` wrapper, keep it valid and minimal: no appended content after `</html>`, no remote Studio shell, and no `file://`-hostile fetch path.
 4. Create or update this Work Order's `PREVIEW.md` and `VERIFICATION.md` during implementation with the selected preview path, commands, outputs, screenshots, and the regression result.
+5. Treat this targeted runtime rework as the first implementation milestone; do not spend the early budget on asset polish until the preview path opens without the shared-shell fetch failure.
 
 ## Vision And Player Fantasy
 
