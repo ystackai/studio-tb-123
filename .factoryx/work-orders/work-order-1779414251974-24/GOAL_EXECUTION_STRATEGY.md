@@ -16,14 +16,14 @@ The concrete brief asks for a small game slice with scoring, progression, or dis
 Current planning-gate inspection on 2026-05-22 for this strategy refresh:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The refreshed guarded branch head supplied by FactoryX and confirmed with `git log -1 --oneline` is `12fa05bd26b2febde35624e2a8a5df983827e3a4` (`12fa05b Update FactoryX goal execution strategy`).
+- The refreshed guarded branch head supplied by FactoryX and confirmed with `git log -1 --oneline` / `git rev-parse HEAD` is `9a8c0cb6d75600dac2505d4cb27a3bf0f4e777cd` (`9a8c0cb Refresh FactoryX goal execution strategy`).
 - `git status --short --branch` showed a clean branch before this strategy update, with no uncommitted production changes.
 - `gh pr view --json number,title,state,url,headRefName,baseRefName,reviewDecision,statusCheckRollup,comments,reviews` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there are no current PR reviews, comments, checks, or requested changes to triage during this gate.
 - No `WORKFLOW.md` was materialized in the workspace.
 - `find .factoryx -type f` showed `.factoryx/FACTORY_CONTEXT.md`, `.factoryx/generated_codex_agents.json`, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, and this strategy file. The referenced prior playtest feedback file, current `PREVIEW.md`, current `VERIFICATION.md`, and current `FEEDBACK.md` were not materialized in the checkout during this gate.
 - Because the referenced feedback files were absent locally, the available product and art-direction inputs are the supervisor prompt, the prior strategy at `.factoryx/work-orders/work-order-1779413526418-1/GOAL_EXECUTION_STRATEGY.md`, this refreshed strategy file, and the explicit previous-run runtime failure.
 - The repository is a dependency-light static site with public HTML surfaces including `index.html`, `games/index.html`, `drops/index.html`, `drops/1776192003473414045/index.html`, `drops/sacrificial-buffer/index.html`, `blog/`, `personas/`, `team/`, `studio.json`, and `.ystack/` state.
-- No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build or test harness exists before adding one.
+- No `WORKFLOW.md`, `package.json`, `vite.config.*`, or `playwright.config.*` was found at shallow inspection depth, so the later implementation should not assume a Node build, dev server, or test harness exists before adding one.
 - Crew-agent definitions are present under `.codex/agents` for signal direction, interface coding, systems review, and copy writing. They can be used in the later implementation phase if the scope grows, but this strategy gate does not need a delegated agent pass.
 
 The previous run issue is blocking and must be addressed before peripheral polish: browser runtime verification failed for `file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html` with `Uncaught (in promise) TypeError: Failed to fetch` from `https://ystackai.com/shared/studio-shell.js` line 62. The first implementation milestone must create or select a direct preview entrypoint for the playable artifact that does not depend on the remote shared Studio shell. Verification must prove that the review entrypoint does not reproduce this failure before time is spent on art flourishes, navigation polish, or PR-body-only work.
@@ -34,6 +34,7 @@ Targeted rework priority for the implementation phase:
 - If a `.factoryx-runtime-check-*.html` file or equivalent preview wrapper is needed, keep it valid and minimal: no appended content after `</html>`, no remote `studio-shell.js`, and no fetch path that can fail under `file://`.
 - Preserve existing drops and studio pages unless a small discovery link is needed, but do not let any existing shared-shell page be the review entrypoint for this Work Order.
 - Document the preview path and the regression result in this Work Order's `PREVIEW.md` and `VERIFICATION.md` during implementation, because the previous browser failure is the first acceptance concern.
+- Treat a browser console failure containing either `https://ystackai.com/shared/studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch` on the intended preview entrypoint as a release blocker, even if the game slice otherwise looks playable.
 
 Implementation milestone order after this strategy gate:
 
@@ -164,6 +165,7 @@ Verification plan:
 - Static smoke: ensure the preview entrypoint is valid HTML and does not append links after a closed document.
 - Browser smoke through local HTTP, plus direct-file behavior if FactoryX preview automation requires it.
 - Regression check for the prior `studio-shell.js` `Failed to fetch` issue on the review entrypoint. Load the intended preview artifact and confirm the console does not include `https://ystackai.com/shared/studio-shell.js` or `Uncaught (in promise) TypeError: Failed to fetch`.
+- Source inspection check: search the new preview artifact and any Work Order runtime-check wrapper for `studio-shell.js`, remote `fetch(` calls, and appended markup after `</html>`.
 - File-preview regression check: reproduce the failing verification shape with a small local runtime-check HTML file or the FactoryX preview harness when available. The preferred outcome is that the direct artifact works under both local HTTP and direct file loading because it has no network fetch dependency. If any feature is intentionally HTTP-only, the preview notes must state the local HTTP command and explain why no remote shared-shell fetch path is involved.
 - Interaction smoke: start audio, toggle a sequencer step, move at least one tuning/filter control, change one source/route, and observe score/clarity/state updates.
 - Canvas or screenshot check: desktop and mobile screenshots show nonblank signal visuals and no text/control overlap.
