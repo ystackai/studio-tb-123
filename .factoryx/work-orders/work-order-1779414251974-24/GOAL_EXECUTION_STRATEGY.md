@@ -16,7 +16,7 @@ The concrete brief asks for a small creative-game slice with scoring, progressio
 Planning-gate inspection on 2026-05-22 for this refreshed strategy:
 
 - The workspace is already on the required canonical branch, `factoryx/factory-tb-123/work-order`.
-- The current guarded branch head for this gate is `58ed3a6f3fb8be4e77913bd028f106a8c3273f70` (`58ed3a6 Refresh Work Order execution strategy`).
+- The current guarded branch head for this gate is `cc3d692b6e676f7ccee05ade7055e43e85a8aecf` (`cc3d692 Refresh Work Order execution strategy`), matching the supervisor-provided head guard for this planning pass.
 - `git status --short --branch` showed no uncommitted changes before this strategy update.
 - `gh pr view --json number,title,state,url,headRefName,baseRefName,reviewDecision,mergeStateStatus,comments,reviews,statusCheckRollup` reported `no pull requests found for branch "factoryx/factory-tb-123/work-order"`, so there is no open PR for this branch to update or triage during this strategy gate.
 - No `WORKFLOW.md` was found in the materialized workspace.
@@ -32,7 +32,7 @@ This strategy refresh is the only intended artifact for the planning gate. Produ
 
 The previous run issue is blocking and must be addressed before peripheral polish:
 
-`browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html: [15036:15036:0522/022652.469780:INFO:CONSOLE:62] "Uncaught (in promise) TypeError: Failed to fetch", source: https://ystackai.com/shared/studio-shell.js (62)`
+`browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/.factoryx-runtime-check-1.html: [15722:15722:0522/022745.403408:INFO:CONSOLE:62] "Uncaught (in promise) TypeError: Failed to fetch", source: https://ystackai.com/shared/studio-shell.js (62)`
 
 Targeted rework priority for the implementation phase:
 
