@@ -473,21 +473,21 @@ for(var i=0;i<4;i++){document.getElementById('lane-'+i).innerHTML='<div class="d
 
 function checkDistrictUnlock(){
 var threshold=state.district*CFG.districtUnlockThreshold;
-if(state.score>=threshold&&state.district<CFG.districtNames.length-1){state.district++;showDistrictBanner(false);}
+if(state.score>=threshold&&state.district<state.districtNames.length-1){state.district++;showDistrictBanner(false);}
 }
 
 function showDistrictBanner(unlock){
 var banner=document.getElementById('district-banner');
-banner.textContent=unlock?'\uD83C\uDF89 '+CFG.districtNames[state.district]+' Unlocked!':CFG.districtNames[state.district];
+banner.textContent=unlock?'\uD83C\uDF89 '+state.districtNames[state.district]+' Unlocked!':state.districtNames[state.district];
 banner.classList.add('show');
 setTimeout(function(){banner.classList.remove('show');},3000);
-document.getElementById('district-val').textContent=CFG.districtNames[state.district];
+document.getElementById('district-val').textContent=state.districtNames[state.district];
 }
 
 function updateHUD(){
 document.getElementById('score-val').textContent=state.score;
 document.getElementById('wins-val').textContent=state.wins;
-document.getElementById('district-val').textContent=CFG.districtNames[state.district];
+document.getElementById('district-val').textContent=state.districtNames[state.district];
 }
 
 function updateInteractionPrompt(){
