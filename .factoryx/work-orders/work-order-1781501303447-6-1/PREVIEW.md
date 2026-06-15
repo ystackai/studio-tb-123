@@ -87,3 +87,10 @@ Screenshots in this dir's screenshots/ (v3 + v4 rework pass) show the post-polis
 - Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.
 - All Game Feel items re-PASS. No game code change. PR#130 updated on canonical branch.
 - This pass directly addresses the launch prompt's "Previous run issue to address before peripheral polish: redeploy reset after verifier image rollout" by completing the full verification + evidence in the active env before PR body refresh.
+
+## Latest Verification Evidence (v23 re-confirmation, HEAD a4bb03cc0b574896164960eecfdb29c4e6565dc6 at start of pass)
+- Fresh chromium file:// + acid-runtime-check-23.html instrumented repro (IIFE driver, git-show pristine base) + direct committed index both produced valid 440x760 PNGs (acid-start-v23-repro.png 67535B, acid-mid-check-23-repro.png 75216B) in <3s with no timeout/pageerror under current post-verifier-image-rollout / redeploy env.
+- Post-interaction state exercised (lane switch + polarity cycle + pre-seed + mismatch toast + glitch warning + final shatter arcs).
+- Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.
+- All Game Feel items re-PASS. No game code change. PR#130 updated on canonical branch.
+- This pass directly addresses the launch prompt's "Previous run issue to address before peripheral polish: redeploy reset after verifier image rollout" by completing the full verification + evidence in the active env before PR body refresh. (Also staged the v23 pngs + confirmed v22 pair present in tree per a4bb03c recovery intent.)
