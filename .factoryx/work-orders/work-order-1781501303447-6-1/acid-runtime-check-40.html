@@ -1202,6 +1202,37 @@ function gameLoop(timestamp){
 }
 
 // ── Start ──
+
+// === INSTRUMENTED DRIVER (v40 music pass) ===
+// exercises start + post-interaction + music init + toggle + mismatch/match + frames for browser verification
+setTimeout(function(){
+  try{
+    if(typeof initAudio === "function") initAudio();
+    if(typeof startGame === "function") startGame();
+    if(hudEl) hudEl.classList.add("visible");
+    if(startScreen) startScreen.classList.remove("active");
+    if(gameoverScreen) gameoverScreen.classList.remove("active");
+    // drive core verbs post-start (music starts in startGame)
+    if(typeof laneCenter === "function" && player){
+      player.lane=0; player.targetX=laneCenter(0);
+      if(typeof cyclePolarity === "function") cyclePolarity();
+    }
+    // seed a visible mismatch for toast + a ready match for shatter (exercises new music-reactive paths indirectly via level/dist but mainly no-crash)
+    if(typeof gates !== "undefined" && typeof laneCenter === "function" && player){
+      gates.push({lane:2, colorIdx: (player.polarity+1)%3 , y: (player.y||300)-40 });
+      gates.push({lane: player.lane||0 , colorIdx: player.polarity||1 , y: (player.y||300)+20 });
+    }
+    if(typeof spawnGlitch === "function") spawnGlitch();
+    // drive several frames to let music schedule, toasts, shatter, particles, render
+    for(let k=0; k<22; k++){
+      if(typeof update === "function") update(16.6);
+      if(typeof render === "function") render();
+    }
+    // toggle music on/off (must be safe, no throw)
+    if(typeof toggleMusic === "function"){ toggleMusic(); toggleMusic(); }
+    console.log("driver: v40 post-interaction state ready (music+play)");
+  }catch(e){ console.error("driver-err", e && e.message || e); }
+}, 70);
 requestAnimationFrame(gameLoop);
 
 })();

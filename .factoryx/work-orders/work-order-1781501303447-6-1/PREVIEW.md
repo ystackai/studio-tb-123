@@ -255,3 +255,18 @@ This closes the "requesting targeted rework before accepting this preview" for t
 - First screen playable immediately; core verb (lane + polarity dual match to shatter) demonstrable <10s with pre-seed. Game Feel re-PASS. Self-contained, responsive (mobile collapses sides/bezels cleanly).
 
 This is the product-shaped fix for the contact-sheet note while keeping the ambitious reactive Acid Circuit Breaker intact. Preview entrypoint remains `games/92-acid-circuit-breaker/index.html`.
+
+## v40 Music Polish (2026-06-15, addresses marcus 16:50Z + "real generated music" requirement)
+
+**Changes (focused on audio requirement, no visual scope creep):**
+- Replaced sparse blip sfx-only with a real generated looping acid/rave soundtrack: 138BPM 16-step sequencer driving a resonant saw bass (303-style slides + squelchy filter env + LFO wobble), kick (pitch drop + noise), snare, hats (density builds), and higher melodic saw stabs (detuned for harmonic thickness) on phrase points.
+- Energy builds with survival (level, combo, distance): higher cutoffs, extra percussion, more stabs, filter sweeps on downbeats at LVL3+ — music gets more alive the deeper you get, matching "build energy during play".
+- Toggle-safe: ♪ button (top-right 28px+ hit area, z-high overlay so does not steal right-lane taps) + M/N keys. Music fades on toggle-off and on death; SFX (gate/collect/polarity/glitch) remain crisp and layered on top always. All audio strictly after first gesture (START/center/RETRY).
+- Browser + gesture safe: pure WAAPI nodes created post-resume; headless verification (chromium file:// + instrumented driver exercising start + verbs + 20+ frames + toggle) produced clean 1380x980 caps with no pageerror/timeout.
+- Preserved exactly: v39 landscape cab (1280x720 + 1380 frame + tall bezels), enlarged player/gates/letters/rings/zaps/BREAK pops/red X+cracks, pre-seed taste-gate, patterns, toasts, warnings, beat-reactive visuals, full controls, self-contained, <40kB, responsive. The "neon handheld action" core look is the strong lane and was left untouched.
+- First screen playable immediately; the 30s slice now *sounds* like a reactive rave track under the breaker verb — directly fulfills the "real music" blocking note without altering the visual or interaction design.
+
+Screenshots: acid-start-v40.png + acid-mid-check-40.png (post lane/pol + mismatch toast + match shatter + music active in driver frames) + acid-runtime-check-40.html in this dir.
+
+This is the targeted response to the 16:50Z playtest while keeping Acid Circuit Breaker ambitious, polished, and true to TB-123 signal/interference aesthetic. Preview entrypoint remains `games/92-acid-circuit-breaker/index.html`.
+

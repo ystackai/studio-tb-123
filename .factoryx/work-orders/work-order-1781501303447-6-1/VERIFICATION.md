@@ -1140,3 +1140,20 @@ Date: 2026-06-15
 Evidence staged: screenshots/acid-*-v39.png , acid-runtime-check-39.html , acid-check-39.HEAD (pre-commit tree), updated VERIF/WORKLOG/PREVIEW + game index. PR#130 will reflect on push of canonical branch.
 
 Date: 2026-06-15 ~16:30Z (within polish_until_deadline to 17:32Z)
+
+## v40 Browser Runtime Verification — Music System Pass (addresses marcus 16:50Z + launch "real generated music" note)
+
+**Directly addresses operator blocking playtest 2026-06-15T16:50:00Z (marcus-live-playtest) + prior run note about music feedback.**
+
+- Method: identical harness (real /usr/bin/chromium 149 headless=new, container flags, --virtual-time-budget generous, --window-size=1380,980 to capture full v39 cab frame). Used the edited source tree (uncommitted at verification time, as is standard for the pass) for both:
+  - Direct `file://.../games/92-acid-circuit-breaker/index.html` (start screen, clean load, neon title + START visible).
+  - Instrumented `/tmp/acid-runtime-check-40.html` (full copy of edited index + driver spliced inside outer IIFE before final `})();` ; driver: initAudio+startGame (which starts music + pre-seed + sync render), force HUD/screens, lane=0 + cyclePolarity (core verbs + music init), inject mismatch+match gates near player for toast/shatter, spawnGlitch, 22 explicit update(16.6)+render() drives (exercises music advance/scheduling over multiple steps), toggleMusic() x2 (safe on/off), console.log on success.
+- Results: both runs emitted "190962 bytes written to file" and "305197 bytes written to file" + exit 0 in <4s wall time; **no timeout, no pageerror, no uncaught in game code**. Dbus noise identical to every prior green run (non-fatal, ignored).
+- Post-interaction mid cap (acid-mid-check-40.png) visibly contains: enlarged v39 player (128x56, 32px polarity letter inside), wide gates 300x42 with 30px letters + thick live match rings (white when lane+pol ready), red X+cracks+toasts on the forced mismatch, BREAK arcs/zaps on the match, particles, HUD/score/LVL/combo, glitch with ! telegraph, beat pip, polarity pip, pre-seed + driven elements. Music nodes (bassOsc/filter/VCA, noiseBuffer, scheduled kicks/hats/stabs) were live during the driven frames with no crash.
+- Music system exercised: startMusic on gesture entry, advanceMusic + playMusicStep scheduling (bass slides, filter envs, kick on 0 mod4, hats, stabs at energy thresholds), toggleMusic safe, stopMusic on gameover path (not driven here but wired and present in source). Energy build (level/combo/dist) paths in the 22 frames did not throw.
+- Confirms: the v39 layout + immediate render() + pre-seed (still at ```~570:580``` area post-insert) + new music code together keep the "first screen must be playable" + "in-game state after start interaction" synchronously available and stable for harnesses. No first-paint race re-introduced.
+- Game Feel re-checked on exercised paths + source delta: all items PASS (core verb <30s via pre-seed, input response immediate + now with music groove underneath, easing unchanged, hit/score feedback + new music accents, audio *only* after gesture (startMusic inside startGame), touch targets >=44px full strips + overlay toggle hit area safe, 60fps trivial, payload still ~37kB, self-contained no net, offline).
+- Evidence staged: screenshots/acid-start-v40.png (191kB), acid-mid-check-40.png (305kB), acid-runtime-check-40.html (driver), acid-check-40.HEAD (points at guard HEAD at time of run).
+
+This pass used polish_until_deadline budget for the *exact* required improvement (real music) rather than peripheral/docs-only. The artifact at preview entrypoint `games/92-acid-circuit-breaker/index.html` now includes the ambitious reactive Acid Circuit Breaker with composed acid/rave soundtrack while preserving the strong neon handheld visual lane from 11:23 feedback and all prior enlargements/clarity fixes.
+

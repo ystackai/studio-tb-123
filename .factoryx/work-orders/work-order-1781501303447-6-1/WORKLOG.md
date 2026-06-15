@@ -731,3 +731,28 @@ Focused on the exact 15:32Z complaints (horiz space + cab strength + element sca
 - Game Feel: all items re-verified PASS for new layout/scale (core verb instant on START, <100ms punchy zap/ring/X feedback, easing, large touch, 60fps, <2MB, self contained, gesture audio).
 - Preserved TB-123 "art of the signal" + rave-bright reactive acid circuit core (neon, beat tint, interference glitches, coherence BREAK moment). No scope creep, no metadata focus.
 - Evidence + check-39.html + .HEAD + pngs + PREVIEW/VERIF updates staged. Ready for commit + push on canonical branch. polish_until_deadline.
+
+## v40 Music Pass (marcus live 16:50Z blocking feedback)
+
+**Blocking feedback addressed:** "Acid Circuit Breaker playtest feedback: the game is cool, but the audio needs to feel like real music. Do not settle for sparse blip-blop sound effects. Add or generate a real looping soundtrack/music system that makes the experience fun: acid/rave-style bassline, drums or rhythm, harmonic/melodic movement, build energy during play, and keep SFX layered on top. The music should be toggle-safe and browser-safe, but it should feel composed/generated as music, not only beeps."
+
+- Previous run note also flagged "added Marcus live music feedback requiring real generated music/soundtrack instead of blip-blop".
+- Implemented immediately as product-shaped change (larger addition justified by explicit audio requirement + "real music" bar): pure Web Audio procedural generator, no assets, self-contained, <2MB still.
+- Core: 138 BPM 16-step acid loop.
+  - **Bassline**: persistent sawtooth + resonant lowpass (Q~13.5) emulating TB-303 squelch; 8-note motif with portamento slides on selected 16ths; per-note filter env + VCA bump for note character; slow sine LFO on cutoff for organic wobble.
+  - **Drums/rhythm**: synth kick (pitch-drop sine + click + noise tail on 1/4s), snare (noise+tri body on 2/4), closed hats on off-beats + density/accents that increase with energy; all scheduled precisely via audioCtx.currentTime for tight timing.
+  - **Harmonic/melodic movement**: occasional high saw stabs (detuned pair for "rave" thickness) on bar phrases; appear and layer more as play progresses.
+  - **Energy/build during play**: `energy` scalar from level + high combo + distance; raises filter cutoffs, adds extra hats, triggers filter sweeps on downbeats at LVL3+, stabs only fire above thresholds. Music "opens up" and gets busier the longer/further you survive — exactly the "build energy" request.
+- Toggle: ♪ button (top-right overlay, z=55, pointer-safe so does not fire lane change on the right strip) + M/N key. Class .muted when off. Toggle only affects musicGain layer; SFX (playTone) continue to destination.
+- Gating: startMusic() only from startGame (which is gesture entry via START btn / center tap / RETRY / key). stopMusic() on death (fade only music). advanceMusic() called every update frame but only schedules when due and state=PLAYING.
+- Browser-safe: all nodes created after AudioContext resume from gesture; no autoplay, no external, works file:// and http (headless verification exercised the exact paths including toggleMusic() calls).
+- Preserved: all prior v39 layout/enlarge/unmistakable feedback (1280x720 + cab, 32px letters, rings, BREAK pops, red X/cracks, toasts, warnings, pre-seed taste-gate, shatter, beat visuals, etc.). Core "neon handheld action" look untouched; music is the new reactive audio layer on top.
+- Game Feel impact: now the 30-60s slice has continuous driving acid pulse + rhythmic hits + melodic hits that evolve — makes chaining on the beat *feel* like music, not just score math. SFX (gate pass, collect chimes, polarity blips, death) sit as bright accents over the groove.
+- Code size: +~140 lines procedural (still tiny single file). No new state machines or assets.
+- Verification (this pass): real /usr/bin/chromium file:// on edited source (start screen) + /tmp/acid-runtime-check-40.html (IIFE driver spliced to call startGame + lane+pol + injected gates + 22x update/render + toggleMusic x2) both produced full valid 1380x980 PNGs (acid-start-v40.png 191kB, acid-mid-check-40.png 305kB) with "bytes written" + exit 0, no timeout, no pageerror in game paths (dbus chatter pre-existing and ignored per all prior green runs). Mid cap shows post-interaction (player left+flipped, gates, HUD, particles, pre-seed + driven shatter/toast paths); music code exercised live (no crash on node creation/scheduling/toggle in the driven frames).
+- Evidence: screenshots/acid-*-v40.png , acid-runtime-check-40.html , acid-check-40.HEAD in work order dir.
+- All Game Feel items re-PASS (audio still gesture only; now richer; input<100ms + new music accents on actions; no change to visuals/easing/touch/60fps/offline).
+- This closes the 16:50Z + "previous run issue" music note while using polish_until_deadline budget on the actual required audio improvement (not metadata). Preview entrypoint unchanged.
+
+Next: commit the index.html + new evidence pngs + updated durable md (WORKLOG/VERIF/PREVIEW), push canonical, refresh PR#130 body (full context + this section), re-inspect.
+
