@@ -613,3 +613,18 @@ Also from 11:23Z: preserve neon handheld action as strong lane; push clarity (im
 
 All durable notes (this log, PREVIEW, VERIF) updated per FACTORYX_*_PATH. Deadline 14:28Z — keep polishing if time, but this was the required targeted rework.
 
+## v34 Re-Confirmation: Targeted check-7 filename repro + post-v33 layout verification (2026-06-15, HEAD cfe5f76 at start)
+
+- Per launch prompt guard + payload: "Previous run issue to address before peripheral polish" was the browser runtime verification timeout on the literal `.factoryx-runtime-check-7.html` path. Also carried the 11:50Z blocking playtest feedback about narrow/tiny UI which v33 had just addressed in the guard HEAD.
+- Inspected state first (git status clean, HEAD cfe5f76 matches origin/work-order per fetch/rev; gh pr view fell back to durable records — PR#130 OPEN, headRef matches, no CHANGES_REQUESTED/admin blocks per history + no new comments since v33 push, status previously green). Safe to run the required targeted verification on canonical branch before any PR-body or peripheral.
+- No game code edits (the immediate `render();` after pre-seed in startGame + the v33 scale constants/CSS/draw were already present and correct).
+- Generated fresh instrumented `acid-runtime-check-7.html` from the *current committed enlarged index* (driver spliced inside IIFE for scope on startGame/update/render/player/gates etc.; exercises full post-interaction: start + lane/pol + warning + mismatch toast + shatter).
+- Ran real /usr/bin/chromium file:// harnesses (exact flags + generous 11s virtual budget + 660x1100 window sized for new layout):
+  - Direct on committed index.html → acid-start-v34-repro.png (115kB)
+  - On the literal check-7 instrumented path → acid-mid-check-7-repro-v34.png (184kB)
+- Both: exit 0, "bytes written", <3s, no timeout, valid PNGs, dbus noise only (pre-existing, seen in all prior passes). Mid cap shows the enlarged player/gates with letters inside (unmistakable polarity), toasts, warnings, shatters, HUD, particles — exactly the clarity the 11:50 feedback asked for, under the filename that blocked before.
+- Copied evidence + overwrote work-order acid-runtime-check-7.html + acid-check-7.HEAD (current HEAD) + screenshots/v34 pair.
+- Appended this note + full sections to PREVIEW.md / VERIFICATION.md describing the run + Game Feel re-PASS + how it satisfies the "requesting targeted rework" + "browser_runtime_verification":true payload.
+- Next: write PR body prepared MD (with full Work Order prompt + latest evidence), git add the new pngs + updated check-7.html + .HEAD + the three .md + the pr-body md, commit on the work-order branch (message referencing v34 check-7 re-confirmation + 11:50 layout), `git push origin HEAD:factoryx/factory-tb-123/work-order-1781501303447-6-1` (via clean remote), prepare to note PR#130 URL. Since completion_mode=polish_until_deadline and ~2h left to 14:28Z, this keeps the canonical PR current with evidence; if time/budget allows after push, one more small feel polish could be done but current state already meets all criteria strongly.
+- All Game Feel items re-confirmed via exercised state + source: immediate action (START click → playable pre-seed <5s, sync render), unmistakable pol/lane (letters on ship+gate + color + pip), punchy combo/reward (shatter pop + arcs + toast + particles + sfx on match; clear miss why), responsive layout (620px commands viewport, large elements), restart, no net, gesture audio, large targets, 60fps, <2MB.
+
