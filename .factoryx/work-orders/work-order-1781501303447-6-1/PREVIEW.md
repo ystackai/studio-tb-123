@@ -44,7 +44,8 @@ This is the playable artifact. No poster, no placeholder, no "coming soon".
 - Gate misses now produce a brief floating "LANE" or "POLARITY" label (red) that rises and fades near the ship — makes the dual-match rule instantly learnable from failure.
 - Glitches carry a 250-350ms "!" + accent line warning at the top of their lane before they descend — threat readable without surprise.
 - At LVL 2+ the world begins injecting short deliberate patterns (color sequences or lane-locked gates + close glitches). This delivers the "escalating patterns" and "oh shit" moments while the opening 30s remains the reliable curated taste-gate slice.
-All still fits the TB-123 "signal that arrives changed / interference as character" frame: the patterns are like fading transmissions or jamming bursts you have to ride.
+- Gate success now *shatters*: on correct lane+polarity match the bar vanishes instantly in a burst of circuit arcs and colored particles at the exact crossing point in the lane (stronger on beat-phase). The "breaker" verb has a clear, satisfying pop instead of the gate sliding past after score. Directly addresses prior note that gate success "lacked 'breaker' satisfaction".
+All still fits the TB-123 "signal that arrives changed / interference as character" frame: the patterns are like fading transmissions or jamming bursts you have to ride. The shatter is the moment of coherence.
 
-Screenshots in this dir's screenshots/ (v3) show the post-polish runtime.
+Screenshots in this dir's screenshots/ (v3 + v4 rework pass) show the post-polish runtime with shatter fx live in mid-play caps.
 

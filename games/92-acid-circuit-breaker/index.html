@@ -173,7 +173,7 @@ function sfxPolarity(){
 function spawnGate(){
   const lane=Math.floor(Math.random()*LANE_COUNT);
   const colorIdx=Math.floor(Math.random()*LANE_COUNT);
-  gates.push({lane,colorIdx,y:-GATE_H,passed:false});
+  gates.push({lane,colorIdx,y:-GATE_H});
 }
 function spawnGlitch(){
   const lane=Math.floor(Math.random()*LANE_COUNT);
@@ -279,9 +279,9 @@ function startGame(){
   hudCombo.textContent='';
    // Pre-place curated obstacles/pickups so first 30s is immediately playable and demonstrates both verbs
   // Start player at lane 1 / polarity 1; first gate matches both for easy score, then a mismatch, glitch, pulse
-  gates.push({lane:1,colorIdx:1,y:80,passed:false}); // easy first match (lane+pol)
-  gates.push({lane:0,colorIdx:2,y:220,passed:false}); // requires lane switch + pol cycle
-  gates.push({lane:2,colorIdx:1,y:360,passed:false}); // mismatch example
+  gates.push({lane:1,colorIdx:1,y:80}); // easy first match (lane+pol)
+  gates.push({lane:0,colorIdx:2,y:220}); // requires lane switch + pol cycle
+  gates.push({lane:2,colorIdx:1,y:360}); // mismatch example
   glitches.push({lane:0,x:laneCenter(0),y:140,speed:speed*1.2});
   glitches.push({lane:2,x:laneCenter(2),y:300,speed:speed*1.35});
   pulses.push({lane:1,x:laneCenter(1),y:170,speed:speed*0.9});
@@ -331,17 +331,17 @@ function update(dt){
       const pcol=(level%3);
       if(level%2===0){
         // color-hold pattern: same polarity gates spread, rewards staying on one breaker setting
-        gates.push({lane:0,colorIdx:pcol,y:-GATE_H-40,passed:false});
-        gates.push({lane:1,colorIdx:pcol,y:-GATE_H+70,passed:false});
-        gates.push({lane:2,colorIdx:pcol,y:-GATE_H+160,passed:false});
+        gates.push({lane:0,colorIdx:pcol,y:-GATE_H-40});
+        gates.push({lane:1,colorIdx:pcol,y:-GATE_H+70});
+        gates.push({lane:2,colorIdx:pcol,y:-GATE_H+160});
         const gl=(pcol+1)%3;
         glitches.push({lane:gl,x:laneCenter(gl),y:-GLITCH_H-20,speed:speed*1.45});
         warnings.push({lane:gl,life:0.55});
       }else{
         // lane-hold + close threat: forces physical alignment while polarity must still flip
         const lh=(level-1)%3;
-        gates.push({lane:lh,colorIdx:pcol,y:-GATE_H-25,passed:false});
-        gates.push({lane:lh,colorIdx:(pcol+1)%3,y:-GATE_H+95,passed:false});
+        gates.push({lane:lh,colorIdx:pcol,y:-GATE_H-25});
+        gates.push({lane:lh,colorIdx:(pcol+1)%3,y:-GATE_H+95});
         const g2=(lh+2)%3;
         glitches.push({lane:g2,x:laneCenter(g2),y:-GLITCH_H-5,speed:speed*1.55});
         warnings.push({lane:g2,life:0.48});
@@ -374,9 +374,8 @@ function update(dt){
     if(g.y>H+20){gates.splice(i,1);continue;}
     
      // Gate passage — must match BOTH lane position and current polarity (color) to break/score
-    if(!g.passed&&g.y+GATE_H>player.y&&g.y<player.y+PLAYER_H){
+    if(g.y+GATE_H>player.y&&g.y<player.y+PLAYER_H){
       if(g.lane===player.lane && g.colorIdx===player.polarity){
-        g.passed=true;
         // Beat-phase bonus for "chain beat-synced" flavor: crossing near the visual beat peak gives extra juice
         const beatInterval=Math.max(200,700-level*50);
         const beatPhase=(gameTime%beatInterval)/beatInterval;
@@ -395,13 +394,17 @@ function update(dt){
         hudCombo.textContent=combo>1?combo+'x':' ';
         flashAlpha=nearPeak?0.28:0.15;flashColor=LANE_COLORS[g.colorIdx];
         sfxGatePass();
-        // Stronger "circuit break" particles on success; extra on beat hit
-        emitParticles(player.x,player.y-10,LANE_COLORS[g.colorIdx],nearPeak?14:8);
-        if(nearPeak) emitParticles(player.x-8,player.y+4,'#fff',6);
-        // Transient "acid breaker" arcs — the moment the signal coheres and snaps
-        for(let k=0;k<(nearPeak?3:2);k++){
-          breaks.push({x:player.x+(k-1)*6, y:player.y-6, life:0.55+Math.random()*0.15, color:nearPeak?'#fff':LANE_COLORS[g.colorIdx], w:18+Math.random()*22});
+        // Gate *shatters* immediately for "breaker" satisfaction — the bar vanishes in a burst at the match point
+        const cx=laneCenter(g.lane);
+        emitParticles(cx, g.y+GATE_H/2, LANE_COLORS[g.colorIdx], nearPeak?16:10);
+        if(nearPeak) emitParticles(cx+5, g.y+GATE_H/2-1, '#fff', 6);
+        // Stronger circuit-break arcs centered on the gate's position (not player) so the "snap" reads up-lane
+        for(let k=0;k<(nearPeak?4:2);k++){
+          breaks.push({x:cx+(k-1.5)*7, y:g.y+GATE_H/2, life:0.62+Math.random()*0.18, color:nearPeak?'#fff':LANE_COLORS[g.colorIdx], w:20+Math.random()*20});
         }
+        // remove the gate right now — it broke; no sliding past after success
+        gates.splice(i,1);
+        continue;
        } else {
         // Wrong lane or wrong polarity: miss, reset combo (no death; glitches are the deadly ones)
         if(combo>0){ combo=0; hudCombo.textContent=''; }
