@@ -21,13 +21,14 @@
    .hud-score{color:#00FF41;font-size:0.95rem;font-weight:900}
    .hud-combo{color:#FFD700;font-size:0.75rem}
    .hud-level{color:#FF006E}
-   /* Touch zones */
-   .touch-zone{position:absolute;bottom:0;width:33.33%;height:100px;pointer-events:all;min-height:44px;z-index:30;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s}
-   .touch-zone:active{opacity:0.2;background:rgba(255,255,255,0.05)}
-   #touch-left{left:0;justify-content:flex-start;padding-left:16px}
-   #touch-center{left:33.33%;justify-content:center}
-   #touch-right{left:66.66%;justify-content:flex-end;padding-right:16px}
-   .touch-label{color:rgba(0,255,65,0.4);font-size:1.3rem;pointer-events:none;user-select:none}
+   /* Touch zones — full-height vertical strips for reliable thumb play anywhere on the circuit */
+   .touch-zone{position:absolute;top:0;bottom:0;width:33.33%;pointer-events:all;z-index:30;opacity:0;transition:opacity 0.2s}
+   .touch-zone:active{opacity:0.15;background:rgba(255,255,255,0.04)}
+   #touch-left{left:0}
+   #touch-center{left:33.33%}
+   #touch-right{left:66.66%}
+   /* Labels are pure hints, anchored low so they don't fight the play area */
+   .touch-label{position:absolute;bottom:18px;color:rgba(0,255,65,0.35);font-size:1.05rem;pointer-events:none;user-select:none}
    /* Screens */
    .screen{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;pointer-events:all;opacity:0;transition:opacity 0.4s;pointer-events:none}
    .screen.active{opacity:1;pointer-events:all}
@@ -42,7 +43,7 @@
    @media(max-width:440px){
      #game-container{border-radius:0;border:none;max-width:100%}
      .screen-title{font-size:1.2rem}
-     .touch-zone{height:80px}
+     /* full-height strips remain; labels scale via their own rule */
    }
    @keyframes neon-pulse{0%,100%{text-shadow:0 0 20px #00FF41,0 0 40px #00FF41}50%{text-shadow:0 0 30px #00FF41,0 0 60px #00FF41,0 0 80px #00FF41}}
    .screen-title{animation:neon-pulse 2s ease-in-out infinite}
@@ -117,13 +118,14 @@ const btnRestart=document.getElementById('btn-restart');
 // ── Game state ──
 let state='START';
 let player={lane:1,polarity:1,x:W/2,y:H-100,targetX:W/2,alpha:1};
-let gates=[],glitches=[],pulses=[],particles=[];
+let gates=[],glitches=[],pulses=[],particles=[],breaks=[];
 let score=0,combo=0,maxCombo=0,level=1,speed=2.5,dist=0;
 let spawnTimer=0,difficultyTimer=0;
 let bgOffset=0,circuitLines=[],lastBeatTime=0;
 let shakeX=0,shakeY=0,shakeDecay=0;
 let flashAlpha=0,flashColor='#fff';
 let gameTime=0;
+let lastSuccessTime=0; // for idle combo decay + beat-phase bonuses
 
 function laneCenter(i){return LANE_W*i+LANE_W/2;}
 
@@ -236,6 +238,24 @@ document.getElementById('touch-center').addEventListener('pointerdown',e=>{
   if(state==='PLAYING')cyclePolarity();
 });
 
+// Canvas-level pointer zones (full height, any Y). Div zones still work for the visual hint taps.
+canvas.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const cx=(e.clientX-rect.left)/rect.width*W;
+  const third=W/3;
+  if(state==='START'){initAudio();startGame();return;}
+  if(state==='GAMEOVER'){initAudio();restartGame();return;}
+  if(state!=='PLAYING')return;
+  if(cx < third){
+    if(player.lane>0){ player.lane--; player.targetX=laneCenter(player.lane); emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4); }
+  }else if(cx < third*2){
+    cyclePolarity();
+  }else{
+    if(player.lane<LANE_COUNT-1){ player.lane++; player.targetX=laneCenter(player.lane); emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4); }
+  }
+});
+
 btnStart.addEventListener('click',()=>{initAudio();startGame();});
 btnRestart.addEventListener('click',()=>{initAudio();restartGame();});
 
@@ -243,7 +263,7 @@ btnRestart.addEventListener('click',()=>{initAudio();restartGame();});
 function startGame(){
   initAudio();
   player={lane:1,polarity:1,x:laneCenter(1),y:H-100,targetX:laneCenter(1),alpha:1};
-  gates=[];glitches=[];pulses=[];particles=[];
+  gates=[];glitches=[];pulses=[];particles=[];breaks=[];
   score=0;combo=0;maxCombo=0;level=1;speed=3;dist=0;
   spawnTimer=0;difficultyTimer=0;
   bgOffset=0;circuitLines=[];
@@ -334,19 +354,31 @@ function update(dt){
     if(!g.passed&&g.y+GATE_H>player.y&&g.y<player.y+PLAYER_H){
       if(g.lane===player.lane && g.colorIdx===player.polarity){
         g.passed=true;
-        const comboMult=Math.min(combo+1,16);
-        const pts=100*comboMult;
+        // Beat-phase bonus for "chain beat-synced" flavor: crossing near the visual beat peak gives extra juice
+        const beatInterval=Math.max(200,700-level*50);
+        const beatPhase=(gameTime%beatInterval)/beatInterval;
+        const nearPeak=(beatPhase<0.16)||(1-beatPhase)<0.16;
+        const comboMult=Math.min(combo+1+(nearPeak?1:0),16);
+        const base=100;
+        const pts=Math.floor(base*comboMult*(nearPeak?1.5:1));
         score+=pts;
         combo=comboMult;
         if(combo>maxCombo)maxCombo=combo;
+        lastSuccessTime=gameTime;
         hudScore.textContent=score;
         hudScore.classList.remove('beat-flash');
         void hudScore.offsetWidth;
         hudScore.classList.add('beat-flash');
         hudCombo.textContent=combo>1?combo+'x':' ';
-        flashAlpha=0.15;flashColor=LANE_COLORS[g.colorIdx];
+        flashAlpha=nearPeak?0.28:0.15;flashColor=LANE_COLORS[g.colorIdx];
         sfxGatePass();
-        emitParticles(player.x,player.y-10,LANE_COLORS[g.colorIdx],8);
+        // Stronger "circuit break" particles on success; extra on beat hit
+        emitParticles(player.x,player.y-10,LANE_COLORS[g.colorIdx],nearPeak?14:8);
+        if(nearPeak) emitParticles(player.x-8,player.y+4,'#fff',6);
+        // Transient "acid breaker" arcs — the moment the signal coheres and snaps
+        for(let k=0;k<(nearPeak?3:2);k++){
+          breaks.push({x:player.x+(k-1)*6, y:player.y-6, life:0.55+Math.random()*0.15, color:nearPeak?'#fff':LANE_COLORS[g.colorIdx], w:18+Math.random()*22});
+        }
        } else {
         // Wrong lane or wrong polarity: miss, reset combo (no death; glitches are the deadly ones)
         if(combo>0){ combo=0; hudCombo.textContent=''; }
@@ -391,6 +423,7 @@ function update(dt){
       flashAlpha=0.1;flashColor='#FFD700';
       sfxCollect();
       emitParticles(p.x,p.y,'#FFD700',8);
+      lastSuccessTime=gameTime;
       pulses.splice(i,1);
      }
    }
@@ -401,6 +434,20 @@ function update(dt){
     p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;
     if(p.life<=0)particles.splice(i,1);
    }
+  
+  // Light combo decay when idle (encourages chaining; does not punish active play)
+  if(combo>1 && (gameTime-lastSuccessTime)>1400){
+    combo--;
+    hudCombo.textContent=combo>1?combo+'x':' ';
+    lastSuccessTime=gameTime; // reset window so it decays one step at a time
+  }
+  
+  // Breaker arcs decay
+  for(let i=breaks.length-1;i>=0;i--){
+    const b=breaks[i];
+    b.life-=0.028;
+    if(b.life<=0)breaks.splice(i,1);
+  }
   
   // Background circuit lines
   bgOffset+=speed*0.5;
@@ -448,9 +495,16 @@ function render(){
     ctx.fillRect(0,0,W,H);
    }
   
-  // Grid / circuit traces
+  // Grid / circuit traces — brighten on the beat for extra rave reactivity
   ctx.strokeStyle=TRACE_COLOR;
   ctx.lineWidth=1;
+  if(state==='PLAYING'){
+    const beatInterval=Math.max(200,700-level*50);
+    const beatPhase=(gameTime%beatInterval)/beatInterval;
+    if(beatPhase<0.12 || (1-beatPhase)<0.12){
+      ctx.strokeStyle='#2a2a36'; ctx.lineWidth=1.5;
+    }
+  }
   for(let y=(bgOffset%40)-40;y<H;y+=40){
     ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
    }
@@ -517,25 +571,32 @@ function render(){
     ctx.restore();
    }
   
-  // Draw glitches
+  // Draw glitches — acid interference: tears + chromatic fringing
   for(let i=0;i<glitches.length;i++){
     const gl=glitches[i];
     ctx.save();
-    ctx.shadowColor='#FFD700';ctx.shadowBlur=10;
+    const gx=gl.x-GLITCH_W/2, gy=gl.y-GLITCH_H/2;
+    // Base bright slab with slight shake
+    ctx.shadowColor='#FFD700';ctx.shadowBlur=8;
     ctx.fillStyle='#fff';
-    ctx.fillRect(gl.x-GLITCH_W/2,gl.y-GLITCH_H/2,GLITCH_W,GLITCH_H);
-    // Glitch pattern
+    ctx.fillRect(gx+ (Math.random()-0.5)*1.5, gy, GLITCH_W, GLITCH_H);
+    // Horizontal signal tears (acid raster break)
     ctx.shadowBlur=0;
     ctx.fillStyle='#FF006E';
-    for(let j=0;j<5;j++){
-      const gx=gl.x-GLITCH_W/2+Math.random()*GLITCH_W;
-      const gy=gl.y-GLITCH_H/2+Math.random()*GLITCH_H;
-      ctx.fillRect(gx,gy,4+Math.random()*8,2);
-     }
-    // Warning triangles
+    for(let j=0;j<4;j++){
+      const tx=gx + (j%2? -3:2) + Math.random()*GLITCH_W*0.6;
+      const ty=gy + 2 + j*3.5;
+      ctx.fillRect(tx, ty, 7+Math.random()*11, 1.5);
+    }
+    // Chromatic fringe (cyan/magenta split) for "rave glitch"
+    ctx.fillStyle='#00f7ff';
+    ctx.fillRect(gx+2, gy+2, 3, GLITCH_H-4);
+    ctx.fillStyle='#ff00aa';
+    ctx.fillRect(gx+GLITCH_W-5, gy+3, 3, GLITCH_H-6);
+    // Warning
     ctx.fillStyle='#FFD700';
-    ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('⚡',gl.x,gl.y);
+    ctx.font='bold 9px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('!',gl.x,gl.y);
     ctx.restore();
    }
   
@@ -552,6 +613,26 @@ function render(){
     ctx.globalAlpha=0.2*pulsePhase;
     ctx.strokeStyle='#FFD700';ctx.lineWidth=1;
     ctx.beginPath();ctx.arc(p.x,p.y,PULSE_R*2.2,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+   }
+  
+  // Draw breaker arcs (transient "circuit snap" on successful gate breaks)
+  for(let i=0;i<breaks.length;i++){
+    const b=breaks[i];
+    ctx.save();
+    ctx.globalAlpha=Math.max(0.15,b.life);
+    ctx.strokeStyle=b.color;
+    ctx.lineWidth=1.5;
+    const y=b.y - (1-b.life)*12;
+    ctx.beginPath();
+    ctx.moveTo(b.x-b.w*0.5, y);
+    ctx.lineTo(b.x+b.w*0.5, y-1);
+    ctx.stroke();
+    // small return arc for "coherence" pop
+    ctx.beginPath();
+    ctx.moveTo(b.x-b.w*0.35, y+2);
+    ctx.lineTo(b.x+b.w*0.25, y+3);
+    ctx.stroke();
     ctx.restore();
    }
   
