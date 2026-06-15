@@ -932,6 +932,29 @@ function gameLoop(timestamp){
 }
 
 // ── Start ──
+
+// --- v38 runtime verification driver (IIFE-internal splice for scope; exercises real post-start state) ---
+setTimeout(function(){
+  try{
+    startGame();
+    // exercise verbs
+    player.lane = 0; player.targetX = LANE_W*0 + LANE_W/2;
+    cyclePolarity(); cyclePolarity(); // to pol 0 (after start at 1)
+    // force mismatch for toast/crack on one gate
+    if(gates.length>0){ gates[0].lane=1; gates[0].colorIdx = (player.polarity+1)%3; }
+    if(typeof spawnGlitch==='function'){ spawnGlitch(); if(warnings.length) warnings[warnings.length-1].life = 0.55; }
+    for(let i=0;i<7;i++){ update(18); render(); }
+    // add a matchable gate for shatter + BREAK
+    player.polarity = 1;
+    gates.push({lane:0, colorIdx:1, y: player.y-28 });
+    for(let i=0;i<5;i++){ update(18); render(); }
+    // pol switch ring + lane
+    player.lane=2; player.targetX=LANE_W*2 + LANE_W/2; cyclePolarity();
+    render();
+    console.log('v38-driver: post lane+pol+mismatch+shatter+toast+warn+ring state ready');
+  }catch(e){ console.error('v38 driver err', e && e.message || e); }
+}, 80);
+
 requestAnimationFrame(gameLoop);
 
 })();
