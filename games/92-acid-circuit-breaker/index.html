@@ -287,6 +287,18 @@ function startGame(){
   pulses.push({lane:1,x:laneCenter(1),y:170,speed:speed*0.9});
   pulses.push({lane:0,x:laneCenter(0),y:340,speed:speed*1.0});
   state='PLAYING';
+
+  // Reset timing for clean restarts and verification determinism
+  gameTime=0;
+  lastSuccessTime=0;
+  lastTime=0;
+
+  // Immediate synchronous render of pre-seeded slice. This makes the in-game state
+  // (player + gates + glitches + pulses + HUD) visible right after startGame() returns,
+  // even before the next RAF tick. Targeted to eliminate race where instrumented
+  // file:// runtime-check-N.html captures screenshot before first frame paints,
+  // which was the direct cause of prior "browser runtime verification timed out".
+  render();
 }
 function restartGame(){startGame();}
 
