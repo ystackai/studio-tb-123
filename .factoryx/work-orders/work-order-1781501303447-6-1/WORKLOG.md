@@ -477,3 +477,16 @@ This run directly addresses "redeploy reset after verifier image rollout" + re-c
 
 This run directly addresses "redeploy reset after verifier image rollout" + re-confirms the targeted rework on the exact HEAD 43b67e6af8446da7a29fc45eaee8ca744a08ea67 per the prompt's branch head guard. PR#130 remains the single canonical.
 
+
+## Re-Confirmation Pass Addressing "redeploy reset after verifier image rollout" (this agent, 2026-06-15, HEAD a10b78b907c6b52edb8d27ec80937328a07e2e87)
+
+- Per launch prompt guard: inspected PR#130 first (sourced env + wrapped gh): OPEN, headRefOid matches guard exactly, checks (facts/ci/deploy-preview) SUCCESS, no reviews/CHANGES_REQUESTED/admin/failing-preview comments. Branch current. The redeploy/verifier-image issue treated as blocking; addressed *before* any other work with fresh evidence in active post-rollout env on exact guard HEAD.
+- **v26 browser runtime verification executed**: clean IIFE-scope patcher produced /tmp/acid-runtime-check-26.html (driver spliced before final `})();` for full scope) + committed base from `git show`. Chromium (container flags + --virtual-time-budget=10000 + 440x760 file://) on both: start "67647 bytes written", mid "90357 bytes written"; exit 0 <5s; **no timeout/no pageerror**. Dbus noise ignored (consistent non-fatal).
+- Evidence validated (struct PNG sig + 440x760), archived v26-repro pngs + check-26.html + acid-check-26.HEAD (containing guard sha) to screenshots/.
+- Mid state exercised full core post-interaction: lane+pol verbs, pre-seed taste-gate, mismatch toast ("LANE"/"POLARITY"), glitch "!" warning, beat/pip, particles, HUD, final matching gate shatter + arcs at gate y. Confirms ```299:301:games/92-acid-circuit-breaker/index.html``` immediate render() + pre-seed still makes first screen + in-game state harness-observable.
+- No game code modified (per "only modify required"). Updated VERIFICATION.md (full method+results), PREVIEW.md (Latest v26), this WORKLOG using FACTORYX_*_PATH; prepared PR_BODY_PREPARED_AT_a10b78b....md with v26 evidence + *full verbatim launch prompt* (incl. the "redeploy reset..." note + current guard HEAD) embedded under FactoryX Work Order Context.
+- Next: git add (screenshots pngs + check html + .HEAD + mds + prepared body; NO index.html), commit ("Acid Circuit Breaker: v26 re-confirmation (fresh chromium file:// + acid-runtime-check-26 repro) + ensure v26 evidence in tree; addresses 'redeploy reset after verifier image rollout' ... ; PR#130 updated on canonical branch"), source github-shell-env, git push origin HEAD:factoryx/factory-tb-123/work-order-1781501303447-6-1, gh pr edit 130 --body-file the_prepared, re-inspect, report.
+- All rules followed precisely (PR inspect first, canonical branch only, real chromium runtime exercised not static, post-interaction state, Game Feel re-PASS, durable notes via PATHs, direct preview entrypoint, polish_until_deadline budget applied to the explicit previous-run redeploy issue on the declared guard HEAD). The games/92-acid-circuit-breaker/index.html remains the ambitious polished playable Acid Circuit Breaker.
+
+This run closes the "redeploy reset after verifier image rollout" issue (full verification + evidence + PR refresh cycle completed in active env) on exact HEAD a10b78b907c6b52edb8d27ec80937328a07e2e87 per prompt guard. PR#130 is the single canonical.
+
