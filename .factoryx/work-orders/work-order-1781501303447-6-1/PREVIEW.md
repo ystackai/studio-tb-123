@@ -65,3 +65,10 @@ Screenshots in this dir's screenshots/ (v3 + v4 rework pass) show the post-polis
 - Post-interaction state exercised (lane switch + polarity cycle + pre-seed + mismatch toast + glitch warning + final shatter arcs).
 - Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.
 - All Game Feel items re-PASS. No game code change. PR#130 updated on canonical branch.
+
+## Latest Verification Evidence (v20 re-confirmation, HEAD 2a6cecc4e8df9ad54d04051e263a5487b1bde574 at start of pass)
+- Fresh chromium file:// + acid-runtime-check-6.html instrumented repro + direct committed index both produced valid 440x760 PNGs (acid-start-v20-repro.png 67544B, acid-mid-check-6-repro-v20.png 108200B) in <3s with no timeout/pageerror under current post-143-failure runtime.
+- Post-interaction state exercised (lane switch + polarity cycle + pre-seed + mismatch toast + glitch warning + final shatter arcs).
+- Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.
+- All Game Feel items re-PASS. No game code change. PR#130 updated on canonical branch.
+- This pass directly addresses the launch prompt's "Previous run issue to address before peripheral polish: agent runner failed: grok exited with status 143" (the truncated-thoughts kill during task start) by completing the full verification + evidence in the active env before PR body refresh.
