@@ -18,3 +18,4 @@
 - No scope creep: still one verb (dual lane+polarity match), one space, pre-seed taste gate preserved, single file, no net, gesture audio.
 - Would call this "correct" (Florian) + "playable instrument" (Tadao): the new toasts and warnings make every decision (stay or flip? dodge left or right?) produce instant distinct signal.
 
+- v37: enlarged horiz cab + unmistakable pol match (rings + BREAK pops) + mismatch (red tint+flash) feedback per 15:32Z. Strong reactive core preserved.

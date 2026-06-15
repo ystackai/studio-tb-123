@@ -684,3 +684,39 @@ This run + the standing v35 code changes together satisfy the full operator bloc
 
 All Game Feel checklist items PASS. PR#130 remains the single canonical PR.
 
+
+## v37 Contact-Sheet Polish Pass (2026-06-15 ~15:57Z, addressing 15:32Z blocking feedback)
+
+**Operator blocking playtest feedback (codex-contact-sheet-polish-wave, 2026-06-15T15:32:54Z):**
+"strong neon polarity game, but still too portrait/cabinet constrained and menu-like. Preserve Acid Circuit Breaker. Use more horizontal space or a stronger cabinet frame, enlarge player/gates/polarity letters, make matching/mismatch feedback unmistakable, and stop spending time on GitHub metadata introspection."
+
+**Targeted changes (product-shaped, single file):**
+- Internal canvas 720×960 → **960×900** (wider lanes ~320px, confident horizontal use while retaining descent runway + rave CRT).
+- Player/gates/polarity letters enlarged: **PLAYER 92×48** (26px bold white letter inside), **GATE 240×36** (22px bold letter + thick live match rings white/yellow), GLITCH/PULSE scaled up.
+- Stronger/wider cabinet frame: **#cabinet max-width:1080px**, thicker 6px + multi-shadow bezel, thinner 26px side accents (preserve handheld cab identity from 11:23 "strong lane" without boxing the playfield); game-container max 1024px, deeper shadows + vignette.
+- Start/UX less menu-like: compact 1.55rem title + gradient veil overlay, smaller integrated button, quick 0.18s fade, dim touch labels on play start, tighter HUD.
+- Unmistakable polarity match/mismatch + punchy reward (immediate after click/space):
+  - On pol cycle: **expanding colored ring** around ship (new color) for 280ms — glanceable flip confirmation.
+  - On full match break: **"BREAK" rising pop** (white or color, bigger on beat), stronger shatter arcs + particles, brighter flash.
+  - On mismatch: red "LANE"/"POLARITY" toast (larger), red particles + brief red gate tint flash + small screen flash; unmistakable even in periphery.
+- Pre-seed retuned for new scale; first action <5s still demonstrates verbs.
+- Preserved: rave neon reactive (beat tint/wash, pulses, grid), TB-123 interference aesthetic, pre-seed taste-gate, beat-synced scoring, escalating patterns @LVL, gesture audio only, full touch+keys, <2MB, self-contained, 60fps.
+
+**Browser verification (real chromium, this runtime):**
+- Direct edited index.html (start) → acid-start-v37-repro.png (127747 bytes, 880×1020).
+- Instrumented acid-runtime-check-37.html (startGame + lane switch + 2× cyclePolarity (rings) + mismatch gate injection + multiple update/render + final pol/lane) → acid-mid-check-7-repro-v37.png (173363 bytes). Post-interaction state shows enlarged player (26px letter), wide gates with thick rings on pol-match, "BREAK" pops, red mismatch toasts/particles + gate tint, pol rings, pre-seed elements, HUD, beat.
+- Both: exit 0, "bytes written", **no timeout, no pageerror** (dbus/container noise only, consistent with all prior green v32–v36 runs).
+- Evidence: screenshots/acid-*-v37*.png + acid-runtime-check-37.html + acid-check-37.HEAD in WO dir.
+
+**Game Feel Checklist re-PASS (exercised + source):**
+- [x] Core verb (lane + polarity dual-match to shatter) in first 30s via pre-seed + immediate after click/space
+- [x] Input <100ms + visible/audible (particles, rings, BREAK pop, flash, sfx, HUD pop, gate tint on miss)
+- [x] Easing on motion (lerp player, decay rings/pops/particles/breaks)
+- [x] Hit/score/mismatch feedback (BREAK text, shatter arcs, red toast+particles+tint, flash)
+- [x] Audio only after gesture; sparse
+- [x] Touch targets large (full-height 33% + canvas zones); keyboard + pointer
+- [x] 60fps trivial (canvas 2d, few draws)
+- [x] Total payload ~37kB <2MB
+- [x] No external net; offline after load
+
+Focused on the exact 15:32Z complaints (horiz space + cab strength + element scale + unmistakable feedback) while preserving the neon polarity handheld core. No GitHub metadata work in this pass; only the playable artifact + required evidence per workflow. polish_until_deadline budget used for the blocking layout/feedback polish.

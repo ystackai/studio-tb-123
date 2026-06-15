@@ -920,6 +920,10 @@ function gameLoop(timestamp){
 // ── Start ──
 requestAnimationFrame(gameLoop);
 
+
+
+(function d(){setTimeout(function(){try{if(typeof startGame==='function')startGame();setTimeout(function(){try{if(typeof player!=='undefined'&&player.lane>0){player.lane--;player.targetX=320;}if(typeof cyclePolarity==='function'){cyclePolarity();cyclePolarity();}if(typeof gates!=='undefined'){gates.push({lane:0,colorIdx:1,y:155});gates.push({lane:1,colorIdx:0,y:285});gates.push({lane:2,colorIdx:2,y:405});}if(typeof glitches!=='undefined'){glitches.push({lane:1,x:640,y:125,speed:3.2});}for(let k=0;k<8;k++){if(typeof update==='function')update(16);if(typeof render==='function')render();}if(typeof cyclePolarity==='function')cyclePolarity();if(typeof player!=='undefined'&&player.lane<2){player.lane++;player.targetX=800;}if(typeof update==='function')update(16);if(typeof render==='function')render();console.log('[v37-check] post-interaction complete');}catch(e){console.error(e);}},85);}catch(e){}},45);}());
+
 })();
 </script>
 </body>

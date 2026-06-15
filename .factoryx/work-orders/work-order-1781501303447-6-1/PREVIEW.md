@@ -235,3 +235,10 @@ This closes the "requesting targeted rework before accepting this preview" for t
 - Staged: screenshots/acid-*-v36*.png , acid-runtime-check-7.html , acid-check-7.HEAD , updated WORKLOG/VERIFICATION/PREVIEW + PR body prep. PR#130 will be refreshed on canonical branch.
 - polish_until_deadline budget used to deliver the required browser evidence on the exact blocker. The artifact at the preview entrypoint `games/92-acid-circuit-breaker/index.html` is the ambitious, polished, immediately playable Acid Circuit Breaker.
 
+
+## v37 Polish (contact-sheet 15:32Z, 2026-06-15T15:57Z)
+- Wider 960×900 playfield + 1080px max cabinet with stronger frame (more horiz, less constrained/menu per feedback).
+- Player 92×48 w/ 26px letter, gates 240×36 w/ 22px + thick live match rings (white on full ready, yellow otherwise); BREAK rising pops + pol switch rings + red mismatch flash/tint.
+- Start screen compact + quick-fade + dim labels (less menu). Pre-seed retuned.
+- Fresh chromium evidence: acid-start-v37-repro.png + acid-mid-check-7-repro-v37.png (post lane+pol+mismatch+BREAK+rings state, exit 0 no timeout).
+- Game Feel re-PASS. Preserved rave-bright reactive Acid Circuit Breaker core + TB-123 signal aesthetic.

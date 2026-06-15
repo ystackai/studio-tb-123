@@ -1107,3 +1107,18 @@ Browser runtime verification **PASSED** on the precise load + instrumented check
 
 No code change to the playable artifact (per "only modify code required"; the implementation already satisfied the feedback + the render() safeguard). This pass supplies the missing browser runtime evidence that was the explicit blocker. The preview at `games/92-acid-circuit-breaker/index.html` is now verified clean under the conditions that previously failed.
 
+
+## v37 Browser Runtime Verification (15:32Z contact-sheet polish pass)
+**Directly addresses:** "too portrait/cabinet constrained and menu-like... Use more horizontal space or a stronger cabinet frame, enlarge player/gates/polarity letters, make matching/mismatch feedback unmistakable"
+
+- Method: real /usr/bin/chromium (same container flags + virtual-time as v35/v36 green runs) on edited on-disk index + instrumented driver.
+- Artifacts: committed-style edited  (start) + /tmp/acid-runtime-check-37.html (IIFE driver: startGame + lane-- + 2×cyclePolarity + injected mismatch gates + 8+ update/render ticks exercising rings/BREAK/red feedback + final action).
+- Results (880×1020): 
+  - acid-start-v37-repro.png (127747 bytes written) — compact title, START, controls on wider cab frame.
+  - acid-mid-check-7-repro-v37.png (173363 bytes written) — post-interaction: big ship (26px letter visible), wide gates w/ thick pol-match rings, "BREAK" pops on success, red LANE/POLARITY toasts + gate tint on mismatch, expanding pol rings on flips, pre-seed + HUD + particles + beat.
+- Both exit 0, "bytes written", **no timeout/no pageerror** (dbus noise only).
+- Staged: screenshots/acid-*-v37*.png , acid-runtime-check-37.html , acid-check-37.HEAD , updated logs.
+- Game Feel items all re-verified PASS at new scale (larger thumb targets, <100ms with unmistakable pops/rings/tints, easing, self-contained).
+- No scope creep; first screen immediately playable; core preserved.
+
+Date: 2026-06-15
