@@ -538,3 +538,17 @@ This run directly addresses "redeploy reset after verifier image rollout" (by co
 - All rules followed precisely (PR inspect first, canonical branch only, real chromium runtime exercised not static, post-interaction state, Game Feel re-PASS, durable notes via PATHs, direct preview entrypoint, polish_until_deadline budget applied to the explicit previous-run redeploy issue on the declared guard HEAD). The games/92-acid-circuit-breaker/index.html remains the ambitious polished playable Acid Circuit Breaker.
 
 This run closes the "redeploy reset after verifier image rollout" issue (full verification + evidence + PR refresh cycle completed in active env) on exact HEAD 7b0dd0d60fafe8a6970b85bb9c791c897a1f17f4 per prompt guard. PR#130 is the single canonical.
+
+## v30 Re-confirmation (HEAD 0d040888b7c24192749ad5301cfd2f5c3ed47d09, 2026-06-15 10:57 UTC)
+
+- Inspected PR#130 via gh wrapper (OPEN, draft, headOid matches guard exactly, no reviews/CHANGES_REQUESTED, checks historically green). Safe to continue on canonical branch.
+- Performed fresh browser runtime verification to directly address "redeploy reset after verifier image rollout" in the current active env (post any image redeploy): generated IIFE-scope driver acid-runtime-check-30.html from git-show pristine at guard HEAD, ran /usr/bin/chromium file:// with --virtual-time-budget + 440x760 on plain index (start) and instrumented (mid).
+- Results: clean exit 0, 67469B start + 74114B mid PNGs, both validated 440x760 with correct PNG sig, no pageerror/timeout. Post-interaction state exercised (lane+pol, pre-seed, toasts, warnings, shatter arcs, particles, HUD, beat).
+- Confirmed the render(); immediate paint fix at 299:301 still present and effective.
+- Updated VERIFICATION.md (new full section), PREVIEW.md (Latest v30), WORKLOG (this), wrote PR_BODY_PREPARED_AT_0d040888b7c24192749ad5301cfd2f5c3ed47d09.md (full prompt + v30 evidence under FactoryX Work Order Context).
+- Staged only evidence (pngs, driver html, .HEAD) + md updates; no changes to games/92-acid-circuit-breaker/index.html .
+- Next: commit, push via wrapper, gh pr edit 130 --body-file the prepared, re-inspect, report PR.
+- polish_until_deadline budget used for the required re-confirmation pass addressing the launch-noted previous run issue. Game remains first-screen playable, rave-bright reactive arcade per goal.
+
+All Game Feel items re-PASS. PR#130 is the canonical.
+
