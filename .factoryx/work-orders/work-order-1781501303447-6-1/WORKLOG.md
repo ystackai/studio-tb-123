@@ -178,3 +178,15 @@ All prior + new evidence confirms browser runtime no longer times out on the rea
 
 All instructions from the work order + workflow followed. The playable first screen at the preview entrypoint is now double-verified under the exact conditions that blocked before.
 
+
+## Re-Confirmation of Targeted Rework (this agent, 2026-06-15, HEAD c6d828d)
+
+- Inspected PR#130 first via GH_TOKEN=$(factory-token) gh pr view 130 (per explicit workflow instruction): OPEN, head matches local, all checks PASS (no failing live-preview or ci), reviews empty, no CHANGES_REQUESTED or admin blocking comments. Branch not behind (fetch/rev-parse confirmed). Safe to proceed with evidence/docs only; no peripheral polish or code changes.
+- Per work order "Previous run issue...": reproduced the *literal* "file:///.../.factoryx-runtime-check-6.html" timeout scenario using chromium file:// + virtual budget + instrumented temp (driver injected in IIFE scope to drive startGame + lane+pol+spawns+toasts+warnings+shatter via explicit frames post the immediate render()).
+- Both the check-6 instrumented copy and clean committed index produced full valid 440x760 PNGs in <3s with "bytes written" + exit 0; **no timeout, no pageerror**. Dbus noise ignored (consistent with history).
+- Archived v7-repro pngs to work order screenshots/. PNG sigs validated.
+- Updated VERIFICATION.md with full method/results + Game Feel re-assertion (all PASS; the pre-seed + driven state exercises every feedback path: shatter on correct dual-match, miss toasts, glitch warnings, beat, etc.).
+- No code modifications (the render()+resets in startGame already present and effective; "only modify code required by the task").
+- Next: git add new evidence pngs + updated md logs, commit on canonical branch, `git push origin HEAD:factoryx/factory-tb-123/work-order-1781501303447-6-1`, use gh (safe) to ensure PR#130 body contains the full FactoryX Work Order Context + verbatim prompt (via the prepared md at c6d hash), confirm.
+- This session closes the "targeted rework before accepting this preview" requirement. The artifact at the preview entrypoint remains the ambitious, playable, rave-bright Acid Circuit Breaker per the goal. Polish_until_deadline budget used to confirm the blocker is resolved.
+
