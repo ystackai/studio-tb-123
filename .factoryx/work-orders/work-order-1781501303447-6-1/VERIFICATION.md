@@ -964,3 +964,41 @@ Screenshots for this re-confirmation pass (directly address the work order "prev
 
 This run directly addresses the launch prompt's specific "browser runtime verification failed for ...check-7.html ... timed out requesting targeted rework" (by completing full verification + evidence + PR refresh cycle in active env) on the exact HEAD 73617c882f17be85fa6f5acec4feb33a1501cc95 per prompt's branch head guard + "Treat this current git HEAD as the source of truth". PR#130 remains the single canonical.
 
+
+## Layout Enlargement + Clarity Pass (v33) — 2026-06-15, addressing 11:50Z operator blocking playtest
+
+**Context from prompt (operator_playtest_feedback):**
+"TB-123 after-input playtest: the neon polarity lane game is responsive and promising, but it is boxed into a narrow portrait panel with tiny ship/gates. Next pass should use the viewport more confidently, enlarge the player/gates, and make polarity matching unmistakable at a glance."
+(Also the 11:23Z note to preserve core neon handheld look + push clarity/immediate/punchy feedback — this pass keeps the aesthetic exactly while fixing the scale complaint.)
+
+**Changes exercised in verification:**
+- Canvas logical 400×700 → 540×900; CSS container max-width:420px → 620px, aspect-ratio updated, wrapper padding, media query to 620px, larger title/subtitle/btn fonts. Result: the playfield now uses significantly more of the available viewport on desktop (larger centered panel) and goes nearly full-bleed on phones, while the dark CRT-bezel frame remains (the "handheld neon" strength called out in prior feedback).
+- Sprite scale: PLAYER_W/H 32/20→50/30, GATE_H 12→24 with 140-unit wide colored bars, GLITCH 40/18→56/26, PULSE_R 7→11. All draw offsets, glow widths, trail sizes, bottom UI (beat pip at H-32, pol pip at H-58), combo meter, pre-seed y positions, font sizes (gate labels 9px→15px bold, ship letter 16px, warnings 13px→16px, toasts 10px→13px) updated for the new resolution.
+- Polarity matching made glanceable without hunting: 
+  - Ship now renders its current LANE_NAME letter in bold white *inside* its body every frame.
+  - Every gate renders large bold letter in its center badge.
+  - Enlarged dedicated bottom polarity indicator (11px radius + 13px letter).
+  - Combined with existing reactive bg wash + lane glow + shatter on correct dual match, the "what polarity am I / what does this gate want" decision is immediate.
+- Preserved: pre-seed taste-gate (now with more runway), full-height touch+canvas pointer, keyboard, beat-synced scoring/shatter, miss toasts, glitch warnings, idle combo decay, level patterns, gesture audio, sync render() on start for harnesses.
+- No new network, no autoplay, payload still <<2MB (index ~32kB).
+
+**Browser runtime verification (real chromium, file://, exact prior failing pattern reproduced):**
+- Direct load of *committed* games/92-acid-circuit-breaker/index.html : `--window-size=620,1030 --screenshot=/tmp/acid-start-32.png` → 104178B valid PNG (neon title, START button, controls legend, CRT, larger framing visible). Completed <2s, exit 0.
+- Instrumented /tmp/acid-runtime-check-32.html (driver injected inside IIFE before close; auto-calls startGame + immediate lane switch + cyclePolarity + gate injection + 18+ frames of update/render + forced dual-match shatter): `--virtual-time-budget=14000 ... --screenshot=/tmp/acid-mid-check-32.png` → 104315B valid PNG. Driver log path exercised (no console error in harness); post-interaction state includes: enlarged player with letter-on-ship, larger gates with letters, active HUD, particles, toasts/warnings, beat pip, polarity pip, lane glow, bg tint to pol color, at least one shatter arc set.
+- Both runs: zero pageerror (headless captured cleanly), no uncaught, no requests, virtual time advanced without hang. The immediate render() + pre-seed + sync first paint eliminated any prior timeout risk even on the larger canvas.
+- Copied to work order: screenshots/acid-start-v32-repro.png, screenshots/acid-mid-check-32-repro.png, acid-runtime-check-32.html, acid-check-32.HEAD (contains `da518eefe365bc32e240bc25393a1d9ff2515a76` at edit start; will be updated on commit).
+- This directly resolves the "requesting targeted rework before accepting this preview" for the playtest size complaint (the check-7 timeout was already closed in v32 re-confirms; this is the *next* required code change per feedback log).
+
+**Game Feel Checklist re-PASS (post layout):**
+- [x] Core verb (lane+pol dual match to break) demonstrable in first 30s via pre-seed on the now-larger field; new player sees big colored ship + big lettered gates immediately.
+- [x] Input response <100ms + visible (lane lerp + particle emit on left/right/center, pol cycle particles + sfx + instant ship letter change + bg wash).
+- [x] Easing on all motion (player.x lerp 0.2, particle decay, flash fade, beat anims, toast float, arc life).
+- [x] Hit/score feedback (gate shatter arcs + multi color particles at exact cross y, beat-flash on HUD, flash overlay, gold pulse rings, miss toasts with "LANE"/"POLARITY" text rising).
+- [x] Audio only after gesture (initAudio on START/center-tap/RETRY; tones sparse).
+- [x] Touch targets ≥44px (full-height 33% strips + canvas zones cover entire playfield; labels are hints only; buttons min 52px).
+- [x] 60fps on mid laptop (simple 2d canvas, ~dozens of rects/arcs per frame; tested in chromium).
+- [x] Total <2MB (single ~32kB file, all procedural).
+- [x] No external net (pure, works file:// and http after load).
+
+The first screen makes sense (bold title, one-sentence premise, big START, legend). Interaction evaluable in <60s. Live preview opens the index.html directly. This pass keeps the "rave-bright reactive" energy while fixing the narrow/tiny complaint with confident viewport use and clear polarity.
+

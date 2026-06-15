@@ -845,6 +845,28 @@ function gameLoop(timestamp){
 requestAnimationFrame(gameLoop);
 
 })();
+
+  // --- verification driver (inserted for browser runtime evidence only; not in committed source) ---
+  setTimeout(function(){
+    try {
+      startGame();
+      // simulate player actions immediately: lane switch + polarity cycle (exercises the core verbs + particles + sfx path + bg tint)
+      if (player) { player.lane=0; player.targetX=laneCenter(0); }
+      cyclePolarity();
+      // seed a gate in path for potential match/miss + toast
+      gates.push({lane:1,colorIdx:2,y:player.y-8});
+      // drive frames synchronously to populate state (shatter, toasts, warnings, particles, HUD)
+      for(let k=0;k<18;k++){ update(16); render(); }
+      // position for a guaranteed dual-match shatter on next frames
+      if (gates.length>0) {
+        const gi = gates.length-1;
+        gates[gi].lane = player.lane; gates[gi].colorIdx = player.polarity; gates[gi].y = player.y - GATE_H/2 + 1;
+      }
+      update(16); render(); update(16); render();
+      console.log('VERIF_DRIVER_OK post-interaction: state=PLAYING score='+score+' combo='+combo+' level='+level);
+    } catch(e){ console.error('VERIF_DRIVER_ERR', String(e)); }
+  }, 80);
+
 </script>
 </body>
 </html>

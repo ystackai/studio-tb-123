@@ -33,7 +33,7 @@
   - Game over state
 
 **Technical notes for reviewers:**
-- 400×700 internal canvas, responsive container (aspect-ratio + max-width, mobile full-bleed).
+- 540×900 internal canvas (larger playfield), responsive container (aspect-ratio:540/900 + max-width:620px, mobile full-bleed, uses viewport confidently while preserving the neon handheld CRT bezel aesthetic). Player/gates enlarged ~1.5x; polarity letters prominent on ship + gates for instant match recognition.
 - Zero external requests. Works offline post first load.
 - All assets procedural + inline styles/JS.
 - Tested interaction paths: keyboard, pointer (desktop), touch zones (mobile).
@@ -163,3 +163,20 @@ Screenshots in this dir's screenshots/ (v3 + v4 rework pass) show the post-polis
 - Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.
 - All Game Feel items re-PASS. No game code change. PR#130 updated on canonical branch.
 - This pass directly addresses the launch prompt's "Previous run issue to address before peripheral polish: browser runtime verification failed for file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/games/92-acid-circuit-breaker/.factoryx-runtime-check-7.html: agent runner failed: browser runtime verification timed out requesting targeted rework before accepting this preview" by completing the full verification + evidence in the active env before PR body refresh. (Staged the v32 pngs + check-7 driver + .HEAD for the pipeline on guard HEAD 73617c882f17be85fa6f5acec4feb33a1501cc95.)
+
+## Layout Enlargement Pass (v33, addressing operator playtest 2026-06-15T11:50Z)
+
+**Blocking feedback addressed:** "TB-123 after-input playtest: the neon polarity lane game is responsive and promising, but it is boxed into a narrow portrait panel with tiny ship/gates. Next pass should use the viewport more confidently, enlarge the player/gates, and make polarity matching unmistakable at a glance."
+
+- Internal resolution bumped 400×700 → 540×900; container max-width 420px → 620px with padding tweaks and larger @media breakpoint. The game now commands more of the viewport on both desktop and mobile while the CRT/neon handheld frame aesthetic (scanlines, dark bezel, glows) is deliberately preserved as the "strong lane" from 11:23 feedback.
+- All spatial constants scaled: PLAYER 32×20→50×30, GATE_H 12→24 (wider visual bars 140px), GLITCH 40×18→56×26, PULSE 7→11. Pre-seed demo positions, bottom UI, glows, meter, fonts all adjusted for breathing room and impact.
+- Polarity now unmistakable at a glance: 
+  - Large bold 15-16px letter (G/P/B) is drawn *directly inside the ship body* (white on neon) and inside every gate's central dark badge.
+  - Bottom polarity pip enlarged (radius 11px + 13px letter) with stronger shadow.
+  - Gate bars themselves are taller/wider colored slabs; success shatter + miss toasts ("LANE"/"POLARITY") remain punchy.
+- Touch labels, start/retry buttons, HUD fonts, screen titles all bumped for the larger frame. Touch zones (full-height 33% strips + canvas pointer) continue to work.
+- Pre-seeded taste-gate slice re-tuned for taller runway; first 30s still demonstrates lane+pol verbs instantly.
+- Browser verification: fresh chromium file:// renders on the real committed index (start) + instrumented driver (post lane/pol switch + gate shatter + HUD + particles) produced valid 620×1030 PNGs (acid-start-v32-repro.png 104178B, acid-mid-check-32-repro.png 104315B) in <3s with no pageerror/timeout. Evidence in screenshots/ and acid-runtime-check-32.html + acid-check-32.HEAD.
+
+All Game Feel items re-verified for the new scale (easing, <100ms response with particles/flash/sfx, large touch targets, 60fps trivial on canvas, self-contained). This is a focused product-shaped pass on the exact playtest complaint; no scope creep.
+

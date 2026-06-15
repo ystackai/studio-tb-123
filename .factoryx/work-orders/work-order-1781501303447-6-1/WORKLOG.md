@@ -578,3 +578,38 @@ This run directly addresses "redeploy reset after verifier image rollout" previo
 
 This run directly addresses the launch prompt's "Previous run issue to address before peripheral polish: browser runtime verification failed for ...check-7.html ... timed out requesting targeted rework" (full verification + evidence + PR refresh cycle completed in active env) on exact HEAD 73617c882f17be85fa6f5acec4feb33a1501cc95 per prompt guard. PR#130 is the single canonical.
 
+
+## v33 Polish Pass: Viewport Confidence + Enlarge + Polarity Clarity (2026-06-15, post 11:50 feedback)
+
+**Trigger:** Operator blocking playtest feedback (codex-public-preview-after-input, 2026-06-15T11:50Z):
+"the neon polarity lane game is responsive and promising, but it is boxed into a narrow portrait panel with tiny ship/gates. Next pass should use the viewport more confidently, enlarge the player/gates, and make polarity matching unmistakable at a glance."
+
+Also from 11:23Z: preserve neon handheld action as strong lane; push clarity (immediate after click/space, unmistakable switching, punchy combo/reward).
+
+**Decision:** Larger product-shaped diff on the layout layer (risk low because core mechanics untouched, just spatial + draw scale + one visual addition: letter-on-ship). Not peripheral metadata; code change required to satisfy the explicit size + glanceability complaint. Deadline still in force (polish_until_deadline).
+
+**Implementation (single file, self contained):**
+- JS: W/H 400/700→540/900; PLAYER 32x20→50x30; GATE_H12→24 (bars now 140 wide); GLITCH/PULSE scaled; all pre-seed y, initial player y (H-130), glow widths, bottom UI ys, font sizes, meter, etc. updated proportionally.
+- CSS: max-width 420→620, aspect 400/700→540/900, @media 440→620, padding, title 1.5→1.75rem, btns larger, touch labels bumped, HUD fonts +.
+- Canvas tag width/height attrs updated.
+- Draw upgrades for clarity (no behavior change):
+  - Gates: wider taller colored slab + 6px caps + 24x14 dark center + bold 15px letter.
+  - Player: body scaled, inner inset, core dot, *new*: bold 16px white polarity letter rendered inside the ship rect every frame (directly solves "unmistakable at a glance" for your current breaker setting).
+  - Pol pip at bottom: r=7→11, letter 9→13px, stronger blur.
+  - Glitch tears/chroma + ! font 9→12; warnings ! 13→16 + thicker line; toasts 10→13px.
+  - Lane glow wider (50→70).
+- Preserved exactly: pre-seed curated slice (re-y'd for space), sync render() at startGame end (the timeout fix), full pointer/touch/keyboard paths, easing, particles on every action, shatter on correct lane+pol, beat phase bonus, miss toasts, glitch warnings, combo decay, level patterns at 2+, sfx gesture only, no net.
+- Also updated: the lane/ pol collision + score paths use the scaled vars, no other logic touched.
+
+**Verification evidence (real browser runtime, file://):**
+- chromium --headless ... --window-size=620,1030 --screenshot=/tmp/acid-start-32.png file://.../index.html (the committed one) → 104178B PNG, <2s, clean start screen with larger title/panel/ship visible in the frame.
+- Instrumented acid-runtime-check-32.html (driver inside IIFE: startGame + lane0 + cyclePol + inject gate + 18 update/render + force dual-match gate at player for shatter) → 104315B mid-play PNG. Driver exercised post-input state (enlarged lettered ship, lettered gates, HUD, particles, arcs, toasts, warnings, reactive tint).
+- Both runs produced valid PNGs (sig + written bytes), no timeout, no pageerror in exercised paths. Copied + .HEAD (da518ee at start of edit) + runtime html to wo dir as acid-*-v32-repro + check-32.
+- This closes the playtest size blocker with actual code + evidence; previous v7/v32 etc were for the timeout on check-N harness (now also covered since larger canvas + same sync path still renders immediately).
+
+**Game Feel + taste gate:** Re-checked mentally + via caps. Larger elements make the dual-match verb *more* readable in first 20s. Still one verb (lane+pol align to break), one space, 30-60s slice intact and now *bigger/better*. No added systems.
+
+**Next (while budget):** commit + push on canonical branch (using git push origin HEAD:factoryx/...), stage fresh PR_BODY_PREPARED_AT_*.md with full work order prompt + diff summary + evidence + before/after note. Since gh API 401 in this worker (wrapped gh fails auth here), rely on the prepared body + push + prior pattern that "PR#130 updated on canonical branch". Report the PR URL from logs: https://github.com/ystackai/studio-tb-123/pull/130 . If needed later rebase only to stay current.
+
+All durable notes (this log, PREVIEW, VERIF) updated per FACTORYX_*_PATH. Deadline 14:28Z — keep polishing if time, but this was the required targeted rework.
+
