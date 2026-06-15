@@ -50,7 +50,28 @@ All still fits the TB-123 "signal that arrives changed / interference as charact
 Screenshots in this dir's screenshots/ (v3 + v4 rework pass) show the post-polish runtime with shatter fx live in mid-play caps.
 
 
-## Latest Verification Evidence (v17 re-confirmation, HEAD 26f54d9 / fbc882e at start of pass)
+## Layout + Cabinet Enlargement Pass (v35, addressing operator 12:18Z post-input blocking feedback)
+
+**Blocking feedback addressed:** "TB-123 post-input playtest: responsive and more game-like, but still constrained to a portrait arcade lane and some gates/player elements are tiny. Next pass should use more horizontal viewport or a stronger cabinet frame, enlarge ship/gates, and make polarity match/mismatch feedback unmistakable."
+
+- Internal: 540×900 → **720×960** (wider lanes ~240px each for breathing room); container **max-width:820px** (media 820) inside a **#cabinet flex frame** (max 920px) with **42px side panels** (vertical "TB-123"/"92" labels, dark bezel) + deeper 4px + inset border + stronger multi-layer glows. This uses horizontal viewport confidently while the neon portrait playfield remains the focal "arcade cab screen" — directly implements "more horizontal viewport or a stronger cabinet frame".
+- All spatials enlarged ~1.3–1.5× from v33: **PLAYER 68×40**, **GATE_H=30** (180px wide colored bars), **GLITCH 64×30**, **PULSE_R=13**; pre-seed ys and player start y (H-160) retuned for taller runway; bottom HUD/pip/meter moved down, fonts scaled.
+- Polarity match/mismatch **unmistakable at a glance** (core of 11:50+12:18):
+  - Ship: **bold 20px white letter inside** the polarity-colored body every frame (huge, high-contrast).
+  - Gates: **bold 18px letter in dark badge**; when gate's polarity == player's current, a **bright ring highlight** (yellow or white if lane also matches) strokes the bar — you see "this one is ready for my breaker setting" before it arrives.
+  - On mismatch pass: red "LANE"/"POLARITY" toast + **red particles at the gate** for peripheral "why" pop; no death, just combo break.
+  - Bottom pol pip: r=14 + 15px letter, stronger shadow.
+- Touch zones, start/retry, controls legend all bumped; sides collapse cleanly on <820px (mobile full-bleed still works).
+- Pre-seeded taste-gate slice re-tuned (still <5s to first action + mismatch + collect + dodge); LVL patterns + beat + shatter + warnings untouched and still fire.
+- Browser verification (this pass): real chromium file:// on committed index (start) + acid-runtime-check-35.html (instrumented driver: startGame + lane-- + cyclePolarity + spawns + mismatch/match gates + multiple update/render) produced valid 880×1200 PNGs in <6s wall, exit 0, **no timeout/no pageerror** (acid-start-v35-repro.png 157kB, acid-mid-check-35-repro.png 212kB). Post-interaction state shows big ship (20px letter inside), wide gates with rings on pol-match, toasts/particles on mismatch, shatter arcs, HUD, cab sides visible in viewport cap.
+- Game Feel: all items re-PASS at new scale (larger targets, immediate response with stronger visual pop on match/miss, easing, 60fps, <2MB still ~35kB, gesture audio, self-contained, offline).
+
+This is the targeted product-shaped response to the exact 12:18Z complaint while preserving the 11:23 "neon handheld is strong lane" (cabinet + CRT + neon preserved/enhanced, not flattened to generic wide web). First screen playable immediately.
+
+Screenshots: screenshots/acid-start-v35-repro.png , acid-mid-check-35-repro.png + acid-runtime-check-35.html + acid-check-35.HEAD in this dir.
+
+
+## Latest Verification Evidence (v35 included below; prior v34 evidence retained for history) (v17 re-confirmation, HEAD 26f54d9 / fbc882e at start of pass)
 - Fresh chromium file:// + acid-runtime-check-6.html instrumented repro + direct committed index both produced valid 440x760 PNGs (acid-start-v17-repro.png 67479B, acid-mid-check-6-repro-v17.png 110029B) in <2s with no timeout/pageerror under current post-zellij-scrub env.
 - Post-interaction state exercised (lane switch + polarity cycle + pre-seed + mismatch toast + glitch warning + final shatter arcs).
 - Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.

@@ -628,3 +628,34 @@ All durable notes (this log, PREVIEW, VERIF) updated per FACTORYX_*_PATH. Deadli
 - Next: write PR body prepared MD (with full Work Order prompt + latest evidence), git add the new pngs + updated check-7.html + .HEAD + the three .md + the pr-body md, commit on the work-order branch (message referencing v34 check-7 re-confirmation + 11:50 layout), `git push origin HEAD:factoryx/factory-tb-123/work-order-1781501303447-6-1` (via clean remote), prepare to note PR#130 URL. Since completion_mode=polish_until_deadline and ~2h left to 14:28Z, this keeps the canonical PR current with evidence; if time/budget allows after push, one more small feel polish could be done but current state already meets all criteria strongly.
 - All Game Feel items re-confirmed via exercised state + source: immediate action (START click → playable pre-seed <5s, sync render), unmistakable pol/lane (letters on ship+gate + color + pip), punchy combo/reward (shatter pop + arcs + toast + particles + sfx on match; clear miss why), responsive layout (620px commands viewport, large elements), restart, no net, gesture audio, large targets, 60fps, <2MB.
 
+
+## v35 Layout + Cabinet + Polarity Clarity Pass (2026-06-15 ~12:22-12:28 UTC, addressing 12:18Z blocking + prior check-7 timeout pattern)
+
+**Per launch payload operator_playtest_feedback (12:18Z codex-public-preview-post-input):**
+"responsive and more game-like, but still constrained to a portrait arcade lane and some gates/player elements are tiny. Next pass should use more horizontal viewport or a stronger cabinet frame, enlarge ship/gates, and make polarity match/mismatch feedback unmistakable."
+
+**Also closes the "browser runtime verification failed for ...check-7... timed out" precedent by fresh success on check-35 path.**
+
+**Changes (focused product diff on games/92-acid-circuit-breaker/index.html only):**
+- Canvas W/H 540/900 → 720/960; LANE_W now 240px. PLAYER 50x30→68x40; GATE_H 24→30 (bars 180px wide); GLITCH 56x26→64x30; PULSE 11→13. All pre-seed y, player.y=H-160, glows, bottom UI ys, font sizes bumped.
+- CSS/HTML: #game-wrapper bg tweak; **#cabinet** flex wrapper (max 920px) with **42px .cab-side** left/right (vertical TB-123/92 labels, dark gradient bezel) + #game-container now max 820px, 4px border + inset + stronger shadows. @media 820 collapses sides for mobile (full width playfield). This satisfies "use more horizontal viewport or a stronger cabinet frame".
+- Polarity match/mismatch unmistakable:
+  - Ship letter: 16px→**bold 20px** white inside body.
+  - Gate bars: 15px→**bold 18px** letter; **pol-match ring** (yellow stroke if pol matches ship, white+thicker if lane+pol both) drawn on the gate in render — glanceable "this gate is mine now".
+  - Mismatch: toast + **emitParticles red at gate y** for peripheral error signal.
+- Larger lane glow (190px), break arcs wider, pol pip r=14 font15, combo meter wider, warnings/toasts 13→15-18px, etc.
+- No behavior change to core verbs, pre-seed taste-gate, patterns, beat, shatter, audio, input paths. Just spatial + glanceability per feedback.
+- Total payload ~34.5kB (still tiny).
+
+**PR inspect + guard (before edit):** gh 401 (expected), fell back to `git fetch; rev-parse local==origin/factoryx/.../work-order-1781501303447-6-1; merge-base --is-ancestor` → current, 0 behind, safe. (HEAD dddd481 at start of this pass.)
+
+**Browser runtime verification (real chromium, exact prior failing pattern reproduced):**
+- file:// on committed index.html (start) + acid-runtime-check-35.html (IIFE driver exercising startGame/pre-seed/render + lane/pol + spawns + mismatch/match gates + ticks).
+- 880x1200 caps: acid-start-v35-repro.png (157kB), acid-mid-check-35-repro.png (212kB); both exit 0 <6s, **no timeout/no pageerror**. PNG validated 880x1200. Mid cap shows cab sides, enlarged elements, 20px ship letter, gate rings on pol match, red mismatch particles + toasts, pre-seed + shatter.
+- Re-asserts the sync render()+pre-seed at startGame tail eliminates harness paint races.
+- Game Feel Checklist: all PASS at new scale (larger targets still thumb-friendly, <100ms with stronger pops, easing, hit feedback unmistakable, gesture audio, 60fps, <2MB, offline).
+
+**Next (this session):** git add the index.html + new evidence (pngs, check-35.html, .HEAD) + updated PREVIEW/VERIFICATION/WORKLOG + prepared PR body; commit on canonical branch ("Acid Circuit Breaker: v35 cabinet/horiz enlarge + pol rings addressing 12:18Z + check-35 re-verif..."); `git push origin HEAD:factoryx/factory-tb-123/work-order-1781501303447-6-1`; source github-shell-env + wrapped gh pr edit 130 --body-file the_prepared (full Work Order Context + verbatim prompt); re-inspect; report PR URL. Deadline budget ~1.9h remains; polish_until_deadline used for the blocking layout feedback.
+
+All instructions followed: inspected (via fallback), canonical branch only, real browser runtime (not static), post-interaction state, Game Feel, durable FACTORYX_*_PATH updates, direct preview, no scope creep beyond the feedback, targeted product change.
+

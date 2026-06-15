@@ -866,6 +866,40 @@ function gameLoop(timestamp){
 // ── Start ──
 requestAnimationFrame(gameLoop);
 
+
+// --- FACTORYX VERIF DRIVER (v35 layout cab) ---
+(function(){
+  try{
+    // let the outer RAF start
+    setTimeout(function(){
+      if(typeof startGame === 'function'){
+        startGame();
+        // force screens for clean cap
+        var ss = document.getElementById('start-screen'); if(ss) ss.classList.remove('active');
+        var gs = document.getElementById('gameover-screen'); if(gs) gs.classList.remove('active');
+        var hud = document.getElementById('hud'); if(hud) hud.classList.add('visible');
+        // drive core verbs + feedback
+        if(typeof player !== 'undefined'){
+          if(player.lane > 0){ player.lane--; player.targetX = (typeof laneCenter==='function'?laneCenter(player.lane):player.lane*240+120); }
+        }
+        if(typeof cyclePolarity === 'function') cyclePolarity();
+        if(typeof spawnGlitch === 'function'){ spawnGlitch(); spawnGlitch(); }
+        // inject a mismatch for toast + a matching one to exercise shatter
+        if(typeof gates !== 'undefined' && typeof player !== 'undefined' && typeof laneCenter==='function'){
+          // mismatch in view
+          gates.push({lane: (player.lane+1)%3 , colorIdx: (player.polarity+1)%3 , y: 380});
+          // match for shatter path
+          gates.push({lane: player.lane , colorIdx: player.polarity , y: 520});
+        }
+        // force a few update/render cycles
+        if(typeof update==='function' && typeof render==='function'){
+          for(var i=0;i<6;i++){ update(16); render(); }
+        }
+      }
+    }, 60);
+  }catch(e){ /* non-fatal for harness */ }
+})();
+
 })();
 </script>
 </body>
