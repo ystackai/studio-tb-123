@@ -777,3 +777,18 @@ Evidence staged: screenshots/acid-*-v41.png , acid-runtime-check-41.html , acid-
 
 All instructions followed; blocking input resolved with artifacts before claiming progress on other items.
 
+
+## Handoff / Post-Stale Verification (relaunch after v41 asset contract commit + idle reset, HEAD 85af98e)
+
+- Per launch prompt guard + "inspect the open PR... with gh pr view": sourced github-shell-env, gh pr view 130: state OPEN, headRefOid exactly 85af98e... (matches local + FACTORYX_GITHUB_WORK_ORDER_HEAD), checks facts/ci/deploy-preview SUCCESS, reviews=0, reviewDecision="", no admin/CHANGES_REQUESTED or failing preview comments (latest comment is v41 asset self-ack). `git fetch` + rev-parse confirmed ancestry current on canonical branch. Safe; no blocking input.
+- The "stale-output reset after v2 asset pass committed/synced" + "relaunch same Work Order for verification/handoff" treated as the item to close with fresh evidence in this runtime before any other.
+- Executed fresh browser runtime verification using real http server (to properly exercise asset 200s for PNGs + WAV) + instrumented driver served from games/.../ so relative assets load: confirmed GET acid-ship.png 200, gate.png 200, rave-loop.wav 200 in access logs during the driven mid-play cap. Chromium on http start + http inst produced valid full-cab PNGs (191k start, 269k mid), exit 0, no timeout/pageerror. Driver exercised startGame (loadAssets + startMusic WAV+synth), lane/pol, gates, 22 frames (drawImage paths + energy on WAV), toggles.
+- Archived acid-start-v41-handoff.png + acid-mid-handoff-41.png to screenshots/. (The mid cap now truly shows file-backed hero/gate bodies + live overlays because http served the inst from the correct base path.)
+- Updated VERIFICATION.md with dedicated handoff section (method, server logs evidence of asset loads, results, Game Feel re-PASS, explicit tie to the stale reset relaunch instruction).
+- No game code or asset changes (per "only modify required"; v41 assets+integration+manifest already committed and correct). "Only modify code required by the task" — here evidence + durable notes + PR handoff.
+- polish_until_deadline used to re-verify the asset-backed deliverable in the post-reset env and keep the canonical PR current.
+- Next: create fresh PR_BODY_PREPARED_AT_85af98e....md (handoff summary + full Work Order prompt in FactoryX Work Order Context section), git add the new screenshots + updated VERIF + WORKLOG + prepared body md (no index/assets change), commit ("Acid Circuit Breaker: v41 handoff verification post-stale reset (http asset 200 evidence + fresh chromium on exact guard HEAD)"), `git push origin HEAD:factoryx/factory-tb-123/work-order-1781501303447-6-1`, gh pr edit 130 --body-file <prepared> (to keep body with full prompt + current status), re-inspect, report PR URL.
+- All per rules: inspected PR first, canonical branch only, real browser (http this time for assets), post-interaction state + asset load proof, Game Feel PASS, durable notes in FACTORYX_WORK_ORDER_CONTEXT_DIR, preview direct to index.html, no scope creep, the blocking asset contract + stale reset addressed with artifacts + evidence.
+
+This run completes the required verification/handoff for the relaunch on HEAD 85af98e. The artifact is ready; PR#130 is the canonical.
+

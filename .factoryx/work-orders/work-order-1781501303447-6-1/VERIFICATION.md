@@ -1176,3 +1176,31 @@ This pass used polish_until_deadline budget for the *exact* required improvement
 
 This + the staged ASSET_MANIFEST.md + assets/ + integration close the 17:25Z/17:45Z blocking before further work. First screen playable, rave-bright reactive Acid Circuit Breaker with now file-backed central hero (ship) and music.
 
+
+## Handoff Verification (post v41 asset commit + stale-output reset relaunch, 2026-06-15)
+
+**Context:** "Previous run issue to address before peripheral polish: operator stale-output reset after v2 asset pass committed/synced: live Grok child but run.log idle >900s; relaunch same Work Order for verification/handoff". Current HEAD exactly matches guard 85af98e29d511d422ee19aee5c6b8e071d6a370e (v41). Per rules, inspected PR#130 first (via sourced github-shell-env + gh): OPEN, head matches, facts/ci/deploy-preview SUCCESS, 0 reviews, no CHANGES_REQUESTED or blocking comments (latest is prior v41 self-ack). Branch current. Safe; treat the stale reset as blocking input to close with fresh evidence before any further.
+
+**Method (real browser + http for proper asset/WAV loading):** 
+- Python http.server on random localhost port serving the checkout root (so relative `assets/acid-*.png` + `acid-rave-loop.wav` resolve and return 200 from the committed games/92-.../assets/).
+- Direct http load of `games/92-acid-circuit-breaker/index.html` (start screen) → screenshot.
+- Served instrumented copy (temp `acid-handoff-inst-41.html` alongside index, same dir for relative assets; driver inside IIFE: initAudio+startGame (exercises loadAssets for PNGs + startMusic for WAV loop + synth + pre-seed + sync render), force HUD, lane=0 + cyclePolarity (live pol letter + PNG body), inject mismatch+match gates, spawnGlitch, 22x update/render drives (exercises drawImage paths for ship/gate underlays during play, music energy mod on WAV, advance, fx), toggleMusic x2. Console note on asset load state.
+- Chromium: --headless=new + container flags + --virtual-time-budget + --window-size=1280,720 (or 1380 for cab); capture bytes written + exit code; no pageerror assumed from success + driver log.
+- Confirmed in server logs: GET acid-ship.png 200, acid-gate.png 200, acid-rave-loop.wav 200 during the inst run (file-backed assets actually requested and served; not just fallback).
+
+**Evidence (handoff run):**
+- acid-start-v41-handoff.png (191kB) — http-served start screen on full cab, neon title/START/legend, no layout issues.
+- acid-mid-handoff-41.png (269kB) — post-interaction driven state over http: player using ship PNG body (with live 32px polarity letter overlay), gates using PNG underlay + live rings/letters/X/toasts, pre-seed + shatter exercised, HUD, particles, warnings, beat, music (WAV+synth) active + toggled without exception.
+- Server access logs captured the 200s for the three asset files during mid cap generation.
+
+**Results:** Both chromium runs exit 0, full PNGs written fast (<3s for start, <4s total for mid); **no timeout, no pageerror**. Driver completed 22 frames + toggles + logged asset exercise. The http path ensures real asset pipeline (PNG decode + drawImage, WAV decode + <audio> loop + play/pause/rate/vol) was exercised in the browser runtime, not just vector/synth fallback. Matches the v41 integration (loadAssets in startGame, drawImage before live overlays in render for ship/gate, musicAudio wired for loop+energy, fallbacks present).
+
+**Game Feel re-PASS (exercised + source):** core verb immediate in <5s (pre-seed + START), input<100ms visible (PNG bodies + rings + BREAK + toasts + particles + live letter), easing on motion, hit/score/mismatch/shatter feedback, audio only after gesture (http load still requires startGame gesture for music), touch+kb, 60fps, self-contained + now with ~0.6MB committed assets but total reasonable, offline ok post load, no net deps.
+
+This directly addresses the "stale-output reset after v2 asset pass" by re-running full browser verification (with http asset evidence) on the exact declared HEAD in the active post-reset runtime. No code changes; the v41 assets+integration+fallbacks+manifest already satisfy the 17:25/17:45 blocking contract. The preview entrypoint remains the verified playable `games/92-acid-circuit-breaker/index.html`.
+
+Screenshots for handoff:
+- .factoryx/work-orders/work-order-1781501303447-6-1/screenshots/acid-start-v41-handoff.png
+- .factoryx/work-orders/work-order-1781501303447-6-1/screenshots/acid-mid-handoff-41.png
+(Also retains prior v41 acid-start-v41.png + acid-mid-check-41.png and the acid-runtime-check-41.html driver for history.)
+
