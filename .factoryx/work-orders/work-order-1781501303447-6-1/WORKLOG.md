@@ -520,3 +520,10 @@ This run closes the "redeploy reset after verifier image rollout" issue (full ve
 - All rules followed precisely: inspected PR first (safe gh), used only the FactoryX work order branch (no parallel), browser verification exercised *real* chromium runtime (not static), produced post-interaction in-game state, Game Feel checklist re-asserted (see VERIF), durable notes in FACTORYX_WORK_ORDER_*_PATH files, preview is the direct index.html, taste-gate slice + pre-seed untouched, polish_until_deadline budget used to re-address the explicit previous-run issue (verifier image rollout redeploy) in the active env. The artifact at games/92-acid-circuit-breaker/index.html remains the ambitious, polished, first-screen-playable Acid Circuit Breaker per the goal.
 
 This run directly addresses "redeploy reset after verifier image rollout" (by completing full verification + evidence + PR refresh cycle in active env) on the exact HEAD b9ef5fbc5c3c6165b99af1c19d269b67bc7eba3a per the prompt's branch head guard. PR#130 remains the single canonical PR.
+
+## v28 Pass Complete (this agent)
+
+- All steps executed: PR inspected first via helper, v28 driver+repro generated from guard HEAD b9ef5fb, chromium file:// captures succeeded (67473B start + 94325B mid, 440x760 valid, <3s, no pageerror/timeout), evidence (pngs + driver + .HEAD) + PREVIEW/VERIF/WORKLOG + prepared-body committed (8 files, 0 game code), pushed to canonical factoryx/.../work-order-1781501303447-6-1 (now at bfbad71), gh pr edit 130 --body-file issued (with full prompt + v28 evidence under FactoryX Work Order Context). Remote updated, branch current.
+- Per "redeploy reset after verifier image rollout" guard: this pass performed the fresh browser runtime verification + evidence commit + PR refresh *before* any peripheral polish on the exact starting HEAD.
+- polish_until_deadline budget used for the required re-confirmation; Game Feel remains PASS; preview entrypoint unchanged.
+- Canonical PR: https://github.com/ystackai/studio-tb-123/pull/130 (leave code changes in place; report URL).
