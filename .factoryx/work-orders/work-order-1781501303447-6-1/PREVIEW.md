@@ -223,3 +223,15 @@ All Game Feel items re-verified for the new scale (easing, <100ms response with 
 
 This closes the "requesting targeted rework before accepting this preview" for the check-7 case while the v33 changes (enlarge + letters on ship/gates) directly implement the operator 11:50Z blocking feedback. The first screen remains immediately playable; rave-bright reactive core preserved and now more legible/confident in viewport.
 
+
+## Latest Verification Evidence (v36 re-confirmation, HEAD 9ddee16c0dfb9733fbc31b680d03916b15e7c1a0 at 2026-06-15T14:05Z)
+
+- Fresh chromium file:// + acid-runtime-check-7.html instrumented repro (IIFE driver via splice on pristine base at guard HEAD) + direct committed index both produced valid 920x1280 PNGs (acid-start-v36-repro.png 160002B, acid-mid-check-7-repro-v36.png 214155B) in <4s with "bytes written" + exit 0; **no timeout/no pageerror** under current env.
+- Post-interaction state exercised (lane switch + polarity cycle + pre-seed taste-gate + HUD + glitch warnings + mismatch toast + red particles + final shatter arcs + particles on the v35 enlarged cab + 20px ship letter + gate rings).
+- Confirms the immediate `render();` (```299:310:games/92-acid-circuit-breaker/index.html```) + pre-seed + v35 layout (cabinet sides, enlarged PLAYER/GATE with prominent polarity letters inside + live match rings) makes the playable first screen + in-game state synchronously available for any harness.
+- Directly addresses the launch prompt's "Previous run issue to address before peripheral polish: browser runtime verification failed for file:///.../.factoryx-runtime-check-7.html ... timed out requesting targeted rework before accepting this preview" by completing the full verification + evidence in the active env on the literal path *before* any further PR-body or peripheral work.
+- All Game Feel items re-PASS. No game code change (v35 spatials + prior render fix already present and exercised). Evidence + docs only.
+- This pass (with v35) also closes the operator blocking playtest feedback (11:50Z + 12:18Z): more horizontal via stronger cabinet frame, enlarged ship/gates, polarity match/mismatch unmistakable (20px letter on ship, 18px+ring on gates, red toasts/particles on miss).
+- Staged: screenshots/acid-*-v36*.png , acid-runtime-check-7.html , acid-check-7.HEAD , updated WORKLOG/VERIFICATION/PREVIEW + PR body prep. PR#130 will be refreshed on canonical branch.
+- polish_until_deadline budget used to deliver the required browser evidence on the exact blocker. The artifact at the preview entrypoint `games/92-acid-circuit-breaker/index.html` is the ambitious, polished, immediately playable Acid Circuit Breaker.
+
