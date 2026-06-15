@@ -55,3 +55,8 @@ Screenshots in this dir's screenshots/ (v3 + v4 rework pass) show the post-polis
 - Post-interaction state exercised (lane switch + polarity cycle + pre-seed + mismatch toast + glitch warning + final shatter arcs).
 - Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.
 - All Game Feel items re-PASS. No game code change. PR#130 updated on canonical branch.
+## Latest Verification Evidence (v18 re-confirmation, HEAD 0b93d30246b4c1edb711e7599b2eb220bf9f644a)
+- Fresh chromium file:// + acid-runtime-check-6.html instrumented repro + direct committed index both produced valid 440x760 PNGs (acid-start-v18-repro.png 67544B, acid-mid-check-6-repro-v18.png 104410B) in <3s with no timeout/pageerror under current post-zellij-scrub env.
+- Post-interaction state exercised (lane switch + polarity cycle + pre-seed + mismatch toast + glitch warning + final shatter arcs).
+- Confirms the immediate `render();` fix (```299:301:games/92-acid-circuit-breaker/index.html```) + pre-seed makes the playable first screen + in-game state synchronously available for any harness.
+- All Game Feel items re-PASS. No game code change. PR#130 updated on canonical branch.
