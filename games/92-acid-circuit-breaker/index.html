@@ -118,7 +118,7 @@ const btnRestart=document.getElementById('btn-restart');
 // ── Game state ──
 let state='START';
 let player={lane:1,polarity:1,x:W/2,y:H-100,targetX:W/2,alpha:1};
-let gates=[],glitches=[],pulses=[],particles=[],breaks=[];
+let gates=[],glitches=[],pulses=[],particles=[],breaks=[],toasts=[],warnings=[];
 let score=0,combo=0,maxCombo=0,level=1,speed=2.5,dist=0;
 let spawnTimer=0,difficultyTimer=0;
 let bgOffset=0,circuitLines=[],lastBeatTime=0;
@@ -178,6 +178,7 @@ function spawnGate(){
 function spawnGlitch(){
   const lane=Math.floor(Math.random()*LANE_COUNT);
   glitches.push({lane,x:laneCenter(lane),y:-GLITCH_H,speed:speed*1.3+Math.random()*0.8});
+  warnings.push({lane,life:0.32}); // brief top-of-lane telegraph for incoming threat
 }
 function spawnPulse(){
   const lane=Math.floor(Math.random()*LANE_COUNT);
@@ -263,7 +264,7 @@ btnRestart.addEventListener('click',()=>{initAudio();restartGame();});
 function startGame(){
   initAudio();
   player={lane:1,polarity:1,x:laneCenter(1),y:H-100,targetX:laneCenter(1),alpha:1};
-  gates=[];glitches=[];pulses=[];particles=[];breaks=[];
+  gates=[];glitches=[];pulses=[];particles=[];breaks=[];toasts=[];warnings=[];
   score=0;combo=0;maxCombo=0;level=1;speed=3;dist=0;
   spawnTimer=0;difficultyTimer=0;
   bgOffset=0;circuitLines=[];
@@ -325,6 +326,28 @@ function update(dt){
     hudLevel.textContent='LVL '+level;
     sfxLevelUp();
     emitParticles(player.x,player.y,'#FFD700',20);
+    // Escalating patterns at level thresholds (keeps first 30s taste-gate pre-seed untouched)
+    if(level>=2){
+      const pcol=(level%3);
+      if(level%2===0){
+        // color-hold pattern: same polarity gates spread, rewards staying on one breaker setting
+        gates.push({lane:0,colorIdx:pcol,y:-GATE_H-40,passed:false});
+        gates.push({lane:1,colorIdx:pcol,y:-GATE_H+70,passed:false});
+        gates.push({lane:2,colorIdx:pcol,y:-GATE_H+160,passed:false});
+        const gl=(pcol+1)%3;
+        glitches.push({lane:gl,x:laneCenter(gl),y:-GLITCH_H-20,speed:speed*1.45});
+        warnings.push({lane:gl,life:0.55});
+      }else{
+        // lane-hold + close threat: forces physical alignment while polarity must still flip
+        const lh=(level-1)%3;
+        gates.push({lane:lh,colorIdx:pcol,y:-GATE_H-25,passed:false});
+        gates.push({lane:lh,colorIdx:(pcol+1)%3,y:-GATE_H+95,passed:false});
+        const g2=(lh+2)%3;
+        glitches.push({lane:g2,x:laneCenter(g2),y:-GLITCH_H-5,speed:speed*1.55});
+        warnings.push({lane:g2,life:0.48});
+        if(Math.random()<0.7) pulses.push({lane:lh,x:laneCenter(lh),y:-PULSE_R-55,speed:speed*0.85});
+      }
+    }
    }
   
   // Beat-synced difficulty
@@ -382,6 +405,8 @@ function update(dt){
        } else {
         // Wrong lane or wrong polarity: miss, reset combo (no death; glitches are the deadly ones)
         if(combo>0){ combo=0; hudCombo.textContent=''; }
+        const missWhy = (g.lane!==player.lane ? 'LANE' : 'POLARITY');
+        toasts.push({x:player.x+(Math.random()-0.5)*8, y:player.y-16, text:missWhy, color:'#FF5E5E', life:0.82});
        }
      }
    }
@@ -447,6 +472,18 @@ function update(dt){
     const b=breaks[i];
     b.life-=0.028;
     if(b.life<=0)breaks.splice(i,1);
+  }
+  // Toasts (miss feedback popups) decay + float
+  for(let i=toasts.length-1;i>=0;i--){
+    const t=toasts[i];
+    t.y-=0.35; t.life-=0.022;
+    if(t.life<=0)toasts.splice(i,1);
+  }
+  // Glitch warning telegraphs decay
+  for(let i=warnings.length-1;i>=0;i--){
+    const w=warnings[i];
+    w.life-=0.028;
+    if(w.life<=0)warnings.splice(i,1);
   }
   
   // Background circuit lines
@@ -635,6 +672,31 @@ function render(){
     ctx.stroke();
     ctx.restore();
    }
+
+  // Draw glitch warning telegraphs (top of lane, brief — makes threats readable before they arrive)
+  for(let i=0;i<warnings.length;i++){
+    const w=warnings[i];
+    const wx=laneCenter(w.lane);
+    ctx.save();
+    ctx.globalAlpha=Math.max(0.12,w.life);
+    ctx.fillStyle='#FF006E';
+    ctx.font='bold 13px Courier New';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText('!',wx,6);
+    ctx.strokeStyle='#FFD700';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(wx-7,12);ctx.lineTo(wx+7,12);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw miss toasts (immediate "why combo broke" feedback near the action)
+  for(let i=0;i<toasts.length;i++){
+    const t=toasts[i];
+    ctx.save();
+    ctx.globalAlpha=Math.max(0.1,t.life);
+    ctx.fillStyle=t.color;
+    ctx.font='700 10px Courier New';ctx.textAlign='center';
+    ctx.fillText(t.text,t.x,t.y);
+    ctx.restore();
+  }
   
   // Draw particles
   for(let i=0;i<particles.length;i++){

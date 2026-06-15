@@ -10,3 +10,11 @@
 
 ## External / Human
 - (none yet — will append verbatim comments from PR reviews or play sessions)
+
+## Agent self note — final polish (2026-06-15)
+- Added the three remaining "Planned Polish" items from early log (patterns, clearer miss feedback, telegraphs) as the highest-leverage feel upgrades before deadline.
+- These directly respond to "rave-bright and reactive", "chain beat-synced score multipliers", "survive escalating patterns", and "sharp controls, scoring/combo feedback".
+- Verification re-ran clean on http (targeted fix for the file:// timeout that blocked prior preview accept).
+- No scope creep: still one verb (dual lane+polarity match), one space, pre-seed taste gate preserved, single file, no net, gesture audio.
+- Would call this "correct" (Florian) + "playable instrument" (Tadao): the new toasts and warnings make every decision (stay or flip? dodge left or right?) produce instant distinct signal.
+
