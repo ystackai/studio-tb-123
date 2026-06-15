@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Acid Circuit Breaker — TB-123</title>
+<style>
+   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#050508;font-family:'Courier New',monospace;color:#00FF41}
+   #game-wrapper{display:flex;justify-content:center;align-items:center;width:100%;height:100%;position:relative;flex-direction:column}
+   #game-container{position:relative;width:100%;max-width:420px;aspect-ratio:400/700;background:#060608;border:2px solid #1a1a2e;border-radius:8px;overflow:hidden;box-shadow:0 0 40px rgba(0,255,65,0.15),0 0 80px rgba(0,255,65,0.05)}
+  canvas{display:block;width:100%;height:100%}
+   /* CRT scanline overlay */
+   #game-container::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);z-index:10}
+   /* HUD */
+   #hud{position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;justify-content:space-between;align-items:flex-start;z-index:25;pointer-events:none;opacity:0;transition:opacity 0.3s}
+   #hud.visible{opacity:1}
+   .hud-item{font-size:0.7rem;font-weight:700;text-shadow:0 0 6px currentColor}
+   .hud-score{color:#00FF41;font-size:0.95rem;font-weight:900}
+   .hud-combo{color:#FFD700;font-size:0.75rem}
+   .hud-level{color:#FF006E}
+   /* Touch zones */
+   .touch-zone{position:absolute;bottom:0;width:33.33%;height:100px;pointer-events:all;min-height:44px;z-index:30;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s}
+   .touch-zone:active{opacity:0.2;background:rgba(255,255,255,0.05)}
+   #touch-left{left:0;justify-content:flex-start;padding-left:16px}
+   #touch-center{left:33.33%;justify-content:center}
+   #touch-right{left:66.66%;justify-content:flex-end;padding-right:16px}
+   .touch-label{color:rgba(0,255,65,0.4);font-size:1.3rem;pointer-events:none;user-select:none}
+   /* Screens */
+   .screen{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;pointer-events:all;opacity:0;transition:opacity 0.4s;pointer-events:none}
+   .screen.active{opacity:1;pointer-events:all}
+   .screen-title{font-size:1.5rem;font-weight:900;letter-spacing:0.12em;text-shadow:0 0 20px #00FF41,0 0 40px #00FF41;margin-bottom:0.4rem;text-align:center;color:#00FF41;line-height:1.2}
+   .screen-subtitle{font-size:0.65rem;color:#777;margin-bottom:1.5rem;text-align:center;max-width:280px;line-height:1.5}
+   .screen-btn{padding:12px 28px;font-family:'Courier New',monospace;font-size:0.85rem;font-weight:700;color:#0a0a0a;background:#00FF41;border:none;border-radius:6px;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase;box-shadow:0 0 20px rgba(0,255,65,0.5);transition:all 0.15s;min-width:160px;min-height:48px}
+   .screen-btn:hover{background:#33FF77;box-shadow:0 0 30px rgba(0,255,65,0.8);transform:scale(1.05)}
+   .screen-btn:active{transform:scale(0.97)}
+   .final-score{font-size:2rem;color:#FF006E;text-shadow:0 0 15px #FF006E;margin:0.4rem 0}
+   .final-combo{font-size:0.8rem;color:#FFD700;margin-bottom:1.2rem}
+   .controls-hint{font-size:0.6rem;color:#444;margin-top:1.2rem;text-align:center;line-height:1.6}
+   @media(max-width:440px){
+     #game-container{border-radius:0;border:none;max-width:100%}
+     .screen-title{font-size:1.2rem}
+     .touch-zone{height:80px}
+   }
+   @keyframes neon-pulse{0%,100%{text-shadow:0 0 20px #00FF41,0 0 40px #00FF41}50%{text-shadow:0 0 30px #00FF41,0 0 60px #00FF41,0 0 80px #00FF41}}
+   .screen-title{animation:neon-pulse 2s ease-in-out infinite}
+   @keyframes beat-flash{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+   .beat-flash{animation:beat-flash 0.15s ease-out}
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+   <div id="game-container">
+     <canvas id="gameCanvas" width="400" height="700"></canvas>
+     <!-- HUD -->
+     <div id="hud">
+       <div class="hud-item hud-score" id="hud-score">0</div>
+       <div class="hud-item hud-level" id="hud-level">LVL 1</div>
+       <div class="hud-item hud-combo" id="hud-combo"></div>
+     </div>
+     <!-- Touch zones for mobile -->
+     <div class="touch-zone" id="touch-left"><span class="touch-label">◀</span></div>
+     <div class="touch-zone" id="touch-center"><span class="touch-label">●</span></div>
+     <div class="touch-zone" id="touch-right"><span class="touch-label">▶</span></div>
+     <!-- Start screen -->
+     <div class="screen active" id="start-screen">
+       <div class="screen-title">ACID CIRCUIT<br>BREAKER</div>
+       <div class="screen-subtitle">Race the circuit. Match polarity. Dodge glitches. Collect pulses.</div>
+       <button class="screen-btn" id="btn-start">START</button>
+       <div class="controls-hint">← → arrows or tap left/right sides<br>SPACE to start / restart</div>
+     </div>
+     <!-- Game over screen -->
+     <div class="screen" id="gameover-screen">
+       <div class="screen-title">CIRCUIT<br>OVER</div>
+       <div class="final-score" id="final-score">0</div>
+       <div class="final-combo" id="final-combo"></div>
+       <button class="screen-btn" id="btn-restart">RETRY</button>
+     </div>
+   </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ── Constants ──
+const W=400, H=700;
+const LANE_COUNT=3;
+const LANE_W=W/LANE_COUNT;
+const PLAYER_W=32, PLAYER_H=20;
+const GATE_H=12;
+const GLITCH_W=40, GLITCH_H=18;
+const PULSE_R=7;
+const LANE_COLORS=['#00FF41','#FF006E','#3A86FF'];
+const LANE_NAMES=['G','P','B'];
+const BG_COLOR='#060608';
+const TRACE_COLOR='#111118';
+
+// ── Canvas & Context ──
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+
+// ── DOM refs ──
+const hudEl=document.getElementById('hud');
+const hudScore=document.getElementById('hud-score');
+const hudLevel=document.getElementById('hud-level');
+const hudCombo=document.getElementById('hud-combo');
+const startScreen=document.getElementById('start-screen');
+const gameoverScreen=document.getElementById('gameover-screen');
+const finalScoreEl=document.getElementById('final-score');
+const finalComboEl=document.getElementById('final-combo');
+const btnStart=document.getElementById('btn-start');
+const btnRestart=document.getElementById('btn-restart');
+
+// ── Game state ──
+let state='START';
+let player={lane:1,x:W/2,y:H-100,targetX:W/2,alpha:1};
+let gates=[],glitches=[],pulses=[],particles=[];
+let score=0,combo=0,maxCombo=0,level=1,speed=2.5,dist=0;
+let spawnTimer=0,difficultyTimer=0;
+let bgOffset=0,circuitLines=[],lastBeatTime=0;
+let shakeX=0,shakeY=0,shakeDecay=0;
+let flashAlpha=0,flashColor='#fff';
+let gameTime=0;
+
+function laneCenter(i){return LANE_W*i+LANE_W/2;}
+
+// ── Audio engine (Web Audio API, only after user gesture) ──
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+   }
+  if(audioCtx.state==='suspended')audioCtx.resume();
+}
+function playTone(freq,dur,type,vol){
+  if(!audioCtx)return;
+  try{
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.type=type||'square';
+    o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+    g.gain.setValueAtTime(vol||0.06,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur);
+   }catch(e){}
+}
+function sfxCollect(){
+  playTone(880,0.1,'sine',0.09);
+  setTimeout(()=>playTone(1320,0.12,'sine',0.05),60);
+}
+function sfxGatePass(){playTone(440,0.12,'square',0.06);}
+function sfxGlitchHit(){
+  playTone(100,0.35,'sawtooth',0.1);
+  playTone(70,0.4,'square',0.06);
+}
+function sfxLevelUp(){
+  playTone(523,0.08,'sine',0.07);
+  setTimeout(()=>playTone(659,0.08,'sine',0.07),70);
+  setTimeout(()=>playTone(784,0.12,'sine',0.09),140);
+}
+
+// ── Spawning ──
+function spawnGate(){
+  const lane=Math.floor(Math.random()*LANE_COUNT);
+  const colorIdx=Math.floor(Math.random()*LANE_COUNT);
+  gates.push({lane,colorIdx,y:-GATE_H,passed:false});
+}
+function spawnGlitch(){
+  const lane=Math.floor(Math.random()*LANE_COUNT);
+  glitches.push({lane,x:laneCenter(lane),y:-GLITCH_H,speed:speed*1.3+Math.random()*0.8});
+}
+function spawnPulse(){
+  const lane=Math.floor(Math.random()*LANE_COUNT);
+  pulses.push({lane,x:laneCenter(lane),y:-PULSE_R,speed:speed*1.1});
+}
+
+// ── Particles ──
+function emitParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const angle=Math.random()*Math.PI*2;
+    const spd=1+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd-1,life:1,decay:0.015+Math.random()*0.025,color,size:2+Math.random()*4});
+   }
+}
+
+// ── Input ──
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(state==='START')startGame();
+    else if(state==='GAMEOVER')restartGame();
+   }
+  if(state==='PLAYING'){
+    if((e.code==='ArrowLeft'||e.code==='KeyA')&&player.lane>0){
+      player.lane--;player.targetX=laneCenter(player.lane);
+      emitParticles(player.x,player.y,'#00FF41',3);
+     }
+    if((e.code==='ArrowRight'||e.code==='KeyD')&&player.lane<LANE_COUNT-1){
+      player.lane++;player.targetX=laneCenter(player.lane);
+      emitParticles(player.x,player.y,'#00FF41',3);
+     }
+   }
+});
+
+document.getElementById('touch-left').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  if(state==='START'){startGame();return;}
+  if(state==='GAMEOVER'){restartGame();return;}
+  if(state==='PLAYING'&&player.lane>0){
+    player.lane--;player.targetX=laneCenter(player.lane);
+    emitParticles(player.x,player.y,'#00FF41',3);
+   }
+});
+document.getElementById('touch-right').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  if(state==='START'){startGame();return;}
+  if(state==='GAMEOVER'){restartGame();return;}
+  if(state==='PLAYING'&&player.lane<LANE_COUNT-1){
+    player.lane++;player.targetX=laneCenter(player.lane);
+    emitParticles(player.x,player.y,'#00FF41',3);
+   }
+});
+
+btnStart.addEventListener('click',()=>{initAudio();startGame();});
+btnRestart.addEventListener('click',()=>{initAudio();restartGame();});
+
+// ── Game control ──
+function startGame(){
+  initAudio();
+  player={lane:1,x:laneCenter(1),y:H-100,targetX:laneCenter(1),alpha:1};
+  gates=[];glitches=[];pulses=[];particles=[];
+  score=0;combo=0;maxCombo=0;level=1;speed=3;dist=0;
+  spawnTimer=0;difficultyTimer=0;
+  bgOffset=0;circuitLines=[];
+  for(let i=0;i<8;i++){
+    circuitLines.push({x:Math.random()*W,y:Math.random()*H,h:20+Math.random()*40,speed:0.5+Math.random()*1.5});
+   }
+  hudEl.classList.add('visible');
+  startScreen.classList.remove('active');
+  gameoverScreen.classList.remove('active');
+  hudScore.textContent='0';
+  hudLevel.textContent='LVL 1';
+  hudCombo.textContent='';
+   // Pre-place some gates so gameplay starts immediately
+  for(let i=0;i<3;i++){
+    const lane=Math.floor(Math.random()*LANE_COUNT);
+    const colorIdx=Math.floor(Math.random()*LANE_COUNT);
+    gates.push({lane,colorIdx,y:100+i*180,passed:false});
+    if(i<2){
+      const glLane=Math.floor(Math.random()*LANE_COUNT);
+      glitches.push({lane:glLane,x:laneCenter(glLane),y:150+i*220,speed:speed*1.3});
+      }
+    }
+  state='PLAYING';
+}
+function restartGame(){startGame();}
+
+function triggerGameOver(){
+  state='GAMEOVER';
+  sfxGlitchHit();
+  shakeDecay=18;
+  flashAlpha=0.8;flashColor='#FF006E';
+  emitParticles(player.x,player.y,'#FF006E',30);
+  emitParticles(player.x,player.y,'#FFD700',15);
+  hudEl.classList.remove('visible');
+  setTimeout(()=>{
+    finalScoreEl.textContent=score;
+    finalComboEl.textContent='Best combo: '+maxCombo+'x';
+    gameoverScreen.classList.add('active');
+   },500);
+}
+
+// ── Update ──
+function update(dt){
+  if(state!=='PLAYING')return;
+  
+  gameTime+=dt;
+  
+  // Difficulty — faster ramp
+  const newLevel=Math.floor(dist/2000)+1;
+  if(newLevel>level){
+    level=newLevel;
+    speed=2.5+level*0.5;
+    hudLevel.textContent='LVL '+level;
+    sfxLevelUp();
+    emitParticles(player.x,player.y,'#FFD700',20);
+   }
+  
+  // Beat-synced difficulty
+  const beatInterval=Math.max(200,700-level*50);
+  
+  // Player movement (smooth easing)
+  const lerpSpeed=0.2;
+  player.x+=(player.targetX-player.x)*lerpSpeed;
+  
+  // Spawn gates — every ~600-1000ms
+  spawnTimer+=dt;
+  const gateInterval=Math.max(350,750-level*50);
+  if(spawnTimer>gateInterval){
+    spawnTimer=0;
+    spawnGate();
+    if(level>=1&&Math.random()<0.4+level*0.03)spawnGlitch();
+    if(level>=1&&Math.random()<0.3)spawnPulse();
+   }
+  
+  // Move gates
+  for(let i=gates.length-1;i>=0;i--){
+    const g=gates[i];
+    g.y+=speed;
+    if(g.y>H+20){gates.splice(i,1);continue;}
+    
+     // Gate passage
+    if(!g.passed&&g.y+GATE_H>player.y&&g.y<player.y+PLAYER_H){
+      if(g.lane===player.lane){
+        g.passed=true;
+        const comboMult=Math.min(combo+1,16);
+        const pts=100*comboMult;
+        score+=pts;
+        combo=comboMult;
+        if(combo>maxCombo)maxCombo=combo;
+        hudScore.textContent=score;
+        hudScore.classList.remove('beat-flash');
+        void hudScore.offsetWidth;
+        hudScore.classList.add('beat-flash');
+        hudCombo.textContent=combo>1?combo+'x':' ';
+        flashAlpha=0.15;flashColor=LANE_COLORS[g.colorIdx];
+        sfxGatePass();
+        emitParticles(player.x,player.y-10,LANE_COLORS[g.colorIdx],6);
+       }
+      // Mismatch — lose combo but don't die (gate is color-matched, not lane-blocked)
+      else{
+        combo=0;hudCombo.textContent='';
+      }
+     }
+   }
+  
+  // Move glitches
+  for(let i=glitches.length-1;i>=0;i--){
+    const gl=glitches[i];
+    gl.y+=gl.speed;
+    if(gl.y>H+30){glitches.splice(i,1);continue;}
+    
+     // Collision with player
+    const px=player.x-PLAYER_W/2,py=player.y-PLAYER_H/2;
+    const gx=gl.x-GLITCH_W/2,gy=gl.y-GLITCH_H/2;
+    if(px<gx+GLITCH_W&&px+PLAYER_W>gx&&py<gy+GLITCH_H&&py+PLAYER_H>gy){
+      combo=0;hudCombo.textContent='';
+      triggerGameOver();
+      return;
+     }
+   }
+  
+  // Move pulses
+  for(let i=pulses.length-1;i>=0;i--){
+    const p=pulses[i];
+    p.y+=p.speed;
+    if(p.y>H+20){pulses.splice(i,1);continue;}
+    
+     // Collection
+    const dx=player.x-p.x,dy=player.y-p.y;
+    if(Math.sqrt(dx*dx+dy*dy)<PULSE_R+PLAYER_W/2){
+      combo++;
+      if(combo>maxCombo)maxCombo=combo;
+      const pts=50*combo;
+      score+=pts;
+      hudScore.textContent=score;
+      hudScore.classList.remove('beat-flash');
+      void hudScore.offsetWidth;
+      hudScore.classList.add('beat-flash');
+      hudCombo.textContent=combo+'x';
+      flashAlpha=0.1;flashColor='#FFD700';
+      sfxCollect();
+      emitParticles(p.x,p.y,'#FFD700',8);
+      pulses.splice(i,1);
+     }
+   }
+  
+  // Particles
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;
+    if(p.life<=0)particles.splice(i,1);
+   }
+  
+  // Background circuit lines
+  bgOffset+=speed*0.5;
+  for(let i=0;i<circuitLines.length;i++){
+    const cl=circuitLines[i];
+    cl.y+=cl.speed;
+    if(cl.y>H+cl.h){cl.y=-cl.h;cl.x=Math.random()*W;}
+   }
+  
+  dist+=speed;
+  
+  // Flash fade
+  if(flashAlpha>0){
+    flashAlpha*=0.92;
+    if(flashAlpha<0.01)flashAlpha=0;
+   }
+  
+  // Screen shake decay
+  if(shakeDecay>0){
+    shakeX=(Math.random()-0.5)*shakeDecay;
+    shakeY=(Math.random()-0.5)*shakeDecay;
+    shakeDecay*=0.82;
+    if(shakeDecay<0.3)shakeDecay=0;
+   }
+}
+
+// ── Render ──
+function render(){
+  ctx.save();
+  ctx.translate(shakeX,shakeY);
+  
+  // Background
+  ctx.fillStyle=BG_COLOR;
+  ctx.fillRect(-10,-10,W+20,H+20);
+  
+  // Beat-synced background pulse
+  if(state==='PLAYING'){
+    const beatInterval=Math.max(200,700-level*50);
+    const beatPhase=(gameTime%beatInterval)/beatInterval;
+    const pulse=Math.max(0,1-beatPhase*3)*0.03;
+    ctx.fillStyle='rgba(0,255,65,'+pulse+')';
+    ctx.fillRect(0,0,W,H);
+   }
+  
+  // Grid / circuit traces
+  ctx.strokeStyle=TRACE_COLOR;
+  ctx.lineWidth=1;
+  for(let y=(bgOffset%40)-40;y<H;y+=40){
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+   }
+  for(let x=0;x<=W;x+=40){
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+   }
+  // Circuit dots
+  ctx.fillStyle='#1a1a24';
+  for(let y=(bgOffset%80)-80;y<H;y+=80){
+    for(let x=(bgOffset*0.5%80)-80;x<W;x+=80){
+      ctx.fillRect(x-1.5,y-1.5,3,3);
+     }
+   }
+  
+  // Background circuit lines (decorative)
+  if(circuitLines.length){
+    for(let i=0;i<circuitLines.length;i++){
+      const cl=circuitLines[i];
+      const ci=Math.floor(cl.x/W*3);
+      ctx.fillStyle=LANE_COLORS[ci]+'33';
+      ctx.fillRect(cl.x,cl.y,1.5,cl.h);
+     }
+   }
+  
+  // Lane indicators
+  for(let i=0;i<LANE_COUNT;i++){
+    const x=laneCenter(i);
+    ctx.strokeStyle=LANE_COLORS[i]+'12';
+    ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+    ctx.strokeStyle=LANE_COLORS[i]+'06';
+    ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+   }
+  
+  // Lane glow when player is on it
+  const plx=laneCenter(player.lane);
+  const glowGrad=ctx.createLinearGradient(plx-50,0,plx+50,0);
+  glowGrad.addColorStop(0,'transparent');
+  glowGrad.addColorStop(0.5,LANE_COLORS[player.lane]+'15');
+  glowGrad.addColorStop(1,'transparent');
+  ctx.fillStyle=glowGrad;
+  ctx.fillRect(plx-50,0,100,H);
+  
+  // Draw gates
+  for(let i=0;i<gates.length;i++){
+    const g=gates[i];
+    const cx=laneCenter(g.lane);
+    const color=LANE_COLORS[g.colorIdx];
+    ctx.save();
+    ctx.shadowColor=color;ctx.shadowBlur=14;
+    ctx.fillStyle=color;
+    ctx.fillRect(cx-55,g.y,110,GATE_H);
+    // Gate ends
+    ctx.fillStyle='#fff';
+    ctx.fillRect(cx-55,g.y,5,GATE_H);
+    ctx.fillRect(cx+50,g.y,5,GATE_H);
+    // Polarity label
+    ctx.fillStyle=BG_COLOR;
+    ctx.fillRect(cx-7,g.y+1,14,GATE_H-2);
+    ctx.fillStyle=color;
+    ctx.font='bold 9px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(LANE_NAMES[g.colorIdx],cx,g.y+GATE_H/2);
+    ctx.restore();
+   }
+  
+  // Draw glitches
+  for(let i=0;i<glitches.length;i++){
+    const gl=glitches[i];
+    ctx.save();
+    ctx.shadowColor='#FFD700';ctx.shadowBlur=10;
+    ctx.fillStyle='#fff';
+    ctx.fillRect(gl.x-GLITCH_W/2,gl.y-GLITCH_H/2,GLITCH_W,GLITCH_H);
+    // Glitch pattern
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#FF006E';
+    for(let j=0;j<5;j++){
+      const gx=gl.x-GLITCH_W/2+Math.random()*GLITCH_W;
+      const gy=gl.y-GLITCH_H/2+Math.random()*GLITCH_H;
+      ctx.fillRect(gx,gy,4+Math.random()*8,2);
+     }
+    // Warning triangles
+    ctx.fillStyle='#FFD700';
+    ctx.font='bold 10px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('⚡',gl.x,gl.y);
+    ctx.restore();
+   }
+  
+  // Draw pulses
+  const pulsePhase=Math.sin(gameTime*0.006)*0.3+0.7;
+  for(let i=0;i<pulses.length;i++){
+    const p=pulses[i];
+    ctx.save();
+    ctx.shadowColor='#FFD700';ctx.shadowBlur=18*pulsePhase;
+    ctx.globalAlpha=0.5+pulsePhase*0.5;
+    ctx.fillStyle='#FFD700';
+    ctx.beginPath();ctx.arc(p.x,p.y,PULSE_R*pulsePhase,0,Math.PI*2);ctx.fill();
+    // Outer ring
+    ctx.globalAlpha=0.2*pulsePhase;
+    ctx.strokeStyle='#FFD700';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(p.x,p.y,PULSE_R*2.2,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+   }
+  
+  // Draw particles
+  for(let i=0;i<particles.length;i++){
+    const p=particles[i];
+    ctx.save();
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.shadowColor=p.color;ctx.shadowBlur=6;
+    ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);
+    ctx.restore();
+   }
+  
+  // Draw player
+  if(state==='PLAYING'||state==='GAMEOVER'){
+    ctx.save();
+    const pAlpha=state==='GAMEOVER'?0.35:1;
+    ctx.globalAlpha=pAlpha;
+    
+    // Player glow
+    ctx.shadowColor=LANE_COLORS[player.lane];
+    ctx.shadowBlur=state==='PLAYING'?20:5;
+    
+    // Player body
+    ctx.fillStyle=LANE_COLORS[player.lane];
+    ctx.fillRect(player.x-PLAYER_W/2,player.y-PLAYER_H/2,PLAYER_W,PLAYER_H);
+    
+    // Player inner
+    ctx.shadowBlur=0;
+    ctx.fillStyle=BG_COLOR;
+    ctx.fillRect(player.x-PLAYER_W/2+3,player.y-PLAYER_H/2+3,PLAYER_W-6,PLAYER_H-6);
+    
+    // Player core
+    ctx.fillStyle=LANE_COLORS[player.lane];
+    ctx.beginPath();
+    ctx.arc(player.x,player.y,3,0,Math.PI*2);
+    ctx.fill();
+    
+    // Trail
+    ctx.globalAlpha=0.12;
+    const trailGrad=ctx.createLinearGradient(player.x-PLAYER_W/2-4,player.y-PLAYER_H/2-8,player.x-PLAYER_W/2-4,player.y+PLAYER_H/2+8);
+    trailGrad.addColorStop(0,'transparent');
+    trailGrad.addColorStop(0.5,LANE_COLORS[player.lane]);
+    trailGrad.addColorStop(1,'transparent');
+    ctx.fillStyle=trailGrad;
+    ctx.fillRect(player.x-PLAYER_W/2-6,player.y-PLAYER_H/2-10,PLAYER_W+12,PLAYER_H+20);
+    
+    ctx.restore();
+   }
+  
+  // Beat indicator (bottom center)
+  if(state==='PLAYING'){
+    const beatInterval=Math.max(200,700-level*50);
+    const beatPhase=(gameTime%beatInterval)/beatInterval;
+    const beatSize=2+Math.max(0,1-beatPhase*3)*4;
+    ctx.save();
+    ctx.globalAlpha=0.5;
+    ctx.fillStyle='#00FF41';
+    ctx.beginPath();ctx.arc(W/2,H-28,beatSize+3,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=0.8;
+    ctx.beginPath();ctx.arc(W/2,H-28,beatSize,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+   }
+  
+  // Combo meter (right side)
+  if(state==='PLAYING'&&combo>0){
+    ctx.save();
+    const meterH=Math.min(combo,16);
+    ctx.globalAlpha=0.4;
+    ctx.fillStyle='#FFD700';
+    ctx.fillRect(W-14,55,5,meterH*3);
+    ctx.globalAlpha=0.7;
+    ctx.fillStyle='#FFD700';
+    ctx.fillRect(W-13,55+(16-meterH)*3,3,meterH*3);
+    ctx.restore();
+   }
+  
+  // Flash overlay
+  if(flashAlpha>0){
+    ctx.save();
+    ctx.globalAlpha=flashAlpha;
+    ctx.fillStyle=flashColor;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+   }
+  
+  ctx.restore();
+}
+
+// ── Game Loop ──
+let lastTime=0;
+function gameLoop(timestamp){
+  if(!lastTime)lastTime=timestamp;
+  const dt=Math.min(timestamp-lastTime,33);
+  lastTime=timestamp;
+  
+  update(dt);
+  render();
+  
+  requestAnimationFrame(gameLoop);
+}
+
+// ── Start ──
+requestAnimationFrame(gameLoop);
+
+})();
+</script>
+</body>
+</html>
