@@ -96,7 +96,7 @@
        <div class="final-combo" id="final-combo"></div>
        <button class="screen-btn" id="btn-restart">RETRY</button>
      </div>
-     <div class="cab-bezel bottom">MATCH LANE + POLARITY TO BREAK • DODGE • CHAIN ON THE BEAT</div>
+     <div class="cab-bezel bottom">MATCH LANE + LETTER TO BREAK • DODGE GLITCHES • CHAIN PULSES</div>
    </div>
    </div><!-- /#game-container -->
   </div><!-- /#cabinet -->
@@ -329,7 +329,7 @@ function cyclePolarity(){
   player.polarity=(player.polarity+1)%LANE_COUNT;
   emitParticles(player.x,player.y-5,LANE_COLORS[player.polarity],9);
   // unmistakable polarity switch ring (expands in new color) — immediate visual pop for lane/polarity verbs (v38 larger)
-  polRings.push({x:player.x, y:player.y, r:12, maxr:130, life:0.34, color:LANE_COLORS[player.polarity]});
+  polRings.push({x:player.x, y:player.y, r:10, maxr:110, life:0.32, color:LANE_COLORS[player.polarity]});
   sfxPolarity();
 }
 
@@ -950,8 +950,28 @@ function gameLoop(timestamp){
 }
 
 // ── Start ──
-requestAnimationFrame(gameLoop);
 
+// --- v39 runtime verification driver (post-edit landscape + zap + X feedback) ---
+setTimeout(function(){
+  try{
+    startGame();
+    // exercise verbs on new 1280x720 layout
+    player.lane = 0; player.targetX = LANE_W*0 + LANE_W/2;
+    cyclePolarity(); cyclePolarity(); // to pol 0
+    if(gates.length>0){ gates[0].lane=1; gates[0].colorIdx = (player.polarity+1)%3; }
+    if(typeof spawnGlitch==="function"){ spawnGlitch(); if(warnings.length) warnings[warnings.length-1].life = 0.55; }
+    for(let i=0;i<7;i++){ update(18); render(); }
+    // add matchable gate for shatter + BREAK + zap
+    player.polarity = 1; player.lane=0; player.targetX=LANE_W*0 + LANE_W/2;
+    gates.push({lane:0, colorIdx:1, y: player.y-30 });
+    for(let i=0;i<5;i++){ update(18); render(); }
+    // pol switch ring + lane change
+    player.lane=2; player.targetX=LANE_W*2 + LANE_W/2; cyclePolarity();
+    render();
+    console.log("v39-driver: post lane+pol+mismatch+shatter+toast+warn+ring+zap state ready on 1280x720");
+  }catch(e){ console.error("v39 driver err", e && e.message || e); }
+}, 80);
+requestAnimationFrame(gameLoop);
 })();
 </script>
 </body>

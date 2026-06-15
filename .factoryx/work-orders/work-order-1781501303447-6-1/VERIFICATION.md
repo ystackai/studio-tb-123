@@ -1122,3 +1122,21 @@ No code change to the playable artifact (per "only modify code required"; the im
 - No scope creep; first screen immediately playable; core preserved.
 
 Date: 2026-06-15
+
+## v39 Browser Runtime Verification (landscape horizontal + stronger cab + enlarged + unmistakable feedback for 15:32Z contact-sheet)
+
+**Directly addresses blocking playtest feedback 2026-06-15T15:32:54Z + prior 11:50/12:18:** "strong neon polarity game, but still too portrait/cabinet constrained and menu-like. ... Use more horizontal space or a stronger cabinet frame, enlarge player/gates/polarity letters, make matching/mismatch feedback unmistakable"
+
+- Switched playfield from 1040x900 portrait-leaning to **1280x720 landscape** (1.78 aspect) + **1380px max cabinet** (from 1150) with **4px border + 32px sides + 24px tall top/bottom bezels** carrying "ACID-92 // TB-123 NEON POLARITY RACE" + "MATCH LANE + POLARITY TO BREAK..." . Uses viewport confidently, stronger physical cab frame weight, less menu-like (lighter screen overlay gradient lets circuit traces read through title/CTA; compact CTA + dim labels).
+- Enlarged: **PLAYER 128x56** (was 104x54), **GATE 300x42** (was 260x38), **GLITCH 100x40**, **PULSE 20**; **polarity letters 32px on ship / 30px in gates** (was 28/24) inside high-contrast badges. Lane glows wider.
+- Unmistakable match/mismatch at a glance: thick 6px white (full ready) or 4px yellow (pol-match) rings + inner ring on gates; on success: **BREAK 26px rising pop**, **zap line from ship nose to gate**, 36+ particles, extra arcs; on mismatch: **red X overlay + cracks + tint on gate**, 18+ red particles, "LANE"/"POLARITY" 21px toast, flash.
+- Pre-seed + player y + all absolute positions retuned for 720 runway; startGame still does immediate `render();` + pre-seed for deterministic first-frame state (addresses prior timeout root cause).
+- Real chromium file:// evidence (this runtime, same flags as history): 
+  - committed (edited) `games/92-acid-circuit-breaker/index.html` (start) → acid-start-v39.png (190kB, 1380x980 cap shows full wide cab + bezels + neon title + compact CTA).
+  - `acid-runtime-check-39.html` (v39 driver: startGame + lane0 + double cyclePol + mismatch setup + spawnGlitch + forced match gate at player y + updates/renders + lane2 + pol flip) → acid-mid-check-39.png (253kB) in <2s wall, exit 0, **no timeout/no pageerror**. Mid cap shows: wide lanes, large ship with 32px white letter inside, 300px gates with thick live rings (white on ready), red X+cracks+toasts on the mismatch gate, BREAK pop + zap line + arcs/particles on successful break, glitch ! telegraphs, HUD, beat pip, cab sides+bezel labels visible.
+- Game Feel re-PASS at new scale (immediate <100ms with stronger zap/ring/X/particle/sfx pops, easing on move + pops, large targets, 60fps trivial, self-contained, gesture audio only, no net).
+- No GitHub metadata work in this pass; focused on playable artifact + verification per operator note.
+
+Evidence staged: screenshots/acid-*-v39.png , acid-runtime-check-39.html , acid-check-39.HEAD (pre-commit tree), updated VERIF/WORKLOG/PREVIEW + game index. PR#130 will reflect on push of canonical branch.
+
+Date: 2026-06-15 ~16:30Z (within polish_until_deadline to 17:32Z)

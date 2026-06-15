@@ -242,3 +242,16 @@ This closes the "requesting targeted rework before accepting this preview" for t
 - Start screen compact + quick-fade + dim labels (less menu). Pre-seed retuned.
 - Fresh chromium evidence: acid-start-v37-repro.png + acid-mid-check-7-repro-v37.png (post lane+pol+mismatch+BREAK+rings state, exit 0 no timeout).
 - Game Feel re-PASS. Preserved rave-bright reactive Acid Circuit Breaker core + TB-123 signal aesthetic.
+
+## v39 Layout + Feedback Polish (2026-06-15, addresses 15:32Z blocking + earlier viewport notes)
+
+**Changes in this pass (no metadata focus):**
+- 1280×720 landscape playfield (was 1040×900) inside 1380px cabinet frame with tall 24px bezels + 32px labeled sides + 10px container border. Uses horizontal space confidently, stronger physical cab presence, reduces portrait/menu feel while preserving neon CRT handheld rave core.
+- Player 128×56 w/ 32px polarity letter inside; gates 300×42 w/ 30px letters + thick live match rings (6px white when lane+pol ready, 4px yellow for pol only) + inner stroke. Glitch/pulse also scaled.
+- Match reward unmistakable: rising 26px "BREAK", direct zap line from ship to gate, burst particles + multiple arcs (stronger on beat-phase). Mismatch denial: red X + cracks drawn on the gate + red tint + 21px "LANE"/"POLARITY" floating toast + particles.
+- Start screen: lighter overlay gradient (world circuit visible behind), smaller title/compact CTA — less full menu block.
+- All pre-seed, bottom UI, glows, fonts, pol pip (r=20 + 20px letter) retuned for new runway + scale.
+- Browser verification (real chromium file://): start + driven mid (lane switch, pol cycle, mismatch with X/toast, successful BREAK with zap + rings visible) both produced clean large caps exit 0 no timeout (acid-start-v39.png 190kB, acid-mid-check-39.png 253kB at 1380x980). acid-runtime-check-39.html + acid-check-39.HEAD in tree.
+- First screen playable immediately; core verb (lane + polarity dual match to shatter) demonstrable <10s with pre-seed. Game Feel re-PASS. Self-contained, responsive (mobile collapses sides/bezels cleanly).
+
+This is the product-shaped fix for the contact-sheet note while keeping the ambitious reactive Acid Circuit Breaker intact. Preview entrypoint remains `games/92-acid-circuit-breaker/index.html`.

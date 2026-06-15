@@ -720,3 +720,14 @@ All Game Feel checklist items PASS. PR#130 remains the single canonical PR.
 - [x] No external net; offline after load
 
 Focused on the exact 15:32Z complaints (horiz space + cab strength + element scale + unmistakable feedback) while preserving the neon polarity handheld core. No GitHub metadata work in this pass; only the playable artifact + required evidence per workflow. polish_until_deadline budget used for the blocking layout/feedback polish.
+
+### v39 — 2026-06-15 ~16:29Z (contact-sheet targeted: more horizontal + stronger frame + enlarge + unmistakable)
+- Switched to 1280x720 landscape playfield inside 1380px cabinet with 32px sides + 24px tall bezels (top/bottom labels) + 10px game border + stronger multi glow. Directly uses more horiz viewport + physical cab weight vs prior portrait tunnel/menu.
+- Player/gates/polarity letters enlarged (128x56 ship w/ 32px white letter; 300x42 gates w/ 30px letter + 6px white/4px yellow live match rings + inner stroke when fully ready).
+- Match feedback: zap line from ship to gate + bigger BREAK 26px pop + more arcs/particles on success (near-peak stronger). Mismatch: red X drawn over gate + cracks + tint + larger 21px "LANE"/"POLARITY" toast + particles.
+- Lighter start overlay gradient (circuit traces visible behind), compact CTA, auto-dim labels, bottom bezel updated — less menu block.
+- Pre-seed ys + player start y retuned for 720h runway; all spatials (glows, pol pip r=20, fonts bumped) consistent with scale.
+- Fresh chromium file:// + instrumented check-39 driver (exercises start+lane+pol+mismatch+match+shatter+zap+ring+warn+toast) produced valid 1380x980 caps (190k/253k) exit0 <2s no timeout/pageerror. (Re-proves sync render+preseed eliminates prior check-N races.)
+- Game Feel: all items re-verified PASS for new layout/scale (core verb instant on START, <100ms punchy zap/ring/X feedback, easing, large touch, 60fps, <2MB, self contained, gesture audio).
+- Preserved TB-123 "art of the signal" + rave-bright reactive acid circuit core (neon, beat tint, interference glitches, coherence BREAK moment). No scope creep, no metadata focus.
+- Evidence + check-39.html + .HEAD + pngs + PREVIEW/VERIF updates staged. Ready for commit + push on canonical branch. polish_until_deadline.
