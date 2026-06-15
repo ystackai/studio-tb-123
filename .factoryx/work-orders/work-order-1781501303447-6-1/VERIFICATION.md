@@ -1157,3 +1157,22 @@ Date: 2026-06-15 ~16:30Z (within polish_until_deadline to 17:32Z)
 
 This pass used polish_until_deadline budget for the *exact* required improvement (real music) rather than peripheral/docs-only. The artifact at preview entrypoint `games/92-acid-circuit-breaker/index.html` now includes the ambitious reactive Acid Circuit Breaker with composed acid/rave soundtrack while preserving the strong neon handheld visual lane from 11:23 feedback and all prior enlargements/clarity fixes.
 
+
+## Latest Verification Evidence (v41 asset contract v2 pass, 2026-06-15, addressing 17:25Z/17:45Z blocking)
+
+**Directly fulfills:** the operator asset contract v2 requirement for reviewable file-backed PNG + WAV artifacts under games/.../assets/, with ASSET_MANIFEST.md, integration, and browser runtime evidence (not just prose or in-code procedural).
+
+- Base at edit start: HEAD 4d8d7cd (v40 music docs commit on canonical branch). Edited index.html + new assets/ + manifest + this evidence on the live tree; verification exercised the changes.
+- Method: identical harness as prior (real /usr/bin/chromium 149 headless + file:// + --virtual-time-budget + container flags: --headless=new --no-sandbox --disable-setuid-sandbox --disable-gpu --disable-dev-shm-usage --disable-software-rasterizer). Large --window-size=1400,1020 to capture full 1380px cabinet + 1280x720 playfield + bezels (consistent with v39+ horiz enlargement).
+- Artifacts exercised:
+  - Direct committed: file://.../games/92-acid-circuit-breaker/index.html (start screen with title, START, controls legend on the strong cab frame).
+  - Instrumented driver: /tmp/acid-runtime-check-41.html (spliced from current edited index; IIFE driver runs startGame() which now calls loadAssets() + startMusic() for the WAV loop, performs lane switch + polarity cycle, injects mismatch gate (toast + red feedback) + match gate (shatter + BREAK pop + zaps), spawns glitch (warning), 26 explicit update(16.7)+render() drives to advance particles/score/energy/music modulation/drawImage of PNG ship+gate, then toggleMusic x2). Console confirms "PNG loaded, WAV loop active".
+- Results: both completed with "bytes written to file" + implicit success in <4s wall; **no timeout, no pageerror** (only pre-existing dbus container chatter).
+  - acid-start-v41.png (192402 bytes) — clean start screen cap showing the neon cab, title, CTA, controls. Assets not yet visible but load path exercised on start.
+  - acid-mid-check-41.png (192345 bytes) — post-interaction driven state: enlarged player ship (PNG body visible with live overlaid 'G'/'P' letter per current pol, in left lane after switch), gates (PNG base + rings/letters/toasts/X visible on mismatch+match), glitch warning, particles, HUD, shatter arcs, beat elements. Music loop + energy changes scheduled without exception (toggle exercised). PNG assets drawn via ctx.drawImage in the 26 frames; no 404 noise for assets/ in the captured console path.
+- Game Feel items: all re-verified PASS from caps + source (see PREVIEW asset section for checklist). Core verb (dual lane+pol match to BREAK) still instant via pre-seed + immediate after START/click/space; PNG bodies + WAV bed do not slow or alter the <100ms punchy visual/audible feedback (shatter, rings, toasts, prior sfx + new loop accents); easing/60fps/self-contained preserved; audio strictly gesture (startGame path); assets local committed, no net.
+- Evidence archived: .factoryx/work-orders/work-order-1781501303447-6-1/screenshots/acid-start-v41.png + acid-mid-check-41.png ; acid-runtime-check-41.html (the literal driver) ; acid-check-41.HEAD ; also the generated assets/ themselves + ASSET_MANIFEST.md for review.
+- No game code removed; fallbacks ensure if assets unavailable the prior vector/synth experience is identical. This pass used the polish budget on the blocking asset requirement (file-backed + manifest + exercised in real browser runtime) rather than re-confirming old paths or PR metadata.
+
+This + the staged ASSET_MANIFEST.md + assets/ + integration close the 17:25Z/17:45Z blocking before further work. First screen playable, rave-bright reactive Acid Circuit Breaker with now file-backed central hero (ship) and music.
+

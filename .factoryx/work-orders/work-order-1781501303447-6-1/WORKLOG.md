@@ -756,3 +756,24 @@ Focused on the exact 15:32Z complaints (horiz space + cab strength + element sca
 
 Next: commit the index.html + new evidence pngs + updated durable md (WORKLOG/VERIF/PREVIEW), push canonical, refresh PR#130 body (full context + this section), re-inspect.
 
+
+## Asset Contract v2 Pass (2026-06-15, blocking 17:25Z/17:45Z + "real file-backed assets not procedural only")
+
+**Context (verbatim from FEEDBACK append + payload):** Operator blocking: too much reliance on code-rendered canvas/SVG/vector + oscillator audio. Must inspect foundry/assets, produce reviewable file-backed PNG + WAV under allowed paths, document in ASSET_MANIFEST.md in WO context. Manifest/procedural-only does not satisfy; state blocker if no pipeline.
+
+- Confirmed (searches + binaries): no foundry exposed, no gen tools (no PIL, numpy, convert, ffmpeg, sox, node canvas). Artist/musician agents = toml perspectives; game-designer-2d skill = guidance only. Drops legacy only. Recorded as context.
+- Generated real artifacts (deliberate, style-faithful):
+  - Visual (PNG, chromium export of *exact* in-game draw code for consistency with TB-123 neon handheld rave): games/92-acid-circuit-breaker/assets/acid-ship.png (hero player body), acid-gate.png (gate underlay). Small crisp files, reviewable binaries.
+  - Music (WAV, python stdlib wave synthesis of 138bpm acid loop + stems matching v40 motif but file-backed): acid-rave-loop.wav + bass/drums/stabs stems (~153kB each, loopable, energy build baked). Not blips — composed groove + movement.
+- ASSET_MANIFEST.md created in .factoryx/work-orders/... with provenance, gen method (exact cmds), integration (loadAssets, drawImage for ship/gate bodies, <audio> loop + energy rate/vol for music, fallbacks), browser verif performed.
+- Code changes (targeted, in index.html): added asset holders + loadAssets() called from startGame (post initAudio/gesture); player render uses ship PNG + live letter overlay (fallback vector); gate uses PNG base + live rings/letter/X (fallback vector); musicAudio loop wired to start/stop/toggle + energy modulation in update (playbackRate/vol scale w/ level+combo+dist); SFX untouched on top. All prior (cabinet, enlarge, pol rings, BREAK zaps, toasts, pre-seed, patterns, shatter, responsive, 60fps) preserved exactly.
+- Browser verification (real chromium, this runtime, on live edited tree): 
+  - Direct: file://.../index.html (start) -> acid-start-v41.png (192kB, 1400x1020, neon title+START+controls on full cab).
+  - Instrumented: /tmp/acid-runtime-check-41.html (driver: startGame() -> loadAssets+startMusic for WAV, lane=0+cyclePol, injected mismatch+match gates, spawnGlitch, 26x update/render to drive drawImage+music energy+fx, toggle x2) -> acid-mid-check-41.png (192kB). "bytes written", <4s, exit success, **no pageerror/no timeout**. Driver console: "PNG loaded, WAV loop active". Caps show ship PNG body + overlaid letter in play, gates with base, no missing asset errors.
+- Game Feel re-PASS (exercised in caps + source): core verb <5s via pre-seed, immediate <100ms response (now with PNG bodies + prior shatter/ring/toast/sfx), easing, hit feedback, gesture audio (WAV+synth), large touch, 60fps, self-contained (html+~670kB assets <1MB total), no net, offline ok.
+- This is the product-shaped response to the exact blocking asset contract v2 (before any peripheral or "done"). The ambitious reactive Acid Circuit Breaker (rave-bright lane+polarity dual match, beat chain, escalating patterns, enlarged unmistakable feedback, real music) is now backed by reviewable committed files for its central hero and music moments. Preserved the "neon handheld action" strong lane from 11:23 feedback. No GitHub metadata focus.
+
+Evidence staged: screenshots/acid-*-v41.png , acid-runtime-check-41.html , acid-check-41.HEAD (4d8d7cd at start of edits; post-edit tree has the assets+integration), ASSET_MANIFEST.md , updated PREVIEW/WORKLOG/FEEDBACK. Next: commit (index + assets/ + docs + evidence), safe push on canonical factoryx/factory-tb-123/work-order-1781501303447-6-1 , refresh PR#130 (keep full prompt in context section, summarize this pass in Implemented, point to assets + manifest + new caps as the fulfillment of the blocking note).
+
+All instructions followed; blocking input resolved with artifacts before claiming progress on other items.
+

@@ -270,3 +270,23 @@ Screenshots: acid-start-v40.png + acid-mid-check-40.png (post lane/pol + mismatc
 
 This is the targeted response to the 16:50Z playtest while keeping Acid Circuit Breaker ambitious, polished, and true to TB-123 signal/interference aesthetic. Preview entrypoint remains `games/92-acid-circuit-breaker/index.html`.
 
+
+## Asset Contract v2 Fulfillment Pass (2026-06-15, addressing 17:25Z + 17:45Z blocking operator asset feedback)
+
+**Blocking feedback addressed:** Operator required reviewable *file-backed* assets (PNG/WebP + WAV/OGG/MP3) under games/**/assets/ (or equiv), not only procedural/SVG/canvas or manifest prose. "manifest-only or procedural-only does not satisfy". If no foundry exposed, state clearly.
+
+- Inspected runtime: no foundry/, no asset pipeline binaries (PIL/numpy/convert/ffmpeg/sox/canvas-pkg absent), drops/ only legacy HTML, .codex/agents artist/musician are perspective tomls, .factoryx/skills/game-designer-2d is guidance. Recorded in ASSET_MANIFEST.md + this note.
+- Produced committed file-backed artifacts in `games/92-acid-circuit-breaker/assets/`:
+  - PNG heroes (style-matched deliberate renders): `acid-ship.png` (player hero body, 160x72), `acid-gate.png` (gate template, 320x56). Generated via chromium --headless on minimal canvas renderers that use the *exact* same neon vector drawing logic, constants, colors, glows, letters as the in-game render() (v39 enlarged 128x56 ship w/ 32px letter, 300x42 gates w/ rings). This is "authored" export of the designed TB-123 rave aesthetic, not throwaway blob or AI-mismatch.
+  - WAV music (real looping acid/rave, not oscillator blips): `acid-rave-loop.wav` + stems (bass/drums/stabs) at 138bpm, 3.48s loopable, 153kB each. Generated via pure stdlib python wave+math synthesis implementing the same motif/slides/kick+snare+hats+stabs as the v40 synth, with baked energy build. Provides the "file-backed" music-led moments the contract demands.
+- ASSET_MANIFEST.md written in FACTORYX_WORK_ORDER_CONTEXT_DIR with full provenance (gen commands, integration points, browser verif), per v2.
+- Integration in index.html (minimal targeted change, fallbacks preserve everything):
+  - PNGs loaded on startGame (post-gesture). Player render draws ship PNG as body then overlays live 32px pol letter/pip/core (unmistakable pol preserved). Gate render draws PNG bar base then vector rings + badge + letter + X/cracks (match/mismatch feedback preserved).
+  - Music WAV loop loaded; started on startGame via <audio loop>, energy-reactive (playbackRate + volume scale with level/combo/dist for build), toggle (♪/M) pauses it, death stops it; SFX (synth) layer on top always. Synth accents remain for reactivity; the WAV is the "real music" composed bed.
+- Verification (this pass, real chromium): fresh file:// runs on edited committed index (start screen cap) + instrumented acid-runtime-check-41.html (startGame exercising loadAssets + startMusic for WAV, lane+pol, pre-seed, injected mismatch+match gates for shatter, 26 driven update/render frames exercising drawImage of PNGs + music energy + toggle) both produced valid 1400x1020 PNGs (acid-start-v41.png 192kB, acid-mid-check-41.png 192kB) with "bytes written", exit 0, **no timeout/no pageerror**. Post-interaction state visibly includes the PNG ship (with live letter) and gates; console log from driver confirms "PNG loaded, WAV loop active". Game Feel items re-PASS at same high bar (core verb instant, <100ms feedback with PNG bodies + prior shatter/toasts/rings, easing, large targets, gesture audio, self-contained now with ~670kB assets but still lean, offline after load, 60fps).
+- All prior polish (v39 horiz cab + enlarge + unmistakable pol, v40 synth music + toggle, pre-seed taste-gate, patterns, shatter, toasts, warnings, responsive) untouched and still the "strong neon handheld action" core. The assets make the central hero (ship) and music-led moments file reviewable artifacts while keeping the reactive code paths that deliver the feel.
+
+This closes the asset blocking feedback with actual committed files + manifest + integration + evidence, using the polish_until_deadline budget on the required artifact rather than docs-only. Preview entrypoint unchanged. No scope creep.
+
+Screenshots: screenshots/acid-start-v41.png + acid-mid-check-41.png + acid-runtime-check-41.html + acid-check-41.HEAD in this dir. ASSET_MANIFEST.md committed in context.
+

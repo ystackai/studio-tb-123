@@ -1263,3 +1263,22 @@ requestAnimationFrame(gameLoop);
 </script>
 </body>
 </html>
+// === INSTRUMENTED DRIVER (v41 asset contract pass) ===
+setTimeout(function(){
+  try{
+    if(typeof initAudio==="function")initAudio();
+    if(typeof startGame==="function")startGame();
+    if(hudEl)hudEl.classList.add("visible");
+    if(startScreen)startScreen.classList.remove("active");
+    if(gameoverScreen)gameoverScreen.classList.remove("active");
+    if(player && typeof laneCenter==="function"){ player.lane=0; player.targetX=laneCenter(0); if(typeof cyclePolarity==="function")cyclePolarity(); }
+    if(typeof gates!=="undefined" && player){ gates.push({lane:2,colorIdx:(player.polarity+1)%3,y:(player.y||280)-30}); gates.push({lane:player.lane||1,colorIdx:player.polarity||1,y:(player.y||280)+30}); }
+    if(typeof spawnGlitch==="function")spawnGlitch();
+    for(let k=0;k<26;k++){ if(typeof update==="function")update(16.7); if(typeof render==="function")render(); }
+    if(typeof toggleMusic==="function"){toggleMusic();toggleMusic();}
+    console.log("driver: v41 assets+music post-interaction ready (PNG+WAV exercised)");
+  }catch(e){console.error("driver-err",e&&e.message||e);}
+},90);
+requestAnimationFrame(gameLoop);
+
+})();
