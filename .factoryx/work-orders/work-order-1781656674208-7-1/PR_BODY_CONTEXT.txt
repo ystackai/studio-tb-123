@@ -1,0 +1,26 @@
+FactoryX Work Order Context (include this section + the full launch prompt in the canonical PR body when updating/refreshing):
+
+- Work Order: work-order-1781656674208-7-1
+- factory_id: factory-tb-123
+- project_id: tb-123
+- role_id: coder-default
+- runtime_profile: grok-build
+- deliverable_id: acid-circuit-breaker
+- preview_entrypoint: games/92-acid-circuit-breaker/index.html
+- goal: Operator feedback on approved Acid Circuit Breaker still asks for concrete changes: add a start screen/tutorial that explains mechanics, what to avoid, and how scoring/audio-reactive play works; improve the audio polish while preserving the existing game. Continue from PR https://github.com/ystackai/studio-tb-123/pull/129 and work-order-1781501303447-6-1 context. Keep the same deliverable goal, produce a reviewable PR, and include verification/preview notes.
+
+## Implemented in this iteration (on branch factoryx/factory-tb-123/work-order-1781656674208-7-1)
+- Start screen/tutorial: 4 compact panels (MECHANICS, AVOID, SCORING, AUDIO REACTIVE) with concrete explanations using game verbs and TB-123 voice. First screen now self-explanatory; START still instant to pre-seed taste-gate slice.
+- Audio polish (preserving exact existing game and track): smoothed energy ramps (lerp), start volume ramp-in, stop fade, musical "coherence" stab accent emitted on every successful BREAK (player success now has distinct sonic tie-in to the reactive acid/rave bed).
+- All prior systems (v39 cab/enlarge/rings/zaps/red mismatch, v40/v41 music+file WAV+PNG assets, pre-seed, scoring/beat-phase, patterns, controls, particles, 60fps canvas, self-contained) 100% preserved.
+- Verification: real chromium (http start cap 215kB showing tutorial legible + file:// instrumented mid 211kB exercising lane/pol/score/BREAK/accent/audio after start interaction); exit 0, no pageerror/timeout, driver confirmed paths + state advance.
+- Game Feel: full PASS (core verb <30s, <100ms feedback + accent now, easing, hit/score, gesture audio, large touch, 60fps, 643kB <2MB, no net).
+- Durable notes: .factoryx/work-orders/work-order-1781656674208-7-1/ (WORKLOG.md, PREVIEW.md, VERIFICATION.md, FEEDBACK.md, GOAL_EXECUTION_STRATEGY.md, TECHNICAL_SYSTEM_DESIGN.md) + screenshots/ + driver html updated with evidence.
+- Commit: 9791a49 on the WO branch. (Push: git push origin HEAD:factoryx/factory-tb-123/work-order-1781656674208-7-1 when auth permits; or rebase/merge forward.)
+
+## Preview
+Open games/92-acid-circuit-breaker/index.html directly. Tutorial explains; play immediately demonstrates.
+
+See VERIFICATION.md for full browser evidence and WORKLOG.md for decisions + checklist.
+
+(End of context section. Paste the original full user_query/payload prompt above or below for reviewers.)
