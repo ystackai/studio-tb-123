@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Acid Circuit Breaker — TB-123</title>
+<style>
+   *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#050508;font-family:'Courier New',monospace;color:#00FF41}
+   #game-wrapper{display:flex;justify-content:center;align-items:center;width:100%;height:100%;position:relative;flex-direction:column;padding:2px 4px;background:#020203}
+   /* v39 stronger horizontal landscape cabinet (1280x720 playfield inside 1380px cab) + thicker frame + taller bezels per contact-sheet 15:32Z + 11:50/12:18 viewport complaints; less menu-like overlay; enlarged player/gates/letters + unmistakable match zaps/rings + red X+crack mismatch; preserves rave neon handheld reactive core */
+   #cabinet{display:flex;justify-content:center;align-items:stretch;width:100%;max-width:1380px;margin:0 auto;gap:0;background:#0a0a0f;border:4px solid #1a1a22;border-radius:3px;overflow:hidden;box-shadow:0 20px 90px rgba(0,0,0,0.85),inset 0 0 0 1px #111118,0 0 0 1px #0a0a0f}
+   .cab-side{width:32px;background:linear-gradient(180deg,#0f0f13 0,#070709 50%,#0f0f13 100%);border-left:1px solid #1f1f26;border-right:1px solid #1f1f26;display:flex;align-items:center;justify-content:center;font-size:8px;color:#2a2a32;letter-spacing:0.08em;writing-mode:vertical-rl;text-orientation:mixed;user-select:none;flex-shrink:0}
+   .cab-side.left{border-right:none}
+   .cab-side.right{border-left:none}
+   .cab-side span{transform:rotate(180deg);text-shadow:0 1px 0 #000}
+   #game-container{position:relative;width:100%;max-width:1280px;aspect-ratio:1280/720;background:#050507;border:10px solid #181820;border-radius:2px;overflow:hidden;box-shadow:inset 0 0 0 3px #252530,0 0 0 1px #0a0a0f,0 0 0 1px #111118,0 0 110px rgba(0,255,65,0.25),0 0 220px rgba(0,255,65,0.1)}
+  canvas{display:block;width:100%;height:100%}
+   /* CRT scanline + vignette + stronger cab presence (v39) */
+   #game-container::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px),radial-gradient(circle at 50% 38%,transparent 58%,rgba(0,0,0,0.28) 94%);z-index:10}
+   /* Taller top/bottom cab bezel labels for unmistakable stronger frame + more horiz weight (less portrait/menu) */
+   .cab-bezel{position:absolute;left:0;right:0;height:24px;background:#0a0a0f;border:1px solid #1f1f26;z-index:15;font-size:9px;color:#2a2a32;letter-spacing:0.1em;display:flex;align-items:center;justify-content:center;pointer-events:none;user-select:none}
+   .cab-bezel.top{top:0;border-bottom:none}
+   .cab-bezel.bottom{bottom:0;border-top:none}
+   /* HUD */
+   #hud{position:absolute;top:0;left:0;right:0;padding:8px 12px;display:flex;justify-content:space-between;align-items:flex-start;z-index:25;pointer-events:none;opacity:0;transition:opacity 0.2s}
+   #hud.visible{opacity:1}
+   .hud-item{font-size:0.68rem;font-weight:700;text-shadow:0 0 5px currentColor;letter-spacing:0.04em}
+   .hud-score{color:#00FF41;font-size:0.98rem;font-weight:900}
+   .hud-combo{color:#FFD700;font-size:0.76rem}
+   .hud-level{color:#FF006E;font-size:0.66rem}
+   /* Touch zones — full-height vertical strips for reliable thumb play anywhere on the circuit */
+   .touch-zone{position:absolute;top:0;bottom:0;width:33.33%;pointer-events:all;z-index:30;opacity:0;transition:opacity 0.15s}
+   .touch-zone:active{opacity:0.12;background:rgba(255,255,255,0.03)}
+   #touch-left{left:0}
+   #touch-center{left:33.33%}
+   #touch-right{left:66.66%}
+   /* Labels are pure hints, anchored low and subtle so they don't fight the play area; auto-dim in play */
+   .touch-label{position:absolute;bottom:22px;color:rgba(0,255,65,0.22);font-size:1.1rem;pointer-events:none;user-select:none;transition:opacity 0.2s}
+   .touch-label.dim{opacity:0.06}
+   /* Screens — lighter gradient so circuit world reads behind title; less menu-like full block */
+   .screen{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;pointer-events:all;opacity:0;transition:opacity 0.18s;pointer-events:none;background:linear-gradient(to bottom,rgba(3,3,5,0.72) 0%,rgba(3,3,5,0.28) 38%,transparent 72%)}
+   .screen.active{opacity:1;pointer-events:all}
+   .screen-title{font-size:1.32rem;font-weight:900;letter-spacing:0.08em;text-shadow:0 0 18px #00FF41,0 0 34px #00FF41;margin:0 0 0.05rem;text-align:center;color:#00FF41;line-height:1.02}
+   .screen-subtitle{font-size:0.56rem;color:#666;margin-bottom:0.55rem;text-align:center;max-width:420px;line-height:1.25;opacity:0.82}
+   .screen-btn{padding:10px 24px;font-family:'Courier New',monospace;font-size:0.82rem;font-weight:800;color:#0a0a0a;background:#00FF41;border:none;border-radius:3px;cursor:pointer;letter-spacing:0.07em;text-transform:uppercase;box-shadow:0 0 16px rgba(0,255,65,0.5);transition:all 0.1s;min-width:148px;min-height:44px}
+   .screen-btn:hover{background:#33FF77;box-shadow:0 0 26px rgba(0,255,65,0.75);transform:scale(1.02)}
+   .screen-btn:active{transform:scale(0.97)}
+   .final-score{font-size:1.95rem;color:#FF006E;text-shadow:0 0 13px #FF006E;margin:0.15rem 0}
+   .final-combo{font-size:0.78rem;color:#FFD700;margin-bottom:0.95rem}
+   .controls-hint{font-size:0.52rem;color:#444;margin-top:0.45rem;text-align:center;line-height:1.25;opacity:0.65}
+   @media(max-width:1080px){
+     #cabinet{border:none;border-radius:0;background:transparent;box-shadow:none}
+     .cab-side{display:none}
+     .cab-bezel{display:none}
+     #game-container{border-radius:0;border:5px solid #15151c;max-width:100%}
+     .screen-title{font-size:1.22rem}
+   }
+   @keyframes neon-pulse{0%,100%{text-shadow:0 0 20px #00FF41,0 0 40px #00FF41}50%{text-shadow:0 0 30px #00FF41,0 0 60px #00FF41,0 0 80px #00FF41}}
+   .screen-title{animation:neon-pulse 2s ease-in-out infinite}
+   @keyframes beat-flash{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+   .beat-flash{animation:beat-flash 0.15s ease-out}
+   /* Music toggle — small, high-z overlay top-right (avoids main touch strips for lane/pol); toggle-safe for real music per 16:50 feedback */
+   .music-toggle{position:absolute;top:6px;right:8px;z-index:55;background:rgba(10,10,15,0.75);color:#0f0;border:1px solid #2a2a32;font-family:'Courier New',monospace;font-size:13px;line-height:1;padding:3px 7px;min-width:28px;min-height:28px;border-radius:2px;cursor:pointer;opacity:0.75;transition:opacity .1s,background .1s;user-select:none}
+   .music-toggle:hover{opacity:1;background:rgba(0,255,65,0.12)}
+   .music-toggle.muted{opacity:0.4;text-decoration:line-through}
+   /* Tutorial on start: compact skimmable panels per follow-on operator feedback. Explains mechanics, hazards, scoring, audio-reactive play while keeping START instant and world faintly visible. Lightweight, reuses neon/CRT language. */
+   .tut-wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 7px;max-width:1020px;margin:2px 0 6px;padding:0 4px}
+   .tut-col{flex:1 1 200px;min-width:162px;background:rgba(8,8,12,0.62);border:1px solid #1f1f26;padding:3px 6px;font-size:0.55rem;line-height:1.16;color:#9cf;letter-spacing:0.015em;text-align:left;border-radius:1px}
+   .tut-col strong{display:block;color:#0f0;font-size:0.59rem;margin-bottom:1px;letter-spacing:0.05em;font-weight:800}
+   @media(max-width:1080px){.tut-col{font-size:0.52rem}.tut-col strong{font-size:0.56rem}}
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+   <!-- v39: landscape 1280x720 + 1380px cab + tall bezels + enlarged unmistakable elements (player 128x56/gates 300x42/letters 32/30) + zap feedback; addresses portrait/menu constraints while keeping rave core -->
+   <div id="cabinet">
+    <div class="cab-side left"><span>TB-123</span></div>
+    <div id="game-container">
+     <div class="cab-bezel top">ACID-92 // TB-123 NEON POLARITY RACE</div>
+     <canvas id="gameCanvas" width="1280" height="720"></canvas>
+     <!-- HUD -->
+     <div id="hud">
+       <div class="hud-item hud-score" id="hud-score">0</div>
+       <div class="hud-item hud-level" id="hud-level">LVL 1</div>
+       <div class="hud-item hud-combo" id="hud-combo"></div>
+     </div>
+     <!-- Music toggle (top-right overlay; M key also works). Provides real looping acid/rave soundtrack toggle per 16:50 marcus feedback; SFX remain layered on top -->
+     <button id="music-toggle" class="music-toggle" title="Toggle acid soundtrack (M)">♪</button>
+     <!-- Touch zones for mobile -->
+     <div class="touch-zone" id="touch-left"><span class="touch-label">◀</span></div>
+     <div class="touch-zone" id="touch-center"><span class="touch-label">●</span></div>
+     <div class="touch-zone" id="touch-right"><span class="touch-label">▶</span></div>
+     <!-- Start screen (tutorial enhanced per operator follow-on: explains mechanics, what to avoid, scoring, audio-reactive play; keeps pre-seed taste-gate + instant START; world visible behind lighter overlay) -->
+     <div class="screen active" id="start-screen">
+       <div class="screen-title">ACID CIRCUIT<br>BREAKER</div>
+       <div class="tut-wrap">
+         <div class="tut-col"><strong>MECHANICS</strong>Left/Right (or A/D) to race lanes. Center tap or SPACE flips polarity (G/P/B). Match BOTH the gate's lane position AND its letter/color to BREAK it for points.</div>
+         <div class="tut-col"><strong>AVOID</strong>! glitches are lethal acid interference — dodge or die. Wrong lane or wrong polarity on a gate drops your combo (red LANE or POLARITY toast shows why).</div>
+         <div class="tut-col"><strong>SCORING</strong>Chain matches for rising xN multipliers. Cross gates near the pulsing beat for bonus BREAKs + surge. Grab gold pulses to fuel combo and score.</div>
+         <div class="tut-col"><strong>AUDIO REACTIVE</strong>Acid/rave loop + synth layers build energy the longer you survive and the higher your combo/level gets. Track gets faster, brighter, denser. ♪/M toggles (gesture first).</div>
+       </div>
+       <button class="screen-btn" id="btn-start">START — DROP IN</button>
+       <div class="controls-hint">←→ / A D : lane &nbsp; ● / SPACE : polarity &nbsp; M : music &nbsp; Match lane+letter to BREAK</div>
+     </div>
+     <!-- Game over screen -->
+     <div class="screen" id="gameover-screen">
+       <div class="screen-title">CIRCUIT<br>OVER</div>
+       <div class="final-score" id="final-score">0</div>
+       <div class="final-combo" id="final-combo"></div>
+       <button class="screen-btn" id="btn-restart">RETRY</button>
+     </div>
+     <div class="cab-bezel bottom">MATCH LANE + POLARITY TO BREAK • DODGE • CHAIN ON THE BEAT</div>
+   </div>
+   </div><!-- /#game-container -->
+  </div><!-- /#cabinet -->
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ── Constants ──
+const W=1280, H=720; // v39: landscape horiz playfield (1280x720) + stronger 1380 cab frame + enlarged player/gates/letters for unmistakable polarity per 15:32Z + 11:50/12:18 feedback; more viewport, less portrait tunnel
+const LANE_COUNT=3;
+const LANE_W=W/LANE_COUNT;
+const PLAYER_W=128, PLAYER_H=56; // enlarged further for new scale + glanceable 32px letter
+const GATE_H=42;
+const GLITCH_W=100, GLITCH_H=40;
+const PULSE_R=20;
+const LANE_COLORS=['#00FF41','#FF006E','#3A86FF'];
+const LANE_NAMES=['G','P','B'];
+const BG_COLOR='#050507';
+const TRACE_COLOR='#111118';
+
+// ── Canvas & Context ──
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+
+// ── DOM refs ──
+const hudEl=document.getElementById('hud');
+const hudScore=document.getElementById('hud-score');
+const hudLevel=document.getElementById('hud-level');
+const hudCombo=document.getElementById('hud-combo');
+const startScreen=document.getElementById('start-screen');
+const gameoverScreen=document.getElementById('gameover-screen');
+const finalScoreEl=document.getElementById('final-score');
+const finalComboEl=document.getElementById('final-combo');
+const btnStart=document.getElementById('btn-start');
+const btnRestart=document.getElementById('btn-restart');
+const musicToggle=document.getElementById('music-toggle');
+
+// ── Game state ──
+let state='START';
+let player={lane:1,polarity:1,x:W/2,y:H-190,targetX:W/2,alpha:1};
+let gates=[],glitches=[],pulses=[],particles=[],breaks=[],toasts=[],warnings=[],polRings=[],matchPops=[];
+let score=0,combo=0,maxCombo=0,level=1,speed=2.5,dist=0;
+let spawnTimer=0,difficultyTimer=0;
+let bgOffset=0,circuitLines=[],lastBeatTime=0;
+let shakeX=0,shakeY=0,shakeDecay=0;
+let flashAlpha=0,flashColor='#fff';
+let gameTime=0;
+let lastSuccessTime=0; // for idle combo decay + beat-phase bonuses
+// Music state (real generated looping acid/rave, toggle-safe, gesture-gated, SFX layered; addresses 16:50 marcus feedback)
+let musicEnabled=true;
+let noiseBuffer=null;
+let musicGain=null, bassOsc=null, bassFilter=null, bassVca=null;
+let musicStep=0, musicNextTime=0;
+
+// File-backed assets (PNG heroes + WAV music loops/stems) per 17:25Z/17:45Z asset contract v2.
+// Generated deliberately (chromium canvas export of exact game vector style for visuals; python stdlib wave synthesis for 138bpm acid audio).
+// See ASSET_MANIFEST.md in Work Order context. Vector + synth fallbacks keep everything playable if assets unavailable.
+let shipImg=null, gateImg=null;
+let musicAudio=null; // looped <audio> element for the committed acid-rave-loop.wav (energy-reactive via rate/volume; SFX stay crisp on top)
+
+function laneCenter(i){return LANE_W*i+LANE_W/2;}
+
+// ── Audio engine (Web Audio API, only after user gesture) ──
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx){
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+   }
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  // Prepare shared white noise buffer once for convincing drum voices (kick/hat/snare) — real music layer
+  if(!noiseBuffer && audioCtx){
+    const len = Math.floor(audioCtx.sampleRate * 1.2);
+    noiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for(let i=0; i<len; i++) data[i] = Math.random() * 2 - 1;
+  }
+}
+function playTone(freq,dur,type,vol){
+  if(!audioCtx)return;
+  try{
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    o.type=type||'square';
+    o.frequency.setValueAtTime(freq,audioCtx.currentTime);
+    g.gain.setValueAtTime(vol||0.06,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur);
+   }catch(e){}
+}
+function sfxCollect(){
+  playTone(880,0.1,'sine',0.09);
+  setTimeout(()=>playTone(1320,0.12,'sine',0.05),60);
+}
+function sfxGatePass(){playTone(440,0.12,'square',0.06);}
+function sfxGlitchHit(){
+  playTone(100,0.35,'sawtooth',0.1);
+  playTone(70,0.4,'square',0.06);
+}
+function sfxLevelUp(){
+  playTone(523,0.08,'sine',0.07);
+  setTimeout(()=>playTone(659,0.08,'sine',0.07),70);
+  setTimeout(()=>playTone(784,0.12,'sine',0.09),140);
+}
+function sfxPolarity(){
+  playTone(720,0.04,'square',0.05);
+  setTimeout(()=>playTone(920,0.05,'square',0.04),25);
+}
+
+// ── Real generated acid/rave music system (looping soundtrack, not blips) ──
+// Addresses marcus 16:50 blocking: "real looping soundtrack... acid/rave-style bassline, drums or rhythm, harmonic/melodic movement, build energy during play... feel composed/generated as music, not only beeps". Toggle-safe, browser-safe (pure WAAPI), gesture only, SFX layered on top of music.
+const MUSIC_BPM = 138;
+const MUSIC_STEP_SEC = (60 / MUSIC_BPM) / 4; // 16th-note steps
+const BASS_SCALE = [41.20, 46.25, 51.91, 55.00, 61.74, 69.30, 77.78, 82.41]; // low E/F/G-ish for squelchy 303 territory
+// 16-step acid bass motif (repeats, with slides on some). Indices into scale.
+const BASS_PAT = [0,0,3, 3,5, 7,5,3,  0,2,3, 5, 2,3,5,7];
+function startMusic(){
+  if(!musicEnabled || !audioCtx) return;
+  try{
+    if(!musicGain){
+      musicGain = audioCtx.createGain();
+      musicGain.gain.value = 0.72;
+      // slight compression feel via master
+      const comp = audioCtx.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value=12; comp.ratio.value=4; comp.attack.value=0.003; comp.release.value=0.12;
+      musicGain.connect(comp); comp.connect(audioCtx.destination);
+    }
+    // Persistent acid bass voice: saw + resonant lowpass (the "303" heart) + VCA
+    if(!bassOsc){
+      bassOsc = audioCtx.createOscillator(); bassOsc.type = 'sawtooth'; bassOsc.frequency.value = BASS_SCALE[0];
+      bassFilter = audioCtx.createBiquadFilter(); bassFilter.type = 'lowpass'; bassFilter.frequency.value = 820; bassFilter.Q.value = 13.5;
+      bassVca = audioCtx.createGain(); bassVca.gain.value = 0.58;
+      // subtle LFO for movement on filter (rave wobble)
+      const lfo = audioCtx.createOscillator(); lfo.type='sine'; lfo.frequency.value = 0.22;
+      const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 220;
+      lfo.connect(lfoGain); lfoGain.connect(bassFilter.frequency);
+      lfo.start();
+      // chain
+      bassOsc.connect(bassFilter); bassFilter.connect(bassVca); bassVca.connect(musicGain);
+      bassOsc.start();
+    }
+    musicStep = 0;
+    musicNextTime = audioCtx.currentTime + 0.02;
+    // kick off the scheduler; advanceMusic called from game loop
+  }catch(e){}
+  // File-backed real music loop (acid-rave-loop.wav) as the composed bed per asset contract v2.
+  // The synth layer (above) provides reactive accents/build on top; file gives the "feels like real music" groove.
+  if(musicAudio){
+    try{
+      musicAudio.currentTime = 0;
+      musicAudio.volume = 0.22; // start quiet for clean ramp-in (audio polish)
+      const p = musicAudio.play();
+      if(p && p.then) p.then(()=>{ /* ramp handled by energy lerp + safety below */ }).catch(()=>{});
+      // safety ramp if energy path hasn't taken over yet
+      setTimeout(()=>{ try{ if(musicAudio && musicEnabled && state==='PLAYING' && musicAudio.volume < 0.55) musicAudio.volume = 0.58; }catch(e){} }, 160);
+    }catch(e){}
+  }
+}
+function stopMusic(){
+  if(!audioCtx || !musicGain) return;
+  try{
+    // quick fade out the music layer only (SFX untouched)
+    musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
+    musicGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.22);
+    // leave nodes; they'll be GC or reused on restart; next startMusic will ramp gain back
+    setTimeout(()=>{
+      if(musicGain) musicGain.gain.value = 0.72;
+    }, 280);
+  }catch(e){}
+  if(musicAudio){
+    try{
+      // smooth fade on stop (audio polish)
+      const ma = musicAudio;
+      const startV = ma.volume || 0.6;
+      ma.volume = startV;
+      const fade = setInterval(()=>{
+        try{
+          if(!ma) {clearInterval(fade); return;}
+          ma.volume = Math.max(0.01, ma.volume - 0.18);
+          if(ma.volume <= 0.03){ ma.pause(); ma.volume = 0.58; clearInterval(fade); }
+        }catch(e){clearInterval(fade);}
+      }, 28);
+      setTimeout(()=>{ try{ if(ma){ ma.pause(); ma.volume=0.58; } }catch(e){} }, 220);
+    }catch(e){}
+  }
+}
+function toggleMusic(){
+  musicEnabled = !musicEnabled;
+  if(musicToggle){
+    if(musicEnabled) musicToggle.classList.remove('muted'); else musicToggle.classList.add('muted');
+  }
+  if(state === 'PLAYING'){
+    if(musicEnabled){ startMusic(); } else { stopMusic(); }
+  }else if(musicAudio){
+    // allow toggle before start for user preference; actual play happens on gesture start
+    try{ if(!musicEnabled) musicAudio.pause(); }catch(e){}
+  }
+}
+function playDrumVoice(kind, t, vel){
+  if(!audioCtx || !noiseBuffer) return;
+  try{
+    if(kind==='kick'){
+      // synth kick: pitch-dropping sine + click + short noise tail
+      const o = audioCtx.createOscillator(); o.type='sine'; o.frequency.value=142;
+      o.frequency.setValueAtTime(142, t); o.frequency.linearRampToValueAtTime(46, t+0.32);
+      const g = audioCtx.createGain(); g.gain.value = 0.0;
+      g.gain.setValueAtTime(1.0*vel, t);
+      g.gain.linearRampToValueAtTime(0.0001, t+0.55);
+      const lp = audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=780;
+      // click transient
+      const ck = audioCtx.createOscillator(); ck.type='square'; ck.frequency.value=920;
+      const ckG = audioCtx.createGain(); ckG.gain.value=0.6*vel;
+      ckG.gain.linearRampToValueAtTime(0.0001, t+0.032);
+      ck.connect(ckG); ckG.connect(musicGain);
+      o.connect(lp); lp.connect(g); g.connect(musicGain);
+      o.start(t); o.stop(t+0.7);
+      ck.start(t); ck.stop(t+0.05);
+      // noise tail
+      const ns = audioCtx.createBufferSource(); ns.buffer=noiseBuffer;
+      const nsG = audioCtx.createGain(); nsG.gain.value=0.35*vel;
+      nsG.gain.linearRampToValueAtTime(0.0001, t+0.18);
+      const nsLp = audioCtx.createBiquadFilter(); nsLp.type='lowpass'; nsLp.frequency.value=420;
+      ns.connect(nsLp); nsLp.connect(nsG); nsG.connect(musicGain);
+      ns.start(t); ns.stop(t+0.22);
+    }else if(kind==='hat'){
+      const ns = audioCtx.createBufferSource(); ns.buffer=noiseBuffer;
+      const hp = audioCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=5200;
+      const bp = audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=7800; bp.Q.value=1.6;
+      const g = audioCtx.createGain(); g.gain.value = 0.38*vel;
+      const decay = (vel>0.7?0.14:0.055);
+      g.gain.setValueAtTime(0.38*vel, t);
+      g.gain.linearRampToValueAtTime(0.0001, t+decay);
+      ns.connect(hp); hp.connect(bp); bp.connect(g); g.connect(musicGain);
+      ns.start(t); ns.stop(t+decay+0.03);
+    }else if(kind==='snare'){
+      const ns = audioCtx.createBufferSource(); ns.buffer=noiseBuffer;
+      const bp = audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=920; bp.Q.value=1.1;
+      const g = audioCtx.createGain(); g.gain.value=0.65*vel;
+      g.gain.setValueAtTime(0.65*vel, t);
+      g.gain.linearRampToValueAtTime(0.0001, t+0.28);
+      // body tone
+      const bo = audioCtx.createOscillator(); bo.type='triangle'; bo.frequency.value=168;
+      const boG = audioCtx.createGain(); boG.gain.value=0.5*vel;
+      boG.gain.linearRampToValueAtTime(0.0001, t+0.18);
+      ns.connect(bp); bp.connect(g); g.connect(musicGain);
+      bo.connect(boG); boG.connect(musicGain);
+      ns.start(t); ns.stop(t+0.32);
+      bo.start(t); bo.stop(t+0.25);
+    }
+  }catch(e){}
+}
+function playBassNote(t, idx, doSlide, accent){
+  if(!audioCtx || !bassOsc || !bassFilter || !bassVca) return;
+  try{
+    const target = BASS_SCALE[ Math.max(0, Math.min(BASS_SCALE.length-1, idx)) ];
+    const cur = bassOsc.frequency.value || target;
+    // acid slide/portamento on selected steps
+    bassOsc.frequency.cancelScheduledValues(t);
+    if(doSlide){
+      bassOsc.frequency.setValueAtTime(cur, t);
+      bassOsc.frequency.linearRampToValueAtTime(target, t + 0.095);
+    }else{
+      bassOsc.frequency.setValueAtTime(target, t);
+    }
+    // squelch filter env + vca bump for "note on" character (composed movement)
+    const baseCut = 780 + (accent ? 260 : 0);
+    bassFilter.frequency.cancelScheduledValues(t);
+    bassFilter.frequency.setValueAtTime(440, t);
+    bassFilter.frequency.linearRampToValueAtTime(baseCut + (musicStep%3===0 ? 180:0), t + (accent?0.22:0.14));
+    bassVca.gain.cancelScheduledValues(t);
+    const peak = accent ? 0.82 : 0.62;
+    bassVca.gain.setValueAtTime(peak, t);
+    bassVca.gain.linearRampToValueAtTime(0.52, t + 0.09);
+  }catch(e){}
+}
+function playMelodicStab(t, idx, vel){
+  if(!audioCtx) return;
+  try{
+    // short bright stab for harmonic/melodic interest (rave "hoover" or chord hit feel, detuned pair)
+    const f = BASS_SCALE[idx] * 4.0; // two octaves up
+    const o1 = audioCtx.createOscillator(); o1.type='sawtooth'; o1.frequency.value = f;
+    const o2 = audioCtx.createOscillator(); o2.type='sawtooth'; o2.frequency.value = f * 1.007; // detune
+    const g = audioCtx.createGain(); g.gain.value = 0.0;
+    const lp = audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 2400;
+    g.gain.setValueAtTime(0.18*vel, t);
+    g.gain.linearRampToValueAtTime(0.0001, t+0.18);
+    const g2 = audioCtx.createGain(); g2.gain.value=0.6;
+    o1.connect(g2); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(musicGain);
+    o1.start(t); o2.start(t); o1.stop(t+0.22); o2.stop(t+0.22);
+  }catch(e){}
+}
+function advanceMusic(){
+  if(!musicEnabled || !audioCtx || state!=='PLAYING' || !musicGain) return;
+  const now = audioCtx.currentTime;
+  // schedule 2-3 steps ahead to avoid jitter
+  let scheduled = 0;
+  while(musicNextTime < now + 0.18 && scheduled < 3){
+    playMusicStep(musicStep, musicNextTime);
+    musicStep = (musicStep + 1) % 16;
+    musicNextTime += MUSIC_STEP_SEC;
+    scheduled++;
+  }
+}
+function playMusicStep(step, t){
+  if(!audioCtx) return;
+  const bar = Math.floor(step / 4);
+  const inBar = step % 4;
+  const energy = Math.min(0.35 + (level-1)*0.09 + (combo>5 ? 0.18 : 0) + (dist>6000?0.12:0), 0.95);
+  // DRUMS — solid 4/4 groove with building density
+  if(step % 4 === 0){
+    playDrumVoice('kick', t, 0.95 + (energy>0.6?0.08:0));
+  }
+  if(step % 4 === 2){
+    playDrumVoice('snare', t + 0.004, 0.72);
+  }
+  // hats: base off-beat + extra density when energy high
+  if(step % 2 === 1){
+    playDrumVoice('hat', t, 0.55);
+  }
+  if(energy > 0.55 && (step % 2 === 0) && Math.random() < 0.6){
+    playDrumVoice('hat', t + MUSIC_STEP_SEC*0.5, 0.36);
+  }
+  if(energy > 0.72 && step % 4 === 3){
+    playDrumVoice('hat', t + 0.01, 0.42); // open-ish accent
+  }
+  // BASSLINE — real melodic movement + slides (the acid heart)
+  const patIdx = BASS_PAT[step];
+  const doSlide = (step % 4 === 1) || (step % 8 === 6);
+  const accent = (step % 4 === 0) || (step === 7) || (step === 15);
+  playBassNote(t + (doSlide?0.003:0), patIdx, doSlide, accent);
+  // occasional filter "sweep" accents for build (energy dependent)
+  if(accent && energy > 0.5 && bassFilter){
+    try{
+      bassFilter.frequency.setValueAtTime(bassFilter.frequency.value, t);
+      bassFilter.frequency.linearRampToValueAtTime(1250 + energy*280, t + 0.07);
+    }catch(e){}
+  }
+  // MELODIC STABS / harmonic layer — gives "composed" feel and movement, appears more as level/energy rise
+  if(step % 8 === 3 && energy > 0.45){
+    playMelodicStab(t + 0.002, (patIdx + 2) % BASS_SCALE.length, 0.7 + energy*0.2);
+  }
+  if(step % 16 === 11 && energy > 0.65){
+    playMelodicStab(t + 0.001, (patIdx + 4) % BASS_SCALE.length, 0.55);
+    playMelodicStab(t + 0.012, (patIdx + 5) % BASS_SCALE.length, 0.4);
+  }
+  // Level-up or high-combo "build" moment: quick rising filter + extra perc on the downbeat
+  if(step % 16 === 0 && level >= 3){
+    try{
+      if(bassFilter){
+        bassFilter.frequency.setValueAtTime(620, t);
+        bassFilter.frequency.linearRampToValueAtTime(1380, t + 0.16);
+      }
+      if(energy > 0.7) playDrumVoice('hat', t + MUSIC_STEP_SEC * 0.25, 0.5);
+    }catch(e){}
+  }
+}
+
+// ── File-backed asset loading (PNG ship/gate + WAV music loop) — gesture-safe, with vector/synth fallbacks
+function loadAssets(){
+  try{
+    if(!shipImg){ shipImg=new Image(); shipImg.src='assets/acid-ship.png'; }
+    if(!gateImg){ gateImg=new Image(); gateImg.src='assets/acid-gate.png'; }
+  }catch(e){}
+  // Music loop (the "real" file-backed acid/rave soundtrack). Plays looped when enabled; energy modulates rate+vol for build during play.
+  // Layered with (or augments) the synth SFX/accents; toggle and death stop only the music layer.
+  if(!musicAudio){
+    try{
+      musicAudio = new Audio('assets/acid-rave-loop.wav');
+      musicAudio.loop = true;
+      musicAudio.volume = 0.76;
+      // If using WAAPI for filter/energy (recommended for build), would create MediaElementSource here, but simple props keep it robust for file://+http.
+    }catch(e){ musicAudio=null; }
+  }
+}
+
+// ── Spawning ──
+function spawnGate(){
+  const lane=Math.floor(Math.random()*LANE_COUNT);
+  const colorIdx=Math.floor(Math.random()*LANE_COUNT);
+  gates.push({lane,colorIdx,y:-GATE_H});
+}
+function spawnGlitch(){
+  const lane=Math.floor(Math.random()*LANE_COUNT);
+  glitches.push({lane,x:laneCenter(lane),y:-GLITCH_H,speed:speed*1.3+Math.random()*0.8});
+  warnings.push({lane,life:0.32}); // brief top-of-lane telegraph for incoming threat
+}
+function spawnPulse(){
+  const lane=Math.floor(Math.random()*LANE_COUNT);
+  pulses.push({lane,x:laneCenter(lane),y:-PULSE_R,speed:speed*1.1});
+}
+
+// ── Particles ──
+function emitParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const angle=Math.random()*Math.PI*2;
+    const spd=1+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd-1,life:1,decay:0.015+Math.random()*0.025,color,size:2+Math.random()*4});
+   }
+}
+
+// ── Input ──
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(state==='START')startGame();
+    else if(state==='GAMEOVER')restartGame();
+    else if(state==='PLAYING')cyclePolarity();
+   }
+  if(state==='PLAYING'){
+    if((e.code==='ArrowLeft'||e.code==='KeyA')&&player.lane>0){
+      player.lane--;player.targetX=laneCenter(player.lane);
+      emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4);
+     }
+    if((e.code==='ArrowRight'||e.code==='KeyD')&&player.lane<LANE_COUNT-1){
+      player.lane++;player.targetX=laneCenter(player.lane);
+      emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4);
+     }
+   }
+  if((e.code==='KeyM'||e.code==='KeyN')){
+    e.preventDefault();
+    initAudio();
+    toggleMusic();
+  }
+});
+
+document.getElementById('touch-left').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  if(state==='START'){startGame();return;}
+  if(state==='GAMEOVER'){restartGame();return;}
+  if(state==='PLAYING'&&player.lane>0){
+    player.lane--;player.targetX=laneCenter(player.lane);
+    emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4);
+   }
+});
+document.getElementById('touch-right').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  if(state==='START'){startGame();return;}
+  if(state==='GAMEOVER'){restartGame();return;}
+  if(state==='PLAYING'&&player.lane<LANE_COUNT-1){
+    player.lane++;player.targetX=laneCenter(player.lane);
+    emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4);
+   }
+});
+document.getElementById('touch-center').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  if(state==='START'){initAudio();startGame();return;}
+  if(state==='GAMEOVER'){initAudio();restartGame();return;}
+  if(state==='PLAYING')cyclePolarity();
+});
+
+// Canvas-level pointer zones (full height, any Y). Div zones still work for the visual hint taps.
+canvas.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const cx=(e.clientX-rect.left)/rect.width*W;
+  const third=W/3;
+  if(state==='START'){initAudio();startGame();return;}
+  if(state==='GAMEOVER'){initAudio();restartGame();return;}
+  if(state!=='PLAYING')return;
+  if(cx < third){
+    if(player.lane>0){ player.lane--; player.targetX=laneCenter(player.lane); emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4); }
+  }else if(cx < third*2){
+    cyclePolarity();
+  }else{
+    if(player.lane<LANE_COUNT-1){ player.lane++; player.targetX=laneCenter(player.lane); emitParticles(player.x,player.y,LANE_COLORS[player.polarity],4); }
+  }
+});
+
+btnStart.addEventListener('click',()=>{initAudio();startGame();});
+btnRestart.addEventListener('click',()=>{initAudio();restartGame();});
+if(musicToggle){
+  musicToggle.addEventListener('click', (e)=>{ e.preventDefault(); initAudio(); toggleMusic(); });
+  if(musicEnabled) musicToggle.classList.remove('muted'); else musicToggle.classList.add('muted');
+}
+
+// ── Game control ──
+function startGame(){
+  initAudio();
+  loadAssets(); // file-backed PNG + WAV per asset contract; safe, gesture-already-done, fallbacks preserve play
+  player={lane:1,polarity:1,x:laneCenter(1),y:H-130,targetX:laneCenter(1),alpha:1};
+  gates=[];glitches=[];pulses=[];particles=[];breaks=[];toasts=[];warnings=[];polRings=[];matchPops=[];
+  score=0;combo=0;maxCombo=0;level=1;speed=3;dist=0;
+  spawnTimer=0;difficultyTimer=0;
+  bgOffset=0;circuitLines=[];
+  for(let i=0;i<8;i++){
+    circuitLines.push({x:Math.random()*W,y:Math.random()*H,h:20+Math.random()*40,speed:0.5+Math.random()*1.5});
+   }
+  hudEl.classList.add('visible');
+  startScreen.classList.remove('active');
+  gameoverScreen.classList.remove('active');
+  // dim touch hints once playing (less menu clutter per 15:32 polish)
+  document.querySelectorAll('.touch-label').forEach(el=>el.classList.add('dim'));
+  hudScore.textContent='0';
+  hudLevel.textContent='LVL 1';
+  hudCombo.textContent='';
+   // Pre-place curated obstacles/pickups so first 30s is immediately playable and demonstrates both verbs
+  // y retuned for 1280x720 landscape runway + larger sprites (v39 enlarge + horiz per contact-sheet)
+  gates.push({lane:1,colorIdx:1,y:74}); // easy first match (lane+pol)
+  gates.push({lane:0,colorIdx:2,y:203}); // requires lane switch + pol cycle
+  gates.push({lane:2,colorIdx:1,y:335}); // mismatch example
+  glitches.push({lane:0,x:laneCenter(0),y:125,speed:speed*1.2});
+  glitches.push({lane:2,x:laneCenter(2),y:277,speed:speed*1.35});
+  pulses.push({lane:1,x:laneCenter(1),y:160,speed:speed*0.9});
+  pulses.push({lane:0,x:laneCenter(0),y:312,speed:speed*1.0});
+  state='PLAYING';
+
+  // Reset timing for clean restarts and verification determinism
+  gameTime=0;
+  lastSuccessTime=0;
+  lastTime=0;
+
+  // Immediate synchronous render of pre-seeded slice. This makes the in-game state
+  // (player + gates + glitches + pulses + HUD) visible right after startGame() returns,
+  // even before the next RAF tick. Targeted to eliminate race where instrumented
+  // file:// runtime-check-N.html captures screenshot before first frame paints,
+  // which was the direct cause of prior "browser runtime verification timed out".
+  render();
+
+  // Start the real acid/rave music loop (gesture already performed via START/RETRY/center). SFX layer on top.
+  if(musicEnabled){ startMusic(); }
+  if(musicToggle){ if(musicEnabled) musicToggle.classList.remove('muted'); else musicToggle.classList.add('muted'); }
+}
+function restartGame(){startGame();}
+
+function cyclePolarity(){
+  if(state!=='PLAYING')return;
+  player.polarity=(player.polarity+1)%LANE_COUNT;
+  emitParticles(player.x,player.y-5,LANE_COLORS[player.polarity],9);
+  // unmistakable polarity switch ring (expands in new color) — immediate visual pop for lane/polarity verbs (v38 larger)
+  polRings.push({x:player.x, y:player.y, r:12, maxr:130, life:0.34, color:LANE_COLORS[player.polarity]});
+  sfxPolarity();
+}
+
+function triggerGameOver(){
+  state='GAMEOVER';
+  stopMusic();
+  sfxGlitchHit();
+  shakeDecay=18;
+  flashAlpha=0.8;flashColor='#FF006E';
+  emitParticles(player.x,player.y,'#FF006E',30);
+  emitParticles(player.x,player.y,'#FFD700',15);
+  hudEl.classList.remove('visible');
+  setTimeout(()=>{
+    finalScoreEl.textContent=score;
+    finalComboEl.textContent='Best combo: '+maxCombo+'x';
+    gameoverScreen.classList.add('active');
+   },500);
+}
+
+// ── Update ──
+function update(dt){
+  if(state!=='PLAYING')return;
+  
+  gameTime+=dt;
+  advanceMusic(); // drive the real acid/rave loop (bass+drums+stabs) — builds via level/combo/energy inside playMusicStep
+  // Energy reactivity on the file-backed music loop (rate + vol rise with survival + combo for "build energy during play")
+  // Audio polish: lerp toward target for smoother ramps, no jarring steps on level/combo jumps
+  if(musicAudio && musicEnabled){
+    try{
+      const energy = Math.min(0.98, 0.68 + (level-1)*0.07 + (combo>4 ? 0.12:0) + (dist>5000?0.08:0));
+      const tgtRate = 1.0 + (energy-0.68)*0.05;
+      const tgtVol = 0.62 + (energy-0.6)*0.28;
+      musicAudio.playbackRate += (tgtRate - musicAudio.playbackRate) * 0.13;
+      musicAudio.volume += (tgtVol - musicAudio.volume) * 0.13;
+    }catch(e){}
+  }
+  
+  // Difficulty — faster ramp
+  const newLevel=Math.floor(dist/2000)+1;
+  if(newLevel>level){
+    level=newLevel;
+    speed=2.5+level*0.5;
+    hudLevel.textContent='LVL '+level;
+    sfxLevelUp();
+    emitParticles(player.x,player.y,'#FFD700',20);
+    // Escalating patterns at level thresholds (keeps first 30s taste-gate pre-seed untouched)
+    if(level>=2){
+      const pcol=(level%3);
+      if(level%2===0){
+        // color-hold pattern: same polarity gates spread, rewards staying on one breaker setting
+        gates.push({lane:0,colorIdx:pcol,y:-GATE_H-40});
+        gates.push({lane:1,colorIdx:pcol,y:-GATE_H+70});
+        gates.push({lane:2,colorIdx:pcol,y:-GATE_H+160});
+        const gl=(pcol+1)%3;
+        glitches.push({lane:gl,x:laneCenter(gl),y:-GLITCH_H-20,speed:speed*1.45});
+        warnings.push({lane:gl,life:0.55});
+      }else{
+        // lane-hold + close threat: forces physical alignment while polarity must still flip
+        const lh=(level-1)%3;
+        gates.push({lane:lh,colorIdx:pcol,y:-GATE_H-25});
+        gates.push({lane:lh,colorIdx:(pcol+1)%3,y:-GATE_H+95});
+        const g2=(lh+2)%3;
+        glitches.push({lane:g2,x:laneCenter(g2),y:-GLITCH_H-5,speed:speed*1.55});
+        warnings.push({lane:g2,life:0.48});
+        if(Math.random()<0.7) pulses.push({lane:lh,x:laneCenter(lh),y:-PULSE_R-55,speed:speed*0.85});
+      }
+    }
+   }
+  
+  // Beat-synced difficulty
+  const beatInterval=Math.max(200,700-level*50);
+  
+  // Player movement (smooth easing)
+  const lerpSpeed=0.2;
+  player.x+=(player.targetX-player.x)*lerpSpeed;
+  
+  // Spawn gates — every ~600-1000ms
+  spawnTimer+=dt;
+  const gateInterval=Math.max(350,750-level*50);
+  if(spawnTimer>gateInterval){
+    spawnTimer=0;
+    spawnGate();
+    if(level>=1&&Math.random()<0.4+level*0.03)spawnGlitch();
+    if(level>=1&&Math.random()<0.3)spawnPulse();
+   }
+  
+  // Move gates
+  for(let i=gates.length-1;i>=0;i--){
+    const g=gates[i];
+    g.y+=speed;
+    if(g.y>H+20){gates.splice(i,1);continue;}
+    
+     // Gate passage — must match BOTH lane position and current polarity (color) to break/score
+    if(g.y+GATE_H>player.y&&g.y<player.y+PLAYER_H){
+      if(g.lane===player.lane && g.colorIdx===player.polarity){
+        // Beat-phase bonus for "chain beat-synced" flavor: crossing near the visual beat peak gives extra juice
+        const beatInterval=Math.max(200,700-level*50);
+        const beatPhase=(gameTime%beatInterval)/beatInterval;
+        const nearPeak=(beatPhase<0.16)||(1-beatPhase)<0.16;
+        const comboMult=Math.min(combo+1+(nearPeak?1:0),16);
+        const base=100;
+        const pts=Math.floor(base*comboMult*(nearPeak?1.5:1));
+        score+=pts;
+        combo=comboMult;
+        if(combo>maxCombo)maxCombo=combo;
+        lastSuccessTime=gameTime;
+        hudScore.textContent=score;
+        hudScore.classList.remove('beat-flash');
+        void hudScore.offsetWidth;
+        hudScore.classList.add('beat-flash');
+        hudCombo.textContent=combo>1?combo+'x':' ';
+        flashAlpha=nearPeak?0.65:0.38;flashColor=LANE_COLORS[g.colorIdx];
+        sfxGatePass();
+        // Audio polish: musical "coherence stab" accent on successful BREAK — ties player action to the reactive track (short, bright, uses existing stab voice)
+        if(audioCtx && musicEnabled){
+          try{ playMelodicStab((audioCtx.currentTime||0)+0.012, (g.colorIdx+4)%BASS_SCALE.length, nearPeak?0.92:0.68); }catch(e){}
+        }
+        const cx=laneCenter(g.lane);
+        // unmistakable "BREAK" pop + zap + burst (v39 larger for horiz scale + contact feedback)
+        matchPops.push({x:cx, y:g.y+GATE_H/2-2, life:0.92, color:nearPeak?'#fff':LANE_COLORS[g.colorIdx], big:nearPeak});
+        emitParticles(cx, g.y+GATE_H/2, LANE_COLORS[g.colorIdx], nearPeak?36:20);
+        if(nearPeak) emitParticles(cx+5, g.y+GATE_H/2-1, '#fff', 14);
+        // zap line from ship nose to break point for unmistakable coherence moment
+        breaks.push({x:player.x, y:player.y-PLAYER_H/2-4, life:0.38, color:nearPeak?'#fff':LANE_COLORS[g.colorIdx], w:0, zapToY:g.y+GATE_H/2, zapToX:cx});
+        // Stronger circuit-break arcs + side zaps
+        for(let k=0;k<(nearPeak?11:7);k++){
+          breaks.push({x:cx+(k-5.5)*9, y:g.y+GATE_H/2, life:0.68+Math.random()*0.18, color:nearPeak?'#fff':LANE_COLORS[g.colorIdx], w:28+Math.random()*24});
+        }
+        // remove the gate right now — it broke; no sliding past after success
+        gates.splice(i,1);
+        continue;
+       } else {
+        // Wrong lane or wrong polarity: miss, reset combo (no death; glitches are the deadly ones)
+        if(combo>0){ combo=0; hudCombo.textContent=''; }
+        const missWhy = (g.lane!==player.lane ? 'LANE' : 'POLARITY');
+        toasts.push({x:player.x+(Math.random()-0.5)*8, y:player.y-18, text:missWhy, color:'#FF5E5E', life:0.95});
+        // Punchier mismatch (v39): red X + crack + particles + flash + toast for unmistakable denial at a glance (horiz scale)
+        const gcx = laneCenter(g.lane);
+        emitParticles(gcx, g.y+GATE_H/2, '#FF5E5E', 18);
+        emitParticles(gcx-7, g.y+GATE_H/2+3, '#c00', 9);
+        flashAlpha=0.28; flashColor='#FF3355';
+        // tag for red tint + crack + X in draw
+        g._mismatchFlash = 2.4;
+        g._showX = 1.8;
+       }
+     }
+   }
+  
+  // Move glitches
+  for(let i=glitches.length-1;i>=0;i--){
+    const gl=glitches[i];
+    gl.y+=gl.speed;
+    if(gl.y>H+30){glitches.splice(i,1);continue;}
+    
+     // Collision with player
+    const px=player.x-PLAYER_W/2,py=player.y-PLAYER_H/2;
+    const gx=gl.x-GLITCH_W/2,gy=gl.y-GLITCH_H/2;
+    if(px<gx+GLITCH_W&&px+PLAYER_W>gx&&py<gy+GLITCH_H&&py+PLAYER_H>gy){
+      combo=0;hudCombo.textContent='';
+      triggerGameOver();
+      return;
+     }
+   }
+  
+  // Move pulses
+  for(let i=pulses.length-1;i>=0;i--){
+    const p=pulses[i];
+    p.y+=p.speed;
+    if(p.y>H+20){pulses.splice(i,1);continue;}
+    
+     // Collection
+    const dx=player.x-p.x,dy=player.y-p.y;
+    if(Math.sqrt(dx*dx+dy*dy)<PULSE_R+PLAYER_W/2){
+      combo++;
+      if(combo>maxCombo)maxCombo=combo;
+      const pts=50*combo;
+      score+=pts;
+      hudScore.textContent=score;
+      hudScore.classList.remove('beat-flash');
+      void hudScore.offsetWidth;
+      hudScore.classList.add('beat-flash');
+      hudCombo.textContent=combo+'x';
+      flashAlpha=0.1;flashColor='#FFD700';
+      sfxCollect();
+      emitParticles(p.x,p.y,'#FFD700',8);
+      lastSuccessTime=gameTime;
+      pulses.splice(i,1);
+     }
+   }
+  
+  // Particles
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;
+    if(p.life<=0)particles.splice(i,1);
+   }
+  
+  // Light combo decay when idle (encourages chaining; does not punish active play)
+  if(combo>1 && (gameTime-lastSuccessTime)>1400){
+    combo--;
+    hudCombo.textContent=combo>1?combo+'x':' ';
+    lastSuccessTime=gameTime; // reset window so it decays one step at a time
+  }
+  
+  // Breaker arcs decay
+  for(let i=breaks.length-1;i>=0;i--){
+    const b=breaks[i];
+    b.life-=0.028;
+    if(b.life<=0)breaks.splice(i,1);
+  }
+  // Toasts (miss feedback popups) decay + float
+  for(let i=toasts.length-1;i>=0;i--){
+    const t=toasts[i];
+    t.y-=0.35; t.life-=0.022;
+    if(t.life<=0)toasts.splice(i,1);
+  }
+  // Glitch warning telegraphs decay
+  for(let i=warnings.length-1;i>=0;i--){
+    const w=warnings[i];
+    w.life-=0.028;
+    if(w.life<=0)warnings.splice(i,1);
+  }
+  // Polarity switch rings decay (for unmistakable flip feedback)
+  for(let i=polRings.length-1;i>=0;i--){
+    const r=polRings[i];
+    r.life-=0.032; r.r += (r.maxr-r.r)*0.18;
+    if(r.life<=0)polRings.splice(i,1);
+  }
+  // Match/BREAK pops decay + rise
+  for(let i=matchPops.length-1;i>=0;i--){
+    const p=matchPops[i];
+    p.y -= 0.9; p.life -= 0.028;
+    if(p.life<=0)matchPops.splice(i,1);
+  }
+  
+  // Background circuit lines
+  bgOffset+=speed*0.5;
+  for(let i=0;i<circuitLines.length;i++){
+    const cl=circuitLines[i];
+    cl.y+=cl.speed;
+    if(cl.y>H+cl.h){cl.y=-cl.h;cl.x=Math.random()*W;}
+   }
+  
+  dist+=speed;
+  
+  // Flash fade
+  if(flashAlpha>0){
+    flashAlpha*=0.92;
+    if(flashAlpha<0.01)flashAlpha=0;
+   }
+  
+  // Screen shake decay
+  if(shakeDecay>0){
+    shakeX=(Math.random()-0.5)*shakeDecay;
+    shakeY=(Math.random()-0.5)*shakeDecay;
+    shakeDecay*=0.82;
+    if(shakeDecay<0.3)shakeDecay=0;
+   }
+}
+
+// ── Render ──
+function render(){
+  ctx.save();
+  ctx.translate(shakeX,shakeY);
+  
+  // Background
+  ctx.fillStyle=BG_COLOR;
+  ctx.fillRect(-10,-10,W+20,H+20);
+  
+  // Beat-synced background pulse (tinted to current polarity for rave-reactive feel)
+  if(state==='PLAYING'){
+    const beatInterval=Math.max(200,700-level*50);
+    const beatPhase=(gameTime%beatInterval)/beatInterval;
+    const pulse=Math.max(0,1-beatPhase*3)*0.035;
+    const pc=LANE_COLORS[player.polarity];
+    // quick hex->rgba (assumes #rrggbb)
+    const r=parseInt(pc.slice(1,3),16),g=parseInt(pc.slice(3,5),16),b=parseInt(pc.slice(5,7),16);
+    ctx.fillStyle='rgba('+r+','+g+','+b+','+pulse+')';
+    ctx.fillRect(0,0,W,H);
+   }
+  
+  // Grid / circuit traces — brighten on the beat for extra rave reactivity
+  ctx.strokeStyle=TRACE_COLOR;
+  ctx.lineWidth=1;
+  if(state==='PLAYING'){
+    const beatInterval=Math.max(200,700-level*50);
+    const beatPhase=(gameTime%beatInterval)/beatInterval;
+    if(beatPhase<0.12 || (1-beatPhase)<0.12){
+      ctx.strokeStyle='#2a2a36'; ctx.lineWidth=1.5;
+    }
+  }
+  for(let y=(bgOffset%40)-40;y<H;y+=40){
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+   }
+  for(let x=0;x<=W;x+=40){
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+   }
+  // Circuit dots
+  ctx.fillStyle='#1a1a24';
+  for(let y=(bgOffset%80)-80;y<H;y+=80){
+    for(let x=(bgOffset*0.5%80)-80;x<W;x+=80){
+      ctx.fillRect(x-1.5,y-1.5,3,3);
+     }
+   }
+  
+  // Background circuit lines (decorative)
+  if(circuitLines.length){
+    for(let i=0;i<circuitLines.length;i++){
+      const cl=circuitLines[i];
+      const ci=Math.floor(cl.x/W*3);
+      ctx.fillStyle=LANE_COLORS[ci]+'33';
+      ctx.fillRect(cl.x,cl.y,1.5,cl.h);
+     }
+   }
+  
+  // Lane indicators
+  for(let i=0;i<LANE_COUNT;i++){
+    const x=laneCenter(i);
+    ctx.strokeStyle=LANE_COLORS[i]+'12';
+    ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+    ctx.strokeStyle=LANE_COLORS[i]+'06';
+    ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+   }
+  
+  // Lane glow when player is on it — wider for v39 landscape larger viewport/lanes + cab scale
+  const plx=laneCenter(player.lane);
+  const glowGrad=ctx.createLinearGradient(plx-160,0,plx+160,0);
+  glowGrad.addColorStop(0,'transparent');
+  glowGrad.addColorStop(0.5,LANE_COLORS[player.lane]+'15');
+  glowGrad.addColorStop(1,'transparent');
+  ctx.fillStyle=glowGrad;
+  ctx.fillRect(plx-160,0,320,H);
+  
+  // Draw gates — v39 300px wide for 1280 landscape + unmistakable thick rings + red X+crack on miss (contact-sheet 15:32Z + follow-ups)
+  for(let i=0;i<gates.length;i++){
+    const g=gates[i];
+    const cx=laneCenter(g.lane);
+    const color=LANE_COLORS[g.colorIdx];
+    const isPolMatch = (g.colorIdx === player.polarity);
+    const isLaneMatch = (g.lane === player.lane);
+    ctx.save();
+    ctx.shadowColor=color;ctx.shadowBlur=32;
+    let gw = 300, gh = GATE_H;
+    // File-backed gate PNG underlay (acid-gate.png) for central "enemy/world" element per asset contract.
+    // Vector rings/badge/letter/X/cracks drawn on top for live match/mismatch state (preserves unmistakable feedback).
+    if(gateImg && gateImg.complete && gateImg.naturalWidth>0){
+      ctx.drawImage(gateImg, cx-gw/2, g.y, gw, gh);
+    }else{
+      ctx.fillStyle=color;
+      // if recent mismatch, tint the bar briefly red for denial pop
+      if(g._mismatchFlash && g._mismatchFlash>0){ ctx.fillStyle='#FF3355'; g._mismatchFlash -= 0.85; }
+      ctx.fillRect(cx-gw/2, g.y, gw, gh);
+    }
+    // Gate ends (brighter caps) — always for definition
+    ctx.fillStyle='#fff';
+    ctx.fillRect(cx-gw/2, g.y, 10, gh);
+    ctx.fillRect(cx+gw/2-10, g.y, 10, gh);
+    // When polarity matches current ship, draw unmistakable "this is breakable now" highlight ring (thicker, brighter on full match)
+    if(isPolMatch){
+      ctx.strokeStyle = isLaneMatch ? '#fff' : '#ffeb3b';
+      ctx.lineWidth = isLaneMatch ? 6 : 4;
+      ctx.strokeRect(cx-gw/2+2, g.y+1, gw-4, gh-2);
+      // extra inner cue for full ready state
+      if(isLaneMatch){
+        ctx.lineWidth=2.5; ctx.strokeRect(cx-gw/2+9, g.y+6, gw-18, gh-12);
+      }
+    }
+    // Polarity label — bold 30px for unmistakable at a glance on larger gates (letter = polarity state)
+    ctx.fillStyle=BG_COLOR;
+    ctx.fillRect(cx-20,g.y+5,40,gh-10);
+    ctx.fillStyle=color;
+    ctx.font='bold 30px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(LANE_NAMES[g.colorIdx],cx,g.y+gh/2);
+    // Punchy mismatch feedback: visible "crack" + red X on the gate when you pass wrong (unmistakable denial)
+    if(g._mismatchFlash && g._mismatchFlash>0){
+      ctx.strokeStyle='#c00'; ctx.lineWidth=1.8;
+      const cy = g.y + gh/2;
+      ctx.beginPath(); ctx.moveTo(cx-gw/2+14,cy-7); ctx.lineTo(cx+gw/2-14,cy+8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-gw/2+20,cy+6); ctx.lineTo(cx+gw/2-22,cy-5); ctx.stroke();
+    }
+    if(g._showX && g._showX>0){
+      g._showX -= 0.9;
+      ctx.strokeStyle='#f33'; ctx.lineWidth=3.5;
+      const cy = g.y + gh/2;
+      ctx.beginPath(); ctx.moveTo(cx-gw/2+22,cy-9); ctx.lineTo(cx+gw/2-22,cy+9); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-gw/2+22,cy+9); ctx.lineTo(cx+gw/2-22,cy-9); ctx.stroke();
+    }
+    ctx.restore();
+   }
+  
+  // Draw glitches — acid interference: tears + chromatic fringing
+  for(let i=0;i<glitches.length;i++){
+    const gl=glitches[i];
+    ctx.save();
+    const gx=gl.x-GLITCH_W/2, gy=gl.y-GLITCH_H/2;
+    // Base bright slab with slight shake
+    ctx.shadowColor='#FFD700';ctx.shadowBlur=10;
+    ctx.fillStyle='#fff';
+    ctx.fillRect(gx+ (Math.random()-0.5)*1.5, gy, GLITCH_W, GLITCH_H);
+    // Horizontal signal tears (acid raster break)
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#FF006E';
+    for(let j=0;j<4;j++){
+      const tx=gx + (j%2? -3:2) + Math.random()*GLITCH_W*0.6;
+      const ty=gy + 2 + j*3.5;
+      ctx.fillRect(tx, ty, 9+Math.random()*13, 2);
+    }
+    // Chromatic fringe (cyan/magenta split) for "rave glitch"
+    ctx.fillStyle='#00f7ff';
+    ctx.fillRect(gx+2, gy+2, 4, GLITCH_H-4);
+    ctx.fillStyle='#ff00aa';
+    ctx.fillRect(gx+GLITCH_W-6, gy+3, 4, GLITCH_H-6);
+    // Warning — larger for v39 horiz scale
+    ctx.fillStyle='#FFD700';
+    ctx.font='bold 20px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('!',gl.x,gl.y);
+    ctx.restore();
+   }
+  
+  // Draw pulses
+  const pulsePhase=Math.sin(gameTime*0.006)*0.3+0.7;
+  for(let i=0;i<pulses.length;i++){
+    const p=pulses[i];
+    ctx.save();
+    ctx.shadowColor='#FFD700';ctx.shadowBlur=18*pulsePhase;
+    ctx.globalAlpha=0.5+pulsePhase*0.5;
+    ctx.fillStyle='#FFD700';
+    ctx.beginPath();ctx.arc(p.x,p.y,PULSE_R*pulsePhase,0,Math.PI*2);ctx.fill();
+    // Outer ring
+    ctx.globalAlpha=0.2*pulsePhase;
+    ctx.strokeStyle='#FFD700';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(p.x,p.y,PULSE_R*2.2,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+   }
+  
+  // Draw breaker arcs + zaps (transient "circuit snap" + coherence zap from ship on successful gate breaks) v39
+  for(let i=0;i<breaks.length;i++){
+    const b=breaks[i];
+    ctx.save();
+    ctx.globalAlpha=Math.max(0.12,b.life);
+    ctx.strokeStyle=b.color;
+    if(b.zapToY){
+      // zap line from ship to gate at break moment (unmistakable polarity+lane match hit)
+      ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.zapToX, b.zapToY); ctx.stroke();
+      ctx.lineWidth=1.2; ctx.globalAlpha *= 0.6;
+      ctx.beginPath(); ctx.moveTo(b.x+2, b.y+3); ctx.lineTo(b.zapToX-1, b.zapToY-2); ctx.stroke();
+    }else{
+      ctx.lineWidth=1.8;
+      const y=b.y - (1-b.life)*11;
+      ctx.beginPath();
+      ctx.moveTo(b.x-b.w*0.5, y);
+      ctx.lineTo(b.x+b.w*0.5, y-1);
+      ctx.stroke();
+      // small return arc for "coherence" pop
+      ctx.beginPath();
+      ctx.moveTo(b.x-b.w*0.35, y+2);
+      ctx.lineTo(b.x+b.w*0.25, y+3);
+      ctx.stroke();
+    }
+    ctx.restore();
+   }
+
+  // Polarity switch rings — unmistakable immediate visual for flip action (expanding colored ring) v39
+  for(let i=0;i<polRings.length;i++){
+    const r=polRings[i];
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.12, r.life);
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.arc(r.x, r.y, Math.max(4,r.r), 0, Math.PI*2); ctx.stroke();
+    ctx.lineWidth=1.5; ctx.globalAlpha *= 0.55;
+    ctx.beginPath(); ctx.arc(r.x, r.y, Math.max(2,r.r*0.6), 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // BREAK / match pops — large rising "BREAK" text on successful dual-match for punchy reward (v39 larger for horiz)
+  for(let i=0;i<matchPops.length;i++){
+    const p=matchPops[i];
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.15, p.life);
+    ctx.fillStyle = p.color;
+    ctx.font = (p.big ? '900 26px' : '700 18px') + ' Courier New';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(p.big ? 'BREAK' : 'OK', p.x, p.y);
+    ctx.restore();
+  }
+
+  // Draw glitch warning telegraphs (top of lane, brief — makes threats readable before they arrive)
+  for(let i=0;i<warnings.length;i++){
+    const w=warnings[i];
+    const wx=laneCenter(w.lane);
+    ctx.save();
+    ctx.globalAlpha=Math.max(0.12,w.life);
+    ctx.fillStyle='#FF006E';
+    ctx.font='bold 22px Courier New';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText('!',wx,8);
+    ctx.strokeStyle='#FFD700';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(wx-9,15);ctx.lineTo(wx+9,15);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draw miss toasts (immediate "why combo broke" feedback near the action) — larger for unmistakable (v38)
+  for(let i=0;i<toasts.length;i++){
+    const t=toasts[i];
+    ctx.save();
+    ctx.globalAlpha=Math.max(0.1,t.life);
+    ctx.fillStyle=t.color;
+    ctx.font='700 21px Courier New';ctx.textAlign='center';
+    ctx.fillText(t.text,t.x,t.y);
+    ctx.restore();
+  }
+  
+  // Draw particles
+  for(let i=0;i<particles.length;i++){
+    const p=particles[i];
+    ctx.save();
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.shadowColor=p.color;ctx.shadowBlur=6;
+    ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);
+    ctx.restore();
+   }
+  
+  // Draw player — position by lane, color by active polarity (the "breaker" color you switch)
+  if(state==='PLAYING'||state==='GAMEOVER'){
+    ctx.save();
+    const pAlpha=state==='GAMEOVER'?0.35:1;
+    ctx.globalAlpha=pAlpha;
+    const pColor=LANE_COLORS[player.polarity];
+    
+    // Player glow (uses current polarity color) — stronger for new larger scale
+    ctx.shadowColor=pColor;
+    ctx.shadowBlur=state==='PLAYING'?34:10;
+    
+    // File-backed hero ship PNG (acid-ship.png) as central body asset per contract v2.
+    // Drawn first so vector letter/pip/core + glow overlays remain for live pol state + unmistakable feedback.
+    if(shipImg && shipImg.complete && shipImg.naturalWidth>0){
+      ctx.drawImage(shipImg, player.x-PLAYER_W/2, player.y-PLAYER_H/2, PLAYER_W, PLAYER_H);
+      ctx.shadowBlur=0;
+    }else{
+      // Vector fallback (original body) keeps the game 100% playable even if asset path fails
+      ctx.fillStyle=pColor;
+      ctx.fillRect(player.x-PLAYER_W/2,player.y-PLAYER_H/2,PLAYER_W,PLAYER_H);
+      ctx.shadowBlur=0;
+      ctx.fillStyle=BG_COLOR;
+      ctx.fillRect(player.x-PLAYER_W/2+6,player.y-PLAYER_H/2+6,PLAYER_W-12,PLAYER_H-12);
+    }
+    
+    // Player core (polarity) — always vector for punch
+    ctx.fillStyle=pColor;
+    ctx.beginPath();
+    ctx.arc(player.x,player.y,6,0,Math.PI*2);
+    ctx.fill();
+    
+    // Polarity LETTER directly on ship — 32px bold, unmistakable at a glance (v39 enlarged for landscape + contact-sheet)
+    ctx.fillStyle='#fff';
+    ctx.font='bold 32px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(LANE_NAMES[player.polarity],player.x,player.y-1);
+    
+    // Lane position indicator (small, shows which trace you are physically on)
+    ctx.fillStyle=LANE_COLORS[player.lane];
+    ctx.fillRect(player.x-PLAYER_W/2+16,player.y-PLAYER_H/2+PLAYER_H-6,PLAYER_W-32,5);
+    
+    // Trail (uses polarity)
+    ctx.globalAlpha=0.12;
+    const trailGrad=ctx.createLinearGradient(player.x-PLAYER_W/2-5,player.y-PLAYER_H/2-10,player.x-PLAYER_W/2-5,player.y+PLAYER_H/2+10);
+    trailGrad.addColorStop(0,'transparent');
+    trailGrad.addColorStop(0.5,pColor);
+    trailGrad.addColorStop(1,'transparent');
+    ctx.fillStyle=trailGrad;
+    ctx.fillRect(player.x-PLAYER_W/2-10,player.y-PLAYER_H/2-14,PLAYER_W+20,PLAYER_H+28);
+    
+    ctx.restore();
+   }
+  
+  // Beat indicator (bottom center)
+  if(state==='PLAYING'){
+    const beatInterval=Math.max(200,700-level*50);
+    const beatPhase=(gameTime%beatInterval)/beatInterval;
+    const beatSize=2+Math.max(0,1-beatPhase*3)*4;
+    ctx.save();
+    ctx.globalAlpha=0.5;
+    ctx.fillStyle='#00FF41';
+    ctx.beginPath();ctx.arc(W/2,H-32,beatSize+5,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=0.8;
+    ctx.beginPath();ctx.arc(W/2,H-32,beatSize,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+   }
+
+  // Polarity indicator (shows active breaker color; switch with SPACE or center tap) — larger for v39 horiz
+  if(state==='PLAYING'){
+    const pol=player.polarity, polColor=LANE_COLORS[pol];
+    const polX=W/2, polY=H-50;
+    ctx.save();
+    ctx.shadowColor=polColor;ctx.shadowBlur=26;
+    ctx.fillStyle=polColor;
+    ctx.beginPath();ctx.arc(polX,polY,20,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle=BG_COLOR;
+    ctx.beginPath();ctx.arc(polX,polY,10,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=polColor;
+    ctx.font='700 20px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(LANE_NAMES[pol],polX,polY);
+    ctx.restore();
+   }
+  
+  // Combo meter (right side) — reposition for v38 wider canvas + larger playfield
+  if(state==='PLAYING'&&combo>0){
+    ctx.save();
+    const meterH=Math.min(combo,16);
+    ctx.globalAlpha=0.4;
+    ctx.fillStyle='#FFD700';
+    ctx.fillRect(W-26,72,9,meterH*5.5);
+    ctx.globalAlpha=0.7;
+    ctx.fillStyle='#FFD700';
+    ctx.fillRect(W-25,72+(16-meterH)*5.5,7,meterH*5.5);
+    ctx.restore();
+   }
+  
+  // Flash overlay
+  if(flashAlpha>0){
+    ctx.save();
+    ctx.globalAlpha=flashAlpha;
+    ctx.fillStyle=flashColor;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+   }
+  
+  ctx.restore();
+}
+
+// ── Game Loop ──
+let lastTime=0;
+function gameLoop(timestamp){
+  if(!lastTime)lastTime=timestamp;
+  const dt=Math.min(timestamp-lastTime,33);
+  lastTime=timestamp;
+  
+  update(dt);
+  render();
+  
+  requestAnimationFrame(gameLoop);
+}
+
+// ── Start ──
+requestAnimationFrame(gameLoop);
+
+
+// --- INSTRUMENTED DRIVER for verification (exercises tutorial state is passive, then start + verbs + audio + scoring + BREAK accent) ---
+(function driver(){
+  try {
+    console.log("DRIVER: starting verification sequence");
+    // start the game (pre-seed + render + music if enabled)
+    if (typeof startGame === "function") {
+      startGame();
+      console.log("DRIVER: startGame called, state=", typeof state !== "undefined" ? state : "n/a");
+    }
+    // drive some frames and inputs
+    if (typeof update === "function" && typeof render === "function") {
+      for (let i=0; i<4; i++) { update(16); render(); }
+    }
+    // simulate lane + polarity actions (core verbs)
+    if (typeof player !== "undefined" && typeof laneCenter === "function" && typeof cyclePolarity === "function") {
+      player.lane = 0; player.targetX = laneCenter(0);
+      if (typeof emitParticles === "function") emitParticles(player.x, player.y, "#00FF41", 6);
+      cyclePolarity(); // flip
+      cyclePolarity();
+      console.log("DRIVER: lane+pol actions done, pol=", player.polarity);
+    }
+    // force a successful gate match to exercise scoring + BREAK accent + particles
+    if (typeof gates !== "undefined" && gates.length > 0 && typeof player !== "undefined") {
+      const g = gates[0];
+      g.lane = player.lane; g.colorIdx = player.polarity; g.y = player.y - 10;
+      console.log("DRIVER: injected matching gate for BREAK path");
+    }
+    // more frames to process collision/score/break/accent
+    if (typeof update === "function" && typeof render === "function") {
+      for (let i=0; i<6; i++) { update(16); render(); }
+    }
+    // toggle music (exercises polish path)
+    if (typeof toggleMusic === "function") { toggleMusic(); toggleMusic(); console.log("DRIVER: music toggled"); }
+    // final state snapshot
+    console.log("DRIVER: post-interaction score=", typeof score!=="undefined"?score:"n/a", "combo=", typeof combo!=="undefined"?combo:"n/a", "level=", typeof level!=="undefined"?level:"n/a");
+    console.log("DRIVER: verification sequence complete, no throw");
+  } catch(e){ console.error("DRIVER ERROR:", e && e.message || e); }
+})();
+})();
+</script>
+</body>
+</html>
