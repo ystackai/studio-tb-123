@@ -256,6 +256,81 @@ jobs:
             --exclude='factoryx-artifacts/' \
             -e "ssh -i ~/.ssh/factoryx_production -o StrictHostKeyChecking=accept-new" \
             "$site_dir/" "$FACTORYX_PRODUCTION_USER@$FACTORYX_PRODUCTION_HOST:$FACTORYX_PRODUCTION_ROOT/"
+      - name: Record release in FactoryX
+        shell: bash
+        env:
+          FACTORYX_ADMIN_API_BASE_URL: ${{ vars.FACTORYX_ADMIN_API_BASE_URL }}
+          FACTORYX_ADMIN_API_TOKEN: ${{ secrets.FACTORYX_ADMIN_API_TOKEN }}
+          FACTORYX_FACTORY_ID: ${{ vars.FACTORYX_FACTORY_ID }}
+          FACTORYX_PROJECT_ID: ${{ vars.FACTORYX_PROJECT_ID }}
+          FACTORYX_FACTORY_SLUG: ${{ needs.facts.outputs.factory_slug }}
+          FACTORYX_TARGET_REPO: ${{ github.repository }}
+        run: |
+          if [ -z "${FACTORYX_ADMIN_API_BASE_URL:-}" ] || [ -z "${FACTORYX_ADMIN_API_TOKEN:-}" ]; then
+            echo "FactoryX admin-api not configured (FACTORYX_ADMIN_API_BASE_URL / FACTORYX_ADMIN_API_TOKEN); skipping release record."
+            exit 0
+          fi
+          factory_id="${FACTORYX_FACTORY_ID:-factory-${FACTORYX_FACTORY_SLUG}}"
+          project_id="${FACTORYX_PROJECT_ID:-studio-${FACTORYX_FACTORY_SLUG}}"
+
+          new_slugs="$(git diff-tree --no-commit-id --name-only --diff-filter=AM -r HEAD \
+            | awk -F/ '$1=="drops" && NF>=2 {print $2}' \
+            | sort -u)"
+
+          if [ -z "$new_slugs" ]; then
+            echo "No drop directories touched in HEAD; nothing to record."
+            exit 0
+          fi
+
+          while IFS= read -r slug; do
+            [ -z "$slug" ] && continue
+            title_path="drops/$slug/index.html"
+            title=""
+            if [ -f "$title_path" ]; then
+              title="$(python3 - "$title_path" <<'PY'
+          import html, re, sys
+          from pathlib import Path
+          text = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
+          match = re.search(r"<title>([^<]+)</title>", text, re.IGNORECASE)
+          print(html.unescape(match.group(1)).strip() if match else "")
+          PY
+          )"
+            fi
+            if [ -z "$title" ]; then
+              title="$(echo "$slug" | sed -E 's/^drop-//; s/-/ /g')"
+            fi
+
+            payload="$(python3 - "$factory_id" "$project_id" "$slug" "$title" "$FACTORYX_TARGET_REPO" <<'PY'
+          import json, sys
+          payload = {
+              "factory_id": sys.argv[1],
+              "project_id": sys.argv[2],
+              "release": {
+                  "slug": sys.argv[3],
+                  "title": sys.argv[4],
+                  "target_repo": sys.argv[5],
+                  "state": "released",
+              },
+          }
+          print(json.dumps(payload))
+          PY
+          )"
+
+            echo "==> Recording release for slug=$slug"
+            http_status="$(curl -sS -o /tmp/factoryx-release.json -w '%{http_code}' \
+              -X POST "${FACTORYX_ADMIN_API_BASE_URL%/}/releases" \
+              -H "Authorization: Bearer $FACTORYX_ADMIN_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$payload")"
+            if [ "$http_status" != "200" ]; then
+              echo "CreateRelease failed for slug=$slug (HTTP $http_status):" >&2
+              cat /tmp/factoryx-release.json >&2 || true
+              exit 1
+            fi
+            cat /tmp/factoryx-release.json
+            echo
+          done <<< "$new_slugs"
+
       - name: Capture live screenshot
         shell: bash
         run: |
