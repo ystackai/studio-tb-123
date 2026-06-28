@@ -1,0 +1,28 @@
+FactoryX Work Order Context (include this section + the full launch prompt in the canonical PR body when updating/refreshing):
+
+- Work Order: work-order-1781694911130-followup
+- factory_id: factory-tb-123
+- project_id: tb-123
+- role_id: coder-default
+- runtime_profile: grok-build
+- deliverable_id: acid-circuit-breaker
+- preview_entrypoint: games/92-acid-circuit-breaker/index.html
+- goal: [see .factoryx/work-orders/work-order-1781694911130-followup/GOAL_EXECUTION_STRATEGY.md or full payload in user_query for operator follow-on requiring browser-runtime-post.png artifact + verification re-run]
+
+## Implemented in this iteration (on branch factoryx/factory-tb-123/work-order-1781694911130-followup)
+- Re-ran real browser runtime verification using chromium headless on the committed preview entrypoint.
+- Produced the exact expected artifacts: browser-runtime-start.png + browser-runtime-post.png (215kB each) from start (tutorial legible) + post-interaction driver (lane/pol/BREAK/score/accent/audio exercised).
+- Created full durable notes for this followup WO id (WORKLOG, VERIFICATION, PREVIEW, FEEDBACK, STRATEGY, TECHNICAL, ASSET_MANIFEST.md).
+- Carried forward all prior tutorial + audio polish + file-backed assets (PNG + WAV under games/92-acid-circuit-breaker/assets/) + pre-seed + cab without alteration.
+- Added ASSET_MANIFEST.md + provenance satisfying asset_contract_v2.
+- Verification: exit 0, no pageerror/timeout, driver confirmed paths + state advance + "no throw". browser-runtime-post.png now present.
+- Game Feel: full PASS (re-confirmed).
+- No game code changes (feedback addressed the missing named verification artifact, not behavior).
+- Commit + push to canonical ref; PR#132 body refreshed with context.
+
+## Preview
+Open games/92-acid-circuit-breaker/index.html directly. Tutorial explains; play immediately demonstrates.
+
+See VERIFICATION.md for full browser evidence (browser-runtime-post.png present) and WORKLOG.md for decisions + checklist.
+
+(End of context section. Paste the original full user_query/payload prompt above or below for reviewers.)
