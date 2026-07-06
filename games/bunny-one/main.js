@@ -24,6 +24,7 @@ const CAM_HOME = new THREE.Vector3(0, 4, 46);
 camera.position.copy(CAM_HOME);
 
 let camDist = CAM_HOME.z;
+const INSPECT = new URLSearchParams(location.search).has('inspect');
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false);
@@ -109,7 +110,8 @@ for (const p of PLANETS) {
       leaf.rotation.z = (i - 1) * 0.5;
       carrot.add(leaf);
     }
-    carrot.position.set(p.x, p.y + p.r + 0.35, 0);
+    carrot.position.set(p.x - 1.1, p.y + p.r + 0.1, 0.6);
+    carrot.rotation.z = 0.25;
     scene.add(carrot);
     p.carrot = carrot;
   }
@@ -136,12 +138,20 @@ const hull = new THREE.Mesh(
   new THREE.MeshStandardMaterial({ color: 0xf2e9e4, roughness: 0.4, metalness: 0.15 })
 );
 ship.add(hull);
-const nose = new THREE.Mesh(
-  new THREE.ConeGeometry(0.55, 0.8, 20),
+const antenna = new THREE.Group();
+const mast = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.035, 0.035, 0.6, 8),
   new THREE.MeshStandardMaterial({ color: 0xe07a5f, roughness: 0.5 })
 );
-nose.position.y = 1.2;
-ship.add(nose);
+const beacon = new THREE.Mesh(
+  new THREE.SphereGeometry(0.09, 12, 8),
+  new THREE.MeshStandardMaterial({ color: 0xffd166, emissive: 0x8a5a00, roughness: 0.3 })
+);
+beacon.position.y = 0.33;
+antenna.add(mast, beacon);
+antenna.position.set(0.55, 1.15, 0);
+antenna.rotation.z = -0.25;
+ship.add(antenna);
 for (let i = 0; i < 3; i++) {
   const fin = new THREE.Mesh(
     new THREE.BoxGeometry(0.1, 0.55, 0.45),
@@ -153,11 +163,18 @@ for (let i = 0; i < 3; i++) {
   ship.add(fin);
 }
 const dome = new THREE.Mesh(
-  new THREE.SphereGeometry(0.62, 24, 16, 0, Math.PI * 2, 0, Math.PI / 1.9),
+  new THREE.SphereGeometry(0.78, 24, 16, 0, Math.PI * 2, 0, Math.PI / 1.9),
   new THREE.MeshPhongMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0.22, shininess: 90 })
 );
-dome.position.y = 0.85;
+dome.position.y = 0.95;
 ship.add(dome);
+const collar = new THREE.Mesh(
+  new THREE.TorusGeometry(0.62, 0.07, 10, 28),
+  new THREE.MeshStandardMaterial({ color: 0xe07a5f, roughness: 0.45 })
+);
+collar.rotation.x = Math.PI / 2;
+collar.position.y = 0.82;
+ship.add(collar);
 const thrustLight = new THREE.PointLight(0xffa552, 0, 7);
 thrustLight.position.y = -1.2;
 ship.add(thrustLight);
@@ -165,18 +182,18 @@ scene.add(ship);
 
 // Bunny rides in the dome (normalized on load; box placeholder until then).
 const bunnySeat = new THREE.Group();
-bunnySeat.position.y = 0.62;
+bunnySeat.position.y = 0.78;
 ship.add(bunnySeat);
 new GLTFLoader().load('./models/bunny.glb', (gltf) => {
   const bunny = gltf.scene;
   const box = new THREE.Box3().setFromObject(bunny);
   const size = box.getSize(new THREE.Vector3());
-  const scale = 0.95 / Math.max(size.x, size.y, size.z);
+  const scale = 1.25 / Math.max(size.x, size.y, size.z);
   bunny.scale.setScalar(scale);
   box.setFromObject(bunny);
   const center = box.getCenter(new THREE.Vector3());
-  bunny.position.sub(center).add(new THREE.Vector3(0, 0.28, 0));
-  bunny.rotation.y = Math.PI * 0.08; // three-quarter charm angle
+  bunny.position.sub(center).add(new THREE.Vector3(0, 0.42, 0));
+  bunny.rotation.y = -Math.PI * 0.28; // three-quarter charm angle, toward camera
   bunnySeat.add(bunny);
 });
 
@@ -454,6 +471,7 @@ const DT = 1 / 120;
 
 function frame(now) {
   window.__bunny = S;
+  window.__bunnyAudio = audio;
 requestAnimationFrame(frame);
   acc += Math.min(0.1, (now - last) / 1000);
   last = now;
@@ -516,11 +534,16 @@ requestAnimationFrame(frame);
 
   // camera: framed system, gentle lean toward the bunny, decaying shake
   S.shake = Math.max(0, S.shake - 0.016);
-  const lean = tmp.copy(S.pos).multiplyScalar(0.3);
-  camera.position.x = CAM_HOME.x + lean.x * 0.4 + (Math.random() - 0.5) * S.shake;
-  camera.position.y = CAM_HOME.y + lean.y * 0.3 + (Math.random() - 0.5) * S.shake;
-  camera.position.z = camDist;
-  camera.lookAt(lean.x, lean.y, 0);
+  if (INSPECT) {
+    camera.position.set(S.pos.x + 1.5, S.pos.y + 1.2, 7);
+    camera.lookAt(S.pos.x, S.pos.y + 0.6, 0);
+  } else {
+    const lean = tmp.copy(S.pos).multiplyScalar(0.3);
+    camera.position.x = CAM_HOME.x + lean.x * 0.4 + (Math.random() - 0.5) * S.shake;
+    camera.position.y = CAM_HOME.y + lean.y * 0.3 + (Math.random() - 0.5) * S.shake;
+    camera.position.z = camDist;
+    camera.lookAt(lean.x, lean.y, 0);
+  }
 
   renderer.render(scene, camera);
 }
