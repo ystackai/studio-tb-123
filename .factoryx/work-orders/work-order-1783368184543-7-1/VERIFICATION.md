@@ -60,3 +60,18 @@
 - Three.js loaded from CDN (jsdelivr) — requires internet for initial load
 - No multi-planet gravity wells yet; simple linear thrust mechanic
 - Procedural bunny fallback used if GLB fails; GLB is the primary asset
+
+## Fix: Three.js CDN 404 (r160 → r147)
+
+**Problem:** `three@0.160.0` removed `examples/js/` paths, causing 404 for GLTFLoader.js and OrbitControls.js. Browser runtime verification failed with:
+- `__FACTORYX_BROWSER_RUNTIME_ERROR__` for `GLTFLoader.js` — resource 404
+- `__FACTORYX_BROWSER_RUNTIME_ERROR__` for `OrbitControls.js` — resource 404
+- `THREE.GLTFLoader is not a constructor` — cascading failure
+
+**Fix:** Switched all Three.js CDN URLs from `0.160.0` to `0.147.0` (last version shipping `examples/js/`), removed unused OrbitControls script tag.
+
+**Verification:**
+- `cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js` → HTTP 200 ✓
+- Chromium headless screenshot (`/tmp/bunny-orbit-title.png`, 25KB) renders title screen with bunny character ✓
+- No `__FACTORYX_BROWSER_RUNTIME_ERROR__` in new smoke test ✓
+- No GLTFLoader/OrbitControls JS errors in chromium log ✓
