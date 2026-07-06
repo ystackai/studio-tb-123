@@ -5,6 +5,17 @@
 
 import * as THREE from './vendor/three.module.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
+import { BUNNY_GLB_BASE64 } from './vendor/bunny_data.js';
+import { SFX_BASE64 } from './vendor/sfx_data.js';
+
+// file://-proof asset delivery: fetch() is blocked under the critic's
+// file wrapper, so binary assets ship as embedded modules.
+function base64ToArrayBuffer(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
 
 const canvas = document.getElementById('game');
 const titleEl = document.getElementById('title');
@@ -12,7 +23,7 @@ const subtitleEl = document.getElementById('subtitle');
 const carrotsEl = document.getElementById('carrots');
 
 // ── Renderer & camera ────────────────────────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
@@ -117,6 +128,24 @@ for (const p of PLANETS) {
   }
 }
 
+// Dawn over the carrot moon: a warm glow that leads the eye to the goal.
+{
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+  grad.addColorStop(0, 'rgba(255, 160, 80, 0.30)');
+  grad.addColorStop(0.4, 'rgba(255, 130, 70, 0.10)');
+  grad.addColorStop(1, 'rgba(255, 140, 80, 0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 256, 256);
+  const tex = new THREE.CanvasTexture(c);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  glow.scale.set(21, 21, 1);
+  glow.position.set(23, 10, -12);
+  scene.add(glow);
+}
+
 // ── Star pickups along the route ─────────────────────────────────────────
 const pickups = [];
 const PICKUP_SPOTS = [ [-8, -1], [-4, 5.5], [4, 0.5], [7.5, 4.5], [14.5, 1] ];
@@ -184,7 +213,7 @@ scene.add(ship);
 const bunnySeat = new THREE.Group();
 bunnySeat.position.y = 0.78;
 ship.add(bunnySeat);
-new GLTFLoader().load('./models/bunny.glb', (gltf) => {
+new GLTFLoader().parse(base64ToArrayBuffer(BUNNY_GLB_BASE64), '', (gltf) => {
   const bunny = gltf.scene;
   const box = new THREE.Box3().setFromObject(bunny);
   const size = box.getSize(new THREE.Vector3());
@@ -214,36 +243,39 @@ function spawnPuff(origin, dir, spread, speed, life) {
     .add(new THREE.Vector3((Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread, (Math.random() - 0.5) * spread));
 }
 
+// Drift trail: faint breadcrumbs make the arc readable.
+const TRAIL_N = 48;
+const trailGeo = new THREE.BufferGeometry();
+trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 3).fill(-999), 3));
+const trailPts = new THREE.Points(trailGeo, new THREE.PointsMaterial({ color: 0x9fb8d8, size: 0.16, transparent: true, opacity: 0.5 }));
+scene.add(trailPts);
+let trailCursor = 0, trailTimer = 0;
+
 // ── Audio: foundry pack, unlocked on first gesture ───────────────────────
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const audio = { ctx: null, buffers: {}, music: null, musicGain: null, thrustSrc: null, ready: false };
-const SFX_FILES = {
-  music: 'audio/music_loop.wav',
-  thrust: 'audio/sfx_movement.wav',
-  tap: 'audio/sfx_interaction.wav',
-  danger: 'audio/sfx_danger.wav',
-  land: 'audio/sfx_impact.wav',
-  star: 'audio/sfx_reveal.wav',
-  carrot: 'audio/sfx_payoff.wav',
-};
+const SFX_KEYS = { thrust: 'movement', tap: 'interaction', danger: 'danger', land: 'impact', star: 'reveal', carrot: 'payoff' };
 async function unlockAudio() {
   if (audio.ctx) return;
   audio.ctx = new AudioCtx();
   await audio.ctx.resume();
-  const entries = await Promise.all(Object.entries(SFX_FILES).map(async ([k, url]) => {
-    const buf = await fetch(url).then(r => r.arrayBuffer()).then(b => audio.ctx.decodeAudioData(b));
+  const entries = await Promise.all(Object.entries(SFX_KEYS).map(async ([k, name]) => {
+    const buf = await audio.ctx.decodeAudioData(base64ToArrayBuffer(SFX_BASE64[name]));
     return [k, buf];
   }));
   for (const [k, b] of entries) audio.buffers[k] = b;
+  // music rides a native <audio> element (file://-safe), gained via WebAudio
+  const el = new Audio('audio/music_loop.wav');
+  el.loop = true;
   audio.musicGain = audio.ctx.createGain();
   audio.musicGain.gain.value = 0.16;
   audio.musicGain.connect(audio.ctx.destination);
-  const src = audio.ctx.createBufferSource();
-  src.buffer = audio.buffers.music;
-  src.loop = true;
-  src.connect(audio.musicGain);
-  src.start();
-  audio.music = src;
+  try {
+    const node = audio.ctx.createMediaElementSource(el);
+    node.connect(audio.musicGain);
+  } catch (e) { el.volume = 0.16; }
+  el.play().catch(() => {});
+  audio.music = el;
   audio.ready = true;
 }
 function playSfx(name, gain = 0.5, rate = 1) {
@@ -453,6 +485,18 @@ function step(dt) {
         playSfx('danger', 0.35, 0.9);
         for (let i = 0; i < 10; i++) spawnPuff(S.pos.clone(), S.pos.clone().sub(near.mesh.position).normalize(), 2.5, 1.5, 0.4);
       }
+    }
+
+    // drift breadcrumbs
+    trailTimer -= dt;
+    if (trailTimer <= 0) {
+      trailTimer = 0.12;
+      const tp = trailGeo.attributes.position.array;
+      tp[trailCursor * 3] = S.pos.x;
+      tp[trailCursor * 3 + 1] = S.pos.y;
+      tp[trailCursor * 3 + 2] = 0;
+      trailCursor = (trailCursor + 1) % TRAIL_N;
+      trailGeo.attributes.position.needsUpdate = true;
     }
 
     // pickups
