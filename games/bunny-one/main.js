@@ -377,9 +377,11 @@ window.addEventListener('keyup', (e) => { if (e.code === 'Space') release(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
 
 // ── Simulation ───────────────────────────────────────────────────────────
-const G = 26;
-const THRUST = 9.5;
-const LAND_SPEED = 5.2;
+const G = 21;
+const THRUST = 16;
+const LAND_SPEED = 7.5;
+const DRAG = 0.9965;          // gentle sky: space slowly forgives
+const CAPTURE_DRAG = 0.988;   // planets reach out and steady you
 const tmp = new THREE.Vector3();
 
 function step(dt) {
@@ -393,11 +395,18 @@ function step(dt) {
 
   if (S.landedOn >= 0) {
     const planet = PLANETS[S.landedOn];
+    // ride the planet's slow rotation: your launch direction sweeps like a
+    // clock hand — timing IS aiming, and nothing ever sits still
+    const cur = S.pos.clone().sub(planet.mesh.position);
+    const ang = Math.atan2(cur.y, cur.x) + 0.42 * dt;
+    const rad = cur.length();
+    S.pos.set(planet.mesh.position.x + Math.cos(ang) * rad,
+              planet.mesh.position.y + Math.sin(ang) * rad, 0);
     const out = S.pos.clone().sub(planet.mesh.position).normalize();
-    S.facing.lerp(out, 0.2).normalize();
+    S.facing.lerp(out, 0.35).normalize();
     if (S.holding) {
       // takeoff: a committed shove, then continuous burn takes over
-      S.vel.copy(out).multiplyScalar(6.5);
+      S.vel.copy(out).multiplyScalar(9);
       S.landedOn = -1;
       S.shake = Math.min(0.3, S.shake + 0.12);
     }
@@ -411,6 +420,7 @@ function step(dt) {
     }
     if (S.holding) {
       S.vel.addScaledVector(S.facing, THRUST * dt);
+      if (S.vel.length() > 19) S.vel.setLength(19);
       const back = S.facing.clone().negate();
       spawnPuff(S.pos.clone().addScaledVector(back, 1.1), back, 1.4, 3.5, 0.45);
       spawnPuff(S.pos.clone().addScaledVector(back, 1.1), back, 1.4, 2.5, 0.35);
@@ -418,6 +428,7 @@ function step(dt) {
     // face velocity when moving; drift keeps last facing
     if (S.vel.lengthSq() > 0.5) S.facing.lerp(tmp.copy(S.vel).normalize(), 0.12).normalize();
 
+    S.vel.multiplyScalar(surfaceDist < near.r * 1.15 ? CAPTURE_DRAG : DRAG);
     S.pos.addScaledVector(S.vel, dt);
 
     // soft world boundary: an invisible hand guides you home
@@ -472,6 +483,21 @@ const DT = 1 / 120;
 function frame(now) {
   window.__bunny = S;
   window.__bunnyAudio = audio;
+  // Headless sim hook: advance the simulation synchronously, independent
+  // of rAF/tab state. actions = [[holdSeconds, driftSeconds], ...].
+  // Lets critics and bench probes measure feel without real time.
+  window.__bunnySim = (actions) => {
+    const trace = [];
+    for (const [holdS, driftS] of actions) {
+      S.holding = true;
+      for (let i = 0; i < Math.round(holdS / DT); i++) step(DT);
+      S.holding = false;
+      for (let i = 0; i < Math.round(driftS / DT); i++) step(DT);
+      trace.push({ x: +S.pos.x.toFixed(1), y: +S.pos.y.toFixed(1), v: +S.vel.length().toFixed(1), landed: S.landedOn, stars: S.stars, mode: S.mode });
+      if (S.mode === 'won') break;
+    }
+    return trace;
+  };
 requestAnimationFrame(frame);
   acc += Math.min(0.1, (now - last) / 1000);
   last = now;
