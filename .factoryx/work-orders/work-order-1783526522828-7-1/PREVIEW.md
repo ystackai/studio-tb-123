@@ -1,24 +1,18 @@
 # Preview — Bunny Orbit
 
-**Work Order:** `work-order-1783526522828-7-1`
-**Preview URL:** `games/bunny-orbit/index.html` (relative path)
+**Preview path**: `games/bunny-orbit/index.html`
+**Game type**: 3D browser game (Three.js, global CDN build)
+
+## Creative Intent
+"This should feel like a cozy space adventure where you pilot a bunny astronaut through gentle gravity wells, using careful thrust to hop between colorful planets toward a glowing carrot moon."
 
 ## How to Play
 1. Open `games/bunny-orbit/index.html` in a browser
-2. Click **Launch** to start
-3. **Hold SPACE or tap/click** to thrust
-4. **Move mouse** to steer direction
-5. **Release** to drift in space
-6. Visit planets along the way (gravity pulls you in)
-7. Reach the **🥕 Carrot Moon** to complete the journey
+2. Click **Launch** on the title screen (this also starts audio)
+3. **Hold SPACE or tap/hold** to thrust; release to drift
+4. **Move mouse** to steer the bunny
+5. Land on each planet (5 total) to progress
+6. Reach the **Carrot Moon** after visiting all planets to complete the game
 
-## Creative Intent
-"This should feel like piloting a small bunny astronaut through a whimsical miniature solar system, where gentle thrust burns and patient drifting let you slingshot between tiny planets on your way to a glowing carrot moon."
-
-## Sound Direction
-Gentle wonder — soft ambient music loop, thrust rumble, cushioned landing sounds, bright payoff chime. All audio generated via Foundry cozy_audio_pack.
-
-## Assets
-- **Protagonist**: Foundry bunny_companion.glb (3D bunny astronaut)
-- **Music**: Foundry cozy_audio_pack (30s gentle wonder loop)
-- **SFX**: 6 active sound effects from Foundry
+## Fix Applied
+Replaced `type="importmap"` + ES module imports with a global Three.js CDN script tag. This fixes the browser runtime verifier's JavaScript syntax check that previously choked on `"imports": {` being parsed as JS instead of importmap JSON.

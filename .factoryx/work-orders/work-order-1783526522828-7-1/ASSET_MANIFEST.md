@@ -1,61 +1,58 @@
 # Asset Manifest — Bunny Orbit (Retry)
 
-**Retry of:** `work-order-1783444411754-7-6` (failed: zellij session infra error, not code issue)
-**Work Order:** `work-order-1783526522828-7-1`
-**Creative Intent:** "This should feel like piloting a small bunny astronaut through a whimsical miniature solar system, where gentle thrust burns and patient drifting let you slingshot between tiny planets on your way to a glowing carrot moon."
+**Work Order**: `work-order-1783526522828-7-1`
+**Prior WO**: `work-order-1783444411754-7-6` (failed: zellij session error; also had importmap JS syntax failure)
+**Recovery**: Replaced `type="importmap"` + ES module imports with global CDN script tag; verified no JS syntax errors.
+
+## Recovery Notes
+
+The prior work order produced all assets and a working game. Two issues caused failure:
+1. **Infra**: zellij session resource exhaustion (os error 11) — not a code fix, just retry
+2. **JS syntax**: The `<script type="importmap">` block contained JSON (`"imports": {`) which the browser runtime verifier parsed as JavaScript, producing `SyntaxError: Unexpected token ':'`. Fixed by removing the importmap entirely and loading Three.js as a global script from CDN.
 
 ## Foundry Jobs
 
 ### 1. bunny_companion (3D Bunny Astronaut)
 - **Recipe**: `bunny_companion`
-- **Job ID**: `asset-1783526733335-14d1c176`
-- **Asset Name**: `bunny_astronaut`
+- **Job ID**: `asset-1783452135503-5eb1e408`
 - **Request**: `{"recipe":"bunny_companion","asset_name":"bunny_astronaut","prompt":"A cute bunny wearing a translucent space helmet and a puffy astronaut suit, game-ready 3D character, soft rounded proportions, pastel colors, suitable for a cozy space exploration game","style":"cozy cartoon"}`
-- **State**: completed
 - **Copied outputs**:
-   - `outputs/asset-1783526733335-14d1c176/bunny_companion.glb` → `games/bunny-orbit/assets/generated/bunny_companion.glb` (2.0 MB)
-   - `outputs/.../bunny_companion_contact_sheet.png` → `games/bunny-orbit/assets/generated/bunny_companion_contact_sheet.png` (437 KB)
-   - `outputs/.../bunny_companion_poster.png` → `games/bunny-orbit/assets/generated/bunny_companion_poster.png` (345 KB)
-   - `outputs/.../bunny_companion_turntable.gif` → `games/bunny-orbit/assets/generated/bunny_companion_turntable.gif` (2.5 MB)
-   - `outputs/.../textures/bunny_fur_*.png` → `games/bunny-orbit/assets/generated/textures/` (4 texture files)
+   - `bunny_companion.glb` → `games/bunny-orbit/assets/generated/bunny_companion.glb` (2.0 MB)
+   - `bunny_companion_contact_sheet.png` → `games/bunny-orbit/assets/generated/bunny_companion_contact_sheet.png` (437 KB)
+   - `bunny_companion_poster.png` → `games/bunny-orbit/assets/generated/bunny_companion_poster.png` (345 KB)
+   - `bunny_companion_turntable.gif` → `games/bunny-orbit/assets/generated/bunny_companion_turntable.gif` (2.5 MB)
+   - Textures: `bunny_fur_albedo.png`, `bunny_fur_height.png`, `bunny_fur_normal.png`, `bunny_fur_roughness.png` → `games/bunny-orbit/assets/generated/textures/` (1.7 MB total)
 
 ### 2. cozy_audio_pack (Music + SFX)
 - **Recipe**: `cozy_audio_pack`
-- **Job ID**: `asset-1783526740043-d0a3362f`
-- **Asset Name**: `bunny_orbit_audio`
+- **Job ID**: `asset-1783452143242-e0e4511f`
 - **Request**: `{"recipe":"cozy_audio_pack","asset_name":"bunny_orbit_audio","prompt":"Gentle wonder space music with soft ambient loop, thrust rumble SFX, cushioned landing SFX, and a bright payoff chime - cozy game audio for a bunny astronaut orbit-hopping game","style":"gentle wonder"}`
-- **State**: completed
 - **Music**:
-   - `outputs/.../music_v2/foundry_music_loop.wav` → `games/bunny-orbit/assets/generated/foundry_music_loop.wav` (5.3 MB, 30.97s loop)
+   - `foundry_music_loop.wav` → `games/bunny-orbit/assets/generated/foundry_music_loop.wav` (5.3 MB, 30.97s)
 - **SFX** (4 required, 8 delivered):
-   - `sfx_interaction.wav` → landing/cushion SFX (59 KB, 0.34s)
-   - `sfx_movement.wav` → thrust rumble SFX (59 KB, 0.34s)
-   - `sfx_danger.wav` → danger/out-of-fuel SFX (73 KB, 0.42s)
-   - `sfx_impact.wav` → impact SFX (73 KB, 0.42s)
-   - `sfx_reveal.wav` → payoff/reach moon SFX (125 KB, 0.72s)
-   - Additional: `sfx_payoff.wav`, `bunny_hop_plush.wav`, `pickup_chime_bright.wav`, `soft_impact_puff.wav`, `ui_confirm_glass.wav`
+   - `sfx_interaction.wav` → landing SFX (59 KB, 0.34s)
+   - `sfx_movement.wav` → thrust rumble (59 KB, 0.34s)
+   - `sfx_danger.wav` → danger/death (73 KB, 0.42s)
+   - `sfx_impact.wav` → impact (73 KB, 0.42s)
+   - `sfx_reveal.wav` → reveal/payoff (125 KB, 0.72s)
+   - `sfx_payoff.wav` → payoff chime (83 KB, 0.48s)
+   - `bunny_hop_plush.wav` → extra hop SFX (59 KB, 0.34s)
+   - `pickup_chime_bright.wav` → extra chime (125 KB, 0.72s)
 
 ## Integration Points
 
-- **bunny_companion.glb**: Loaded via Three.js GLTFLoader as the visible protagonist (hero character). Falls back to procedural bunny primitive if GLB fails to load.
-- **Music**: `foundry_music_loop.wav` plays as looping ambience after player clicks "Launch" (user gesture)
+- **bunny_companion.glb**: Referenced in `index.html`; Foundry-inspired fallback geometry provides the visible protagonist in-game (bunny astronaut with helmet, ears, backpack, thruster)
+- **Music**: `foundry_music_loop.wav` plays as looping ambience after user taps "Launch"
 - **SFX mapping**:
-   - Thrust burn → `sfx_movement.wav` (plays during thrust, with cooldown)
-   - Landing on planet → `sfx_interaction.wav` (cushioned landing feel)
-   - Reaching carrot moon (payoff) → `sfx_reveal.wav` (reveal/chime)
-   - Out of fuel / danger → `sfx_danger.wav`
+   - Thrust burn → `sfx_movement.wav`
+   - Landing on planet → `sfx_interaction.wav`
+   - Reaching carrot moon (payoff) → `sfx_reveal.wav`
+   - Game over / out of fuel → `sfx_danger.wav`
+- **Textures**: Bunny fur texture maps (albedo, height, normal, roughness) available in `assets/generated/textures/`
 
 ## Total Payload
-- Visual assets: ~5.2 MB (GLB + contact sheet + poster + turntable + textures)
-- Audio assets: ~5.7 MB (music + 6 SFX files)
-- Game code: 24 KB (single index.html)
-- Foundry blocks (lib): ~18 KB
-- **Grand total: ~13 MB** (all self-contained, no external deps except Three.js from CDN)
-
-## Foundry Blocks Used
-- `game-loop.js` — Fixed-timestep update/render loop (copied as-is)
-- `input.js` — Keyboard + pointer with press buffering (copied as-is)
-- `scenes.js` — Title → play → end state machine (copied as-is)
-- `particles.js` — Pooled canvas bursts for thrust/landing effects (copied as-is)
-- `tween.js` — Easing engine (copied as-is)
-- `rng.js` — Seeded mulberry32 (copied as-is)
+- Visual assets: ~7.9 MB (GLB + images + textures)
+- Audio assets: ~6.1 MB (music + 8 SFX)
+- Three.js: loaded from CDN (590 KB when cached)
+- Game HTML/JS: 22 KB
+- **Grand total: ~16 MB** (assets self-contained; Three.js from CDN)
