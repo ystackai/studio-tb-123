@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pocket Signal Machine — TB-123</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#0a0808;touch-action:none;user-select:none}
+#machine{
+  position:relative;width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#12101a 0%,#0a0808 50%,#100e08 100%);
+}
+#canvas-wrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+canvas{display:block;background:#08060a;border-radius:4px}
+
+/* Start overlay */
+#start-overlay{
+  position:absolute;inset:0;background:rgba(8,6,10,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:30;gap:14px;
+}
+#start-overlay h1{font-size:clamp(24px,5vw,40px);color:#f0a030;text-shadow:0 0 20px #f0a03088,0 0 40px #f0a03044;letter-spacing:3px;font-weight:800;font-family:'Courier New',monospace}
+#start-overlay p{color:#aa8866;font-size:14px;font-family:'Courier New',monospace;text-align:center;max-width:320px;line-height:1.5}
+#start-overlay .tagline{color:#8899bb;font-size:12px;font-style:italic;font-family:'Courier New',monospace}
+#start-btn{
+  margin-top:8px;padding:14px 44px;background:linear-gradient(135deg,#f0a030,#e08020);color:#1a1008;border:none;border-radius:8px;font-size:16px;font-weight:800;letter-spacing:2px;cursor:pointer;
+  font-family:'Courier New',monospace;box-shadow:0 0 30px #f0a03066;transition:transform .08s,filter .12s;
+}
+#start-btn:hover{filter:brightness(1.15);transform:scale(1.03)}
+#start-btn:active{transform:scale(0.97)}
+
+/* Payoff flash */
+#payoff-flash{
+  position:absolute;inset:0;background:radial-gradient(ellipse at center,#f0a03044 0%,#f0a03000 70%);
+  opacity:0;pointer-events:none;z-index:20;transition:opacity .15s;
+}
+#payoff-flash.active{opacity:1}
+
+/* HUD */
+#hud{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;
+  display:flex;gap:20px;align-items:center;
+}
+#hud .chain{
+  font-family:'Courier New',monospace;font-size:14px;color:#f0a030;text-shadow:0 0 8px #f0a03088;font-weight:700;
+  opacity:0;transition:opacity .3s;
+}
+#hud .chain.visible{opacity:1}
+#hud .chain-text{letter-spacing:2px}
+
+/* Instructions */
+#instructions{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;
+  font-family:'Courier New',monospace;font-size:10px;color:#555;text-align:center;letter-spacing:1px;
+}
+</style>
+</head>
+<body>
+<div id="machine">
+  <div id="canvas-wrap">
+    <canvas id="game"></canvas>
+  </div>
+  <div id="hud">
+    <div class="chain" id="chain-display"><span class="chain-text">CHAIN x0</span></div>
+  </div>
+  <div id="payoff-flash"></div>
+  <div id="instructions">PADS: Q W E R / A S D F &nbsp;|&nbsp; FILTER: ← → &nbsp;|&nbsp; DELAY: Z X</div>
+  <div id="start-overlay">
+    <h1>POCKET SIGNAL MACHINE</h1>
+    <p>A compact drum machine crossed with modular signal paths</p>
+    <p class="tagline">Tap pads. Twist knobs. Chase the chain.</p>
+    <button id="start-btn">POWER ON</button>
+  </div>
+</div>
+
+<script src="game-loop.js"></script>
+<script src="rng.js"></script>
+<script src="input.js"></script>
+<script src="particles.js"></script>
+<script src="tween.js"></script>
+<script src="webaudio-kit.js"></script>
+<script>
+(function(){
+"use strict";
+
+// === CREATIVE INTENT ===
+// "This should feel like tapping on a vintage signal-processing desk in a tiny studio —
+// each pad triggers a musical hit, the signal pulses along a visible cable path,
+// and after a short sequence a satisfying payoff moment lights up the entire machine."
+
+// === CONFIG ===
+var CFG = {
+  padCount: 8,
+  cols: 4,
+  rows: 2,
+  chainThreshold: 8,
+  chainDecayMs: 2000,
+  padColor: '#f0a030',
+  padActive: '#ffcc66',
+  cableColor: '#445566',
+  cableActive: '#f0a030',
+  knobColor: '#667788',
+  filterDefault: 0.5,
+  delayDefault: 0.3,
+  padGap: 8,
+  machinePadding: 30,
+  knobSize: 50,
+};
+
+// === CANVAS SETUP ===
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var W, H, machineW, machineH;
+var dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+function resize(){
+  var container = document.getElementById('canvas-wrap');
+  var cw = container.clientWidth;
+  var ch = container.clientHeight;
+  W = Math.min(960, cw);
+  H = Math.min(640, ch);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  machineW = W - CFG.machinePadding * 2;
+  machineH = H - CFG.machinePadding * 2;
+  layout();
+}
+
+// === LAYOUT ===
+var pads = [];
+var knobs = [];
+var cablePath = { points: [], segments: [] };
+
+function layout(){
+  var padW = (machineW - (CFG.cols + 1) * CFG.padGap) / CFG.cols;
+  var padH = 56;
+  var padAreaW = CFG.cols * padW + (CFG.cols - 1) * CFG.padGap;
+  var startX = (W - padAreaW) / 2;
+  var padY = H * 0.38;
+
+  pads = [];
+  for(var r = 0; r < CFG.rows; r++){
+    for(var c = 0; c < CFG.cols; c++){
+      var idx = r * CFG.cols + c;
+      pads.push({
+        x: startX + c * (padW + CFG.padGap),
+        y: padY + r * (padH + CFG.padGap),
+        w: padW, h: padH,
+        idx: idx,
+        label: padLabels[idx],
+        freq: padFreqs[idx],
+        type: padTypes[idx],
+        velocity: 0,
+        glow: 0,
+      });
+    }
+  }
+
+  // Knobs: FILTER and DELAY at top
+  var knobY = H * 0.12;
+  var knobSpacing = machineW * 0.28;
+  var knobCenterX = W / 2;
+  knobs = [
+    { x: knobCenterX - knobSpacing, y: knobY, label: 'FILTER', value: CFG.filterDefault, angle: 0, dragging: false, type: 'filter' },
+    { x: knobCenterX + knobSpacing, y: knobY, label: 'DELAY', value: CFG.delayDefault, angle: 0, dragging: false, type: 'delay' },
+  ];
+
+  // Cable path: from pad area to filter knob to delay knob to output (right side)
+  var padCenterY = padY + padH * (CFG.rows - 1) / 2 + padH / 2;
+  var padCenterX = startX + padAreaW / 2;
+  var outputX = W * 0.92;
+  var outputY = H * 0.55;
+
+  cablePath.points = [
+    { x: padCenterX, y: padCenterY },
+    { x: knobs[0].x, y: knobs[0].y + CFG.knobSize },
+    { x: knobs[1].x, y: knobs[1].y + CFG.knobSize },
+    { x: outputX, y: outputY },
+  ];
+  cablePath.segments = computeCableSegments(cablePath.points);
+  cablePath.pulses = [];
+}
+
+function computeCableSegments(pts){
+  var segs = [];
+  for(var i = 0; i < pts.length - 1; i++){
+    var dx = pts[i+1].x - pts[i].x;
+    var dy = pts[i+1].y - pts[i].y;
+    var len = Math.sqrt(dx*dx + dy*dy);
+    segs.push({ start: pts[i], end: pts[i+1], len: len });
+  }
+  return segs;
+}
+
+// === PAD DEFINITIONS ===
+var padLabels = ['KICK', 'SNARE', 'HIHAT', 'CLAP', 'TOM', 'RIM', 'BASS', 'LEAD'];
+var padFreqs  = [55, 200, 800, 400, 120, 280, 65, 523];
+var padTypes  = ['kick', 'snare', 'hihat', 'clap', 'tom', 'rim', 'bass', 'lead'];
+
+// Keyboard mapping
+var keyMap = {
+  'q': 0, 'w': 1, 'e': 2, 'r': 3,
+  'a': 4, 's': 5, 'd': 6, 'f': 7,
+};
+
+// === STATE ===
+var state = {
+  running: false,
+  chain: 0,
+  chainTimer: 0,
+  filter: CFG.filterDefault,
+  delay: CFG.delayDefault,
+  payoffActive: false,
+  payoffTimer: 0,
+  signalLevel: 0,
+  lastPadHit: 0,
+  totalHits: 0,
+  audioStarted: false,
+};
+
+// === AUDIO ENGINE ===
+var audioCtx = null;
+var masterGain = null;
+var filterNode = null;
+var delayNode = null;
+var feedbackGain = null;
+var musicSource = null;
+var musicGain = null;
+var loadedSounds = {};
+
+function initAudio(){
+  if(state.audioStarted) return;
+  state.audioStarted = true;
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.7;
+
+  // Filter
+  filterNode = audioCtx.createBiquadFilter();
+  filterNode.type = 'lowpass';
+  filterNode.frequency.value = 200 + state.filter * 4800;
+  filterNode.Q.value = 2;
+
+  // Delay
+  delayNode = audioCtx.createDelay(1.0);
+  delayNode.delayTime.value = 0.15 + state.delay * 0.45;
+  feedbackGain = audioCtx.createGain();
+  feedbackGain.gain.value = state.delay * 0.6;
+
+  // Signal chain: source -> filter -> masterGain -> destination
+  //              filter -> delay -> feedbackGain -> delay (feedback loop)
+  //              delay -> masterGain
+  filterNode.connect(masterGain);
+  delayNode.connect(masterGain);
+  delayNode.connect(feedbackGain);
+  feedbackGain.connect(delayNode);
+  masterGain.connect(audioCtx.destination);
+
+  // Load sounds
+  loadSound('interaction', 'assets/audio/sfx_interaction.wav');
+  loadSound('impact', 'assets/audio/sfx_impact.wav');
+  loadSound('movement', 'assets/audio/sfx_movement.wav');
+  loadSound('danger', 'assets/audio/sfx_danger.wav');
+  loadSound('reveal', 'assets/audio/sfx_reveal.wav');
+  loadSound('payoff', 'assets/audio/sfx_payoff.wav');
+  loadSound('chime', 'assets/audio/sfx_chime.wav');
+  loadSound('music', 'assets/audio/music_loop.wav');
+}
+
+function loadSound(name, path){
+  fetch(path).then(function(r){ return r.arrayBuffer(); }).then(function(buf){
+    return audioCtx.decodeAudioData(buf);
+  }).then(function(decoded){
+    loadedSounds[name] = decoded;
+    if(name === 'music'){
+      startMusicLoop();
+    }
+  }).catch(function(){
+    // Fallback: generate procedural sound
+    loadedSounds[name] = generateProceduralSound(name);
+  });
+}
+
+function generateProceduralSound(type){
+  // Create a simple procedural buffer as fallback
+  var duration = type === 'music' ? 10 : 0.3;
+  var sampleRate = audioCtx.sampleRate;
+  var length = sampleRate * duration;
+  var buffer = audioCtx.createBuffer(1, length, sampleRate);
+  var data = buffer.getChannelData(0);
+  var freq = 440;
+  var vol = 0.3;
+  if(type === 'kick'){ freq = 60; vol = 0.8; duration = 0.2; }
+  else if(type === 'snare'){ freq = 200; vol = 0.6; duration = 0.15; }
+  else if(type === 'hihat'){ freq = 800; vol = 0.3; duration = 0.08; }
+  else if(type === 'clap'){ freq = 400; vol = 0.5; duration = 0.12; }
+  else if(type === 'tom'){ freq = 120; vol = 0.7; duration = 0.2; }
+  else if(type === 'rim'){ freq = 280; vol = 0.5; duration = 0.06; }
+  else if(type === 'bass'){ freq = 65; vol = 0.7; duration = 0.3; }
+  else if(type === 'lead'){ freq = 523; vol = 0.4; duration = 0.4; }
+  else if(type === 'interaction'){ freq = 800; vol = 0.3; duration = 0.2; }
+  else if(type === 'impact'){ freq = 100; vol = 0.7; duration = 0.25; }
+  else if(type === 'movement'){ freq = 300; vol = 0.3; duration = 0.15; }
+  else if(type === 'danger'){ freq = 150; vol = 0.5; duration = 0.3; }
+  else if(type === 'reveal'){ freq = 600; vol = 0.4; duration = 0.5; }
+  else if(type === 'payoff'){ freq = 523; vol = 0.6; duration = 0.6; }
+  else if(type === 'chime'){ freq = 880; vol = 0.4; duration = 0.4; }
+  else if(type === 'music'){ freq = 220; vol = 0.15; }
+
+  for(var i = 0; i < length; i++){
+    var t = i / sampleRate;
+    var env = Math.max(0, 1 - t / duration);
+    var wave = Math.sin(2 * Math.PI * freq * t);
+    if(type === 'hihat' || type === 'snare') wave += (Math.random() * 2 - 1) * 0.5;
+    data[i] = wave * env * vol;
+  }
+  return buffer;
+}
+
+function startMusicLoop(){
+  if(!loadedSounds.music || musicSource) return;
+  musicSource = audioCtx.createBufferSource();
+  musicSource.buffer = loadedSounds.music;
+  musicSource.loop = true;
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.12;
+  musicSource.connect(musicGain);
+  musicGain.connect(audioCtx.destination);
+  musicSource.start();
+}
+
+function triggerPad(padIdx){
+  if(!state.running) return;
+  var pad = pads[padIdx];
+  if(!pad) return;
+
+  initAudio();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+
+  // Synthesize the pad sound
+  var now = audioCtx.currentTime;
+
+  // Create osc-based sound shaped by pad type
+  var osc = audioCtx.createOscillator();
+  var env = audioCtx.createGain();
+  var pan = audioCtx.createStereoPanner();
+  var type = pad.type;
+
+  osc.type = type === 'hihat' || type === 'snare' ? 'square' : 'sine';
+  osc.frequency.value = pad.freq;
+
+  // Add noise layer for percussion
+  var noise = null;
+  if(type === 'snare' || type === 'hihat' || type === 'clap' || type === 'rim'){
+    noise = createNoiseBurst(now, type === 'hihat' ? 0.06 : 0.1);
+    noise.connect(filterNode);
+  }
+
+  // Envelope
+  env.gain.setValueAtTime(0, now);
+  var attack = type === 'kick' ? 0.005 : 0.01;
+  var decay = type === 'kick' ? 0.3 : type === 'lead' ? 0.5 : 0.15;
+  env.gain.linearRampToValueAtTime(0.6, now + attack);
+  env.gain.exponentialRampToValueAtTime(0.001, now + attack + decay);
+
+  // Stereo position spreads pads across the field
+  pan.pan.value = (padIdx / (CFG.padCount - 1)) * 2 - 1;
+
+  osc.connect(env);
+  env.connect(filterNode);
+  env.connect(delayNode);
+  osc.connect(pan);
+  pan.connect(env);
+
+  osc.start(now);
+  osc.stop(now + attack + decay + 0.1);
+
+  // Play foundry SFX layered on percussion
+  var sfxMap = {
+    kick: 'impact', snare: 'impact', hihat: 'movement', clap: 'interaction',
+    tom: 'impact', rim: 'movement', bass: 'movement', lead: 'chime',
+  };
+  var sfxKey = sfxMap[type];
+  if(loadedSounds[sfxKey]){
+    playBuffer(loadedSounds[sfxKey], now, 0.4);
+  }
+
+  // Visual: pad velocity + glow
+  pad.velocity = 1.0;
+  pad.glow = 1.0;
+
+  // Signal pulse along cable
+  state.signalLevel = 0.8;
+  state.lastPadHit = performance.now();
+  state.totalHits++;
+
+  // Add pulse to cable
+  addCablePulse(padIdx);
+
+  // Chain logic
+  var elapsed = performance.now() - state.chainTimer;
+  if(elapsed < CFG.chainDecayMs){
+    state.chain++;
+  } else {
+    state.chain = 1;
+  }
+  state.chainTimer = performance.now();
+
+  // Check payoff
+  if(state.chain >= CFG.chainThreshold && !state.payoffActive){
+    triggerPayoff();
+  }
+
+  // Spawn particles at pad position
+  spawnParticles(pad.x + pad.w/2, pad.y + pad.h/2, padIdx);
+
+  updateChainDisplay();
+}
+
+function createNoiseBurst(time, duration){
+  var bufferSize = audioCtx.sampleRate * duration;
+  var buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  var data = buffer.getChannelData(0);
+  for(var i = 0; i < bufferSize; i++){
+    data[i] = (Math.random() * 2 - 1) * (1 - i/bufferSize);
+  }
+  var source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  var env = audioCtx.createGain();
+  env.gain.setValueAtTime(0.4, time);
+  env.gain.exponentialRampToValueAtTime(0.001, time + duration);
+  var hpf = audioCtx.createBiquadFilter();
+  hpf.type = 'highpass';
+  hpf.frequency.value = 6000;
+  source.connect(hpf);
+  hpf.connect(env);
+  env.connect(audioCtx.destination);
+  source.start(time);
+  source.stop(time + duration + 0.01);
+  return source;
+}
+
+function playBuffer(buf, time, vol){
+  var src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  var g = audioCtx.createGain();
+  g.gain.value = vol || 0.3;
+  src.connect(g);
+  g.connect(audioCtx.destination);
+  src.start(time);
+}
+
+function addCablePulse(padIdx){
+  var seg = cablePath.segments[0];
+  if(!seg) return;
+  cablePath.pulses.push({
+    progress: 0,
+    speed: 2.0 + Math.random() * 0.5,
+    segIndex: 0,
+    color: padColors[padIdx],
+    size: 6 + Math.random() * 4,
+    alpha: 1.0,
+  });
+}
+
+var padColors = [
+  '#ff6644', '#ffaa33', '#ffdd44', '#aaff66',
+  '#44ddff', '#66aaff', '#aa66ff', '#ff66aa',
+];
+
+function triggerPayoff(){
+  state.payoffActive = true;
+  state.payoffTimer = 2000;
+
+  // Play payoff SFX
+  if(loadedSounds.payoff) playBuffer(loadedSounds.payoff, audioCtx.currentTime, 0.7);
+  if(loadedSounds.reveal) playBuffer(loadedSounds.reveal, audioCtx.currentTime + 0.1, 0.4);
+
+  // Flash effect
+  document.getElementById('payoff-flash').classList.add('active');
+  setTimeout(function(){
+    document.getElementById('payoff-flash').classList.remove('active');
+  }, 500);
+
+  // Extra cable pulses
+  for(var i = 0; i < 5; i++){
+    setTimeout(function(){
+      addCablePulse(Math.floor(Math.random() * CFG.padCount));
+    }, i * 120);
+  }
+}
+
+// === INPUT ===
+var keysDown = {};
+var knobDrag = { active: false, knob: null, startY: 0, startVal: 0 };
+
+function handleKeyDown(e){
+  if(!state.running){
+    if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); startMachine(); }
+    return;
+  }
+  var key = e.key.toLowerCase();
+  if(key in keyMap){
+    e.preventDefault();
+    triggerPad(keyMap[key]);
+  }
+  // Filter control: arrow keys
+  if(e.key === 'ArrowLeft'){
+    e.preventDefault();
+    state.filter = Math.max(0, state.filter - 0.05);
+    updateKnob(knobs[0]);
+  }
+  if(e.key === 'ArrowRight'){
+    e.preventDefault();
+    state.filter = Math.min(1, state.filter + 0.05);
+    updateKnob(knobs[0]);
+  }
+  // Delay control: Z/X
+  if(key === 'z'){
+    state.delay = Math.max(0, state.delay - 0.05);
+    updateKnob(knobs[1]);
+  }
+  if(key === 'x'){
+    state.delay = Math.min(1, state.delay + 0.05);
+    updateKnob(knobs[1]);
+  }
+}
+
+function handlePointerDown(e){
+  if(!state.running) return;
+  var pos = getPointerPos(e);
+  var px = pos.x, py = pos.y;
+
+  // Check knobs
+  for(var i = 0; i < knobs.length; i++){
+    var k = knobs[i];
+    var dx = px - k.x, dy = py - k.y;
+    if(Math.sqrt(dx*dx + dy*dy) < CFG.knobSize * 1.5){
+      knobDrag.active = true;
+      knobDrag.knob = k;
+      knobDrag.startY = py;
+      knobDrag.startVal = k.value;
+      k.dragging = true;
+      return;
+    }
+  }
+
+  // Check pads
+  for(var i = 0; i < pads.length; i++){
+    var p = pads[i];
+    if(px >= p.x && px <= p.x + p.w && py >= p.y && py <= p.y + p.h){
+      triggerPad(p.idx);
+      return;
+    }
+  }
+}
+
+function handlePointerMove(e){
+  if(!knobDrag.active) return;
+  var pos = getPointerPos(e);
+  var dy = knobDrag.startY - pos.y;
+  var newVal = Math.max(0, Math.min(1, knobDrag.startVal + dy / 150));
+  var k = knobDrag.knob;
+  k.value = newVal;
+  if(k.type === 'filter'){
+    state.filter = newVal;
+    if(filterNode) filterNode.frequency.value = 200 + newVal * 4800;
+  } else {
+    state.delay = newVal;
+    if(delayNode) delayNode.delayTime.value = 0.15 + newVal * 0.45;
+    if(feedbackGain) feedbackGain.gain.value = newVal * 0.6;
+  }
+  updateKnob(k);
+}
+
+function handlePointerUp(){
+  if(knobDrag.active && knobDrag.knob){
+    knobDrag.knob.dragging = false;
+  }
+  knobDrag.active = false;
+  knobDrag.knob = null;
+}
+
+function getPointerPos(e){
+  var rect = canvas.getBoundingClientRect();
+  var clientX, clientY;
+  if(e.touches && e.touches.length > 0){
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else if(e.changedTouches && e.changedTouches.length > 0){
+    clientX = e.changedTouches[0].clientX;
+    clientY = e.changedTouches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+  return {
+    x: (clientX - rect.left) / rect.width * W,
+    y: (clientY - rect.top) / rect.height * H,
+  };
+}
+
+// Wire events
+document.addEventListener('keydown', handleKeyDown);
+canvas.addEventListener('mousedown', handlePointerDown);
+canvas.addEventListener('mousemove', handlePointerMove);
+document.addEventListener('mouseup', handlePointerUp);
+canvas.addEventListener('touchstart', function(ev){ ev.preventDefault(); handlePointerDown(ev); }, {passive:false});
+canvas.addEventListener('touchmove', function(ev){ ev.preventDefault(); handlePointerMove(ev); }, {passive:false});
+canvas.addEventListener('touchend', function(ev){ ev.preventDefault(); handlePointerUp(ev); }, {passive:false});
+
+function updateKnob(k){
+  k.angle = k.value * 270 * Math.PI / 180 - 135 * Math.PI / 180;
+}
+
+function updateChainDisplay(){
+  var el = document.getElementById('chain-display');
+  if(state.chain >= 3){
+    el.classList.add('visible');
+    el.querySelector('.chain-text').textContent = 'CHAIN x' + state.chain;
+    if(state.chain >= CFG.chainThreshold){
+      el.querySelector('.chain-text').style.color = '#ffcc44';
+      el.querySelector('.chain-text').style.textShadow = '0 0 12px #ffcc4488';
+    }
+  } else {
+    el.classList.remove('visible');
+  }
+}
+
+// === PARTICLES ===
+var particlePool = [];
+
+function spawnParticles(x, y, padIdx){
+  var color = padColors[padIdx];
+  for(var i = 0; i < 12; i++){
+    var angle = Math.random() * Math.PI * 2;
+    var speed = 40 + Math.random() * 120;
+    particlePool.push({
+      x: x, y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1.0,
+      decay: 1.5 + Math.random() * 1.5,
+      size: 2 + Math.random() * 4,
+      color: color,
+    });
+  }
+}
+
+function updateParticles(dt){
+  for(var i = particlePool.length - 1; i >= 0; i--){
+    var p = particlePool[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 200 * dt; // gravity
+    p.life -= p.decay * dt;
+    if(p.life <= 0){
+      particlePool.splice(i, 1);
+    }
+  }
+}
+
+// === DRAWING ===
+function draw(){
+  ctx.clearRect(0, 0, W, H);
+
+  // Background texture
+  drawBackground();
+
+  // Cable paths
+  drawCables();
+
+  // Cable pulses
+  drawCablePulses();
+
+  // Knobs
+  drawKnobs();
+
+  // Pads
+  drawPads();
+
+  // Output indicator
+  drawOutputIndicator();
+
+  // Particles
+  drawParticles();
+
+  // Payoff overlay
+  if(state.payoffActive){
+    drawPayoffEffect();
+  }
+
+  // Foundry waveform decoration
+  drawWaveformDecor();
+}
+
+function drawBackground(){
+  // Subtle grid
+  ctx.strokeStyle = '#111118';
+  ctx.lineWidth = 0.5;
+  var gridSz = 20;
+  for(var x = 0; x < W; x += gridSz){
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for(var y = 0; y < H; y += gridSz){
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Machine chassis
+  var cx = CFG.machinePadding;
+  var cy = CFG.machinePadding;
+  var cw = machineW;
+  var ch = machineH;
+
+  ctx.fillStyle = '#0e0c14';
+  ctx.strokeStyle = '#1a1828';
+  ctx.lineWidth = 2;
+  roundRect(ctx, cx, cy, cw, ch, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  // Inner panel
+  ctx.fillStyle = '#0a0810';
+  roundRect(ctx, cx + 6, cy + 6, cw - 12, ch - 12, 8);
+  ctx.fill();
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawCables(){
+  var pts = cablePath.points;
+  if(pts.length < 2) return;
+
+  for(var i = 0; i < pts.length - 1; i++){
+    var a = pts[i], b = pts[i+1];
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+
+    // Curved cable with control points
+    var midX = (a.x + b.x) / 2;
+    var midY = (a.y + b.y) / 2 + 15;
+    ctx.quadraticCurveTo(midX, midY, b.x, b.y);
+
+    // Cable glow
+    ctx.strokeStyle = state.signalLevel > 0.3 ? '#f0a03066' : '#33445588';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Cable core
+    ctx.strokeStyle = state.signalLevel > 0.3 ? '#f0a030' : '#445566';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function drawCablePulses(){
+  for(var i = cablePath.pulses.length - 1; i >= 0; i--){
+    var p = cablePath.pulses[i];
+    var seg = cablePath.segments[p.segIndex];
+    if(!seg){ cablePath.pulses.splice(i, 1); continue; }
+
+    var t = p.progress / seg.len;
+    var a = seg.start, b = seg.end;
+    var midX = (a.x + b.x) / 2;
+    var midY = (a.y + b.y) / 2 + 15;
+
+    // Quadratic bezier point at t
+    var x = (1-t)*(1-t)*a.x + 2*(1-t)*t*midX + t*t*b.x;
+    var y = (1-t)*(1-t)*a.y + 2*(1-t)*t*midY + t*t*b.y;
+
+    p.progress += p.speed;
+    p.alpha -= 0.8;
+
+    if(p.alpha <= 0 || p.progress >= seg.len){
+      if(p.segIndex < cablePath.segments.length - 1){
+        p.segIndex++;
+        p.progress = 0;
+        p.alpha = 1.0;
+      } else {
+        cablePath.pulses.splice(i, 1);
+        continue;
+      }
+    }
+
+    // Draw pulse
+    var grad = ctx.createRadialGradient(x, y, 0, x, y, p.size * 2);
+    grad.addColorStop(0, hexToRgba(p.color, p.alpha));
+    grad.addColorStop(1, hexToRgba(p.color, 0));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, p.size * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core dot
+    ctx.fillStyle = hexToRgba('#ffffff', p.alpha * 0.8);
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawKnobs(){
+  for(var i = 0; i < knobs.length; i++){
+    var k = knobs[i];
+
+    // Knob base
+    ctx.fillStyle = k.dragging ? '#2a2838' : '#1a1828';
+    ctx.strokeStyle = k.dragging ? '#f0a030' : '#333344';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(k.x, k.y, CFG.knobSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Knob dial
+    ctx.fillStyle = '#222030';
+    ctx.beginPath();
+    ctx.arc(k.x, k.y, CFG.knobSize - 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Value indicator arc
+    var startAngle = -135 * Math.PI / 180;
+    var sweep = k.value * 270 * Math.PI / 180;
+    ctx.strokeStyle = k.type === 'filter' ? '#f0a03088' : '#66aaff88';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(k.x, k.y, CFG.knobSize - 8, startAngle, startAngle + sweep);
+    ctx.stroke();
+
+    // Indicator dot
+    var dotAngle = startAngle + sweep;
+    var dotX = k.x + Math.cos(dotAngle) * (CFG.knobSize - 8);
+    var dotY = k.y + Math.sin(dotAngle) * (CFG.knobSize - 8);
+    ctx.fillStyle = k.type === 'filter' ? '#f0a030' : '#66aaff';
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = '#888899';
+    ctx.font = '10px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(k.label, k.x, k.y + CFG.knobSize + 16);
+
+    // Value
+    var valText = (k.value * 100).toFixed(0) + '%';
+    ctx.fillStyle = '#aaaabb';
+    ctx.font = '9px "Courier New", monospace';
+    ctx.fillText(valText, k.x, k.y + CFG.knobSize + 28);
+  }
+}
+
+function drawPads(){
+  for(var i = 0; i < pads.length; i++){
+    var p = pads[i];
+
+    // Decay velocity and glow
+    p.velocity *= 0.9;
+    p.glow *= 0.95;
+
+    var padCol = padColors[i];
+
+    // Pad background
+    ctx.fillStyle = p.velocity > 0.1 ? padCol : '#18161e';
+    ctx.strokeStyle = p.velocity > 0.1 ? padCol : '#2a2838';
+    ctx.lineWidth = p.velocity > 0.1 ? 3 : 1;
+    roundRect(ctx, p.x, p.y, p.w, p.h, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Glow
+    if(p.glow > 0.05){
+      var glow = ctx.createRadialGradient(
+        p.x + p.w/2, p.y + p.h/2, 0,
+        p.x + p.w/2, p.y + p.h/2, p.w * 0.8
+      );
+      glow.addColorStop(0, hexToRgba(padCol, p.glow * 0.4));
+      glow.addColorStop(1, hexToRgba(padCol, 0));
+      ctx.fillStyle = glow;
+      roundRect(ctx, p.x - p.w*0.2, p.y - p.h*0.2, p.w*1.4, p.h*1.4, 10);
+      ctx.fill();
+    }
+
+    // Label
+    ctx.fillStyle = p.velocity > 0.1 ? '#fff' : '#666677';
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.label, p.x + p.w/2, p.y + p.h/2 - 4);
+
+    // Key hint
+    var keyHint = '';
+    for(var k in keyMap){
+      if(keyMap[k] === i){ keyHint = k.toUpperCase(); break; }
+    }
+    if(keyHint){
+      ctx.fillStyle = '#444455';
+      ctx.font = '9px "Courier New", monospace';
+      ctx.fillText(keyHint, p.x + p.w/2, p.y + p.h/2 + 12);
+    }
+  }
+}
+
+function drawOutputIndicator(){
+  var out = cablePath.points[cablePath.points.length - 1];
+  if(!out) return;
+
+  var pulse = state.signalLevel;
+  var radius = 12 + pulse * 8;
+
+  // Output LED
+  var grad = ctx.createRadialGradient(out.x, out.y, 0, out.x, out.y, radius * 2);
+  var ledCol = pulse > 0.3 ? '#f0a030' : '#332200';
+  grad.addColorStop(0, hexToRgba(ledCol, 0.8 + pulse * 0.2));
+  grad.addColorStop(0.5, hexToRgba(ledCol, pulse * 0.4));
+  grad.addColorStop(1, hexToRgba(ledCol, 0));
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(out.x, out.y, radius * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Core
+  ctx.fillStyle = pulse > 0.3 ? '#ffdd66' : '#443300';
+  ctx.beginPath();
+  ctx.arc(out.x, out.y, radius * 0.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle = '#665533';
+  ctx.font = '9px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('OUT', out.x, out.y + radius + 14);
+
+  // Meter bars
+  var meterW = 8, meterH = 60;
+  var barCount = 12;
+  for(var i = 0; i < barCount; i++){
+    var barH = meterH / barCount;
+    var bx = out.x + radius + 6;
+    var by = out.y - meterH/2 + i * barH;
+    var isActive = (i / barCount) < (1 - pulse) * 0.8;
+    ctx.fillStyle = isActive ? '#332200' : '#f0a030';
+    ctx.fillRect(bx, by, meterW, barH - 1);
+  }
+}
+
+function drawParticles(){
+  for(var i = 0; i < particlePool.length; i++){
+    var p = particlePool[i];
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1.0;
+}
+
+function drawPayoffEffect(){
+  // Ring expansion effect
+  var progress = 1 - (state.payoffTimer / 2000);
+  var ringRadius = 50 + progress * 300;
+  var alpha = (1 - progress) * 0.5;
+
+  ctx.strokeStyle = hexToRgba('#f0a030', alpha);
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(W/2, H * 0.4, ringRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = hexToRgba('#ff6644', alpha * 0.6);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(W/2, H * 0.4, ringRadius * 0.7, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // "CHAIN COMPLETE" text
+  ctx.fillStyle = hexToRgba('#ffcc44', (1 - progress));
+  ctx.font = 'bold 22px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('CHAIN ' + state.chain, W/2, H * 0.22);
+}
+
+var waveformImg = null;
+function drawWaveformDecor(){
+  // Draw the foundry waveform as a subtle decoration in the background
+  if(waveformImg){
+    ctx.globalAlpha = 0.08;
+    ctx.drawImage(waveformImg, W * 0.02, H * 0.02, 100, 40);
+    ctx.globalAlpha = 1.0;
+  }
+}
+
+// Preload waveform image
+try{
+  var img = new Image();
+  img.onload = function(){ waveformImg = img; };
+  img.src = 'assets/visual/music_waveform.png';
+} catch(e){}
+
+// === UTILS ===
+function hexToRgba(hex, alpha){
+  var r = parseInt(hex.slice(1,3), 16);
+  var g = parseInt(hex.slice(3,5), 16);
+  var b = parseInt(hex.slice(5,7), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// === GAME STATE ===
+function startMachine(){
+  state.running = true;
+  document.getElementById('start-overlay').style.display = 'none';
+  initAudio();
+}
+
+// Expose for verification
+window.PSM_STATE = function(){
+  return { running: state.running, chain: state.chain, filter: state.filter, delay: state.delay, hits: state.totalHits, payoffActive: state.payoffActive };
+};
+
+// === MAIN LOOP ===
+var lastTime = 0;
+var accumulator = 0;
+var FIXED_DT = 1/60;
+
+function gameLoop(timestamp){
+  var dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+  lastTime = timestamp;
+
+  if(state.running){
+    accumulator += dt;
+    while(accumulator >= FIXED_DT){
+      update(FIXED_DT);
+      accumulator -= FIXED_DT;
+    }
+  }
+
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+function update(dt){
+  // Signal level decay
+  state.signalLevel *= Math.pow(0.02, dt);
+  if(state.signalLevel < 0.001) state.signalLevel = 0;
+
+  // Chain decay
+  if(performance.now() - state.chainTimer > CFG.chainDecayMs){
+    state.chain = Math.max(0, state.chain - 1);
+    updateChainDisplay();
+  }
+
+  // Payoff timer
+  if(state.payoffActive){
+    state.payoffTimer -= dt * 1000;
+    if(state.payoffTimer <= 0){
+      state.payoffActive = false;
+    }
+  }
+
+  // Update particles
+  updateParticles(dt);
+}
+
+// === BOOT ===
+window.addEventListener('resize', resize);
+document.getElementById('start-btn').addEventListener('click', startMachine);
+document.addEventListener('click', function once(){ initAudio(); document.removeEventListener('click', once); }, {once:true});
+
+resize();
+lastTime = performance.now();
+requestAnimationFrame(gameLoop);
+
+// Initial draw for pre-start visual
+draw();
+
+// Console hook for verification
+console.log('%c[Pocket Signal Machine] Ready. Click POWER ON or press Space to start.', 'color:#f0a030');
+})();
+</script>
+</body>
+</html>
