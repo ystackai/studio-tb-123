@@ -12,6 +12,8 @@
 - Controls: Space boost and lateral steering changed the live flight state.
 - Active-play result: score 600, stems 2/4, gates 1/5 at the mid-flight checkpoint.
 - Finale result: score 1400, stems 4/4, gates 4/5, `SIGNAL ACQUIRED`.
+- Relaunch result: score 0, visible stems 0/4, audio stems 0, gates 0/5.
+- Gate scoring includes horizontal and vertical distance from the visible ring center.
 
 ## Asset Proof
 

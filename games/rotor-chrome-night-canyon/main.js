@@ -364,6 +364,7 @@ function restartGame() {
   pylons.forEach(p => { p.collected = false; p.group.visible = true; });
   stemLights.forEach(l => l.intensity = 0);
   document.querySelectorAll('.stem-slot').forEach(s => s.classList.remove('active'));
+  audio.resetStems();
   scene.fog.density = 0.008;
   renderer.toneMappingExposure = 1.5;
   finalBloom.visible = false;
@@ -468,8 +469,8 @@ function animate() {
    // Gate checks
   for (const gate of gates) {
     if (gate.passed) continue;
-    const dx = Math.abs(rc.pos.x);
-    if (previousZ <= gate.z && rc.pos.z >= gate.z && dx < 5.5) {
+    const gateRadius = Math.hypot(rc.pos.x, rc.pos.y - 7);
+    if (previousZ <= gate.z && rc.pos.z >= gate.z && gateRadius < 5.1) {
       gate.passed = true;
       score += 100;
       passedGates++;
@@ -490,7 +491,7 @@ function animate() {
   for (const py of pylons) {
     if (py.collected) continue;
     const crossesPylon = previousZ <= py.z && rc.pos.z >= py.z;
-    const aligned = Math.abs(rc.pos.x - py.x) < 5 && Math.abs(rc.pos.y - 3) < 5;
+    const aligned = Math.abs(rc.pos.x - py.x) < 6 && Math.abs(rc.pos.y - 3) < 5;
     if (crossesPylon && aligned) {
       py.collected = true;
       py.group.visible = false;
@@ -525,7 +526,7 @@ function animate() {
   renderer.render(scene, camera);
   window.__rotorChromeState = {
     position: { x: rc.pos.x, y: rc.pos.y, z: rc.pos.z },
-    score, passedGates, collectedStems, ended,
+    score, passedGates, collectedStems, audioStems: audio.activeStems, ended,
     foundryLoaded: { ...foundryLoaded }
   };
 }

@@ -226,6 +226,16 @@ export class AudioManager {
     return this.activeStems;
   }
 
+  resetStems() {
+    this.activeStems = 0;
+    if (!this.ctx) return;
+    this.stemGains.forEach((stem) => {
+      stem.gain.cancelScheduledValues(this.ctx.currentTime);
+      stem.gain.setValueAtTime(0, this.ctx.currentTime);
+    });
+    if (this.musicGain) this.musicGain.gain.value = 0.45;
+  }
+
   resume() {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();

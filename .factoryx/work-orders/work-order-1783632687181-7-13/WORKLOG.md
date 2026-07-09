@@ -15,10 +15,12 @@ The original game loaded every asset without a browser error but rendered an eff
 - Normalized inactive controls to numeric zero and added observable runtime state.
 - Aligned canyon ground, walls, and ceiling with the +Z flight path.
 - Added swept gate/pylon crossing tests so high-speed frames cannot skip interactions.
+- Required the craft to cross inside the visible gate radius, including altitude.
 - Awaited real WAV decoding before starting music.
 - Split the Foundry music file into four filtered, gain-ramped stem layers activated by pickups.
 - Increased camera, craft, Foundry model, canyon, and lighting readability.
 - Added an earned mirrored-hangar chord bloom and outcome-coherent debrief.
+- Reset both visible and audio stem state on relaunch.
 - Set the preview entrypoint to the Rotor Chrome artifact.
 
 ## Result
