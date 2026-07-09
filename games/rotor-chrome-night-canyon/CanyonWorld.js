@@ -7,21 +7,20 @@ export function createCanyonWorld({
   wallHeight = 40,
   segments = 80,
   roughness = 3,
-  color = 0x0a0e18,
-  emissive = 0x112233
+  color = 0x18243a,
+  emissive = 0x153654
 }) {
   const group = new THREE.Group();
   const halfW = width / 2;
-  const segLen = length / segments;
-
-   // Ground plane
-  const groundGeo = new THREE.PlaneGeometry(length * 2, width);
+   // Ground plane follows the flight path on +Z.
+  const groundGeo = new THREE.PlaneGeometry(width, length, 8, segments);
   const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x050810, roughness: 0.95, metalness: 0.1
+    color: 0x091426, emissive: 0x030915, emissiveIntensity: 0.35,
+    roughness: 0.82, metalness: 0.25
    });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
-  ground.position.set(length / 2, -1, 0);
+  ground.position.set(0, -1, length / 2);
   group.add(ground);
 
    // Canyon walls (left and right, deformed with noise)
@@ -44,52 +43,53 @@ export function createCanyonWorld({
 
     const wallMat = new THREE.MeshStandardMaterial({
       color, roughness: 0.9, metalness: 0.2,
-      emissive, emissiveIntensity: 0.08,
+      emissive, emissiveIntensity: 0.22,
       side: THREE.DoubleSide
      });
     const wall = new THREE.Mesh(wallGeo, wallMat);
-    wall.position.set(length / 2, wallHeight / 2 - 1, side * halfW);
+    wall.position.set(side * halfW, wallHeight / 2 - 1, length / 2);
     wall.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
     group.add(wall);
    }
 
    // Overhead rock ceiling (partial — gives tunnel/canyon feel)
-  const ceilGeo = new THREE.PlaneGeometry(length, width * 0.8, segments, 6);
+  const ceilGeo = new THREE.PlaneGeometry(width * 0.8, length, 6, segments);
   const cPos = ceilGeo.attributes.position;
   for (let i = 0; i < cPos.count; i++) {
-    const x = cPos.getX(i);
-    cPos.setZ(i, cPos.getZ(i) + Math.sin(x * 0.04) * 2);
+    const y = cPos.getY(i);
+    cPos.setZ(i, cPos.getZ(i) + Math.sin(y * 0.04) * 2);
    }
   cPos.needsUpdate = true;
   ceilGeo.computeVertexNormals();
   const ceilMat = new THREE.MeshStandardMaterial({
-    color: 0x080c14, roughness: 0.95, metalness: 0.15,
+    color: 0x101a2c, emissive: 0x071426, emissiveIntensity: 0.18,
+    roughness: 0.9, metalness: 0.2,
     side: THREE.DoubleSide
    });
   const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.set(length / 2, wallHeight * 0.7, 0);
+  ceiling.position.set(0, wallHeight * 0.7, length / 2);
   group.add(ceiling);
 
    // Fog for depth
   const fog = new THREE.FogExp2(0x050810, 0.008);
 
    // Moon light (cool key from above-left)
-  const moonLight = new THREE.DirectionalLight(0xccddff, 0.7);
+  const moonLight = new THREE.DirectionalLight(0xdceaff, 1.8);
   moonLight.position.set(10, 30, -10);
   group.add(moonLight);
 
    // Rim light (warm from behind)
-  const rimLight = new THREE.DirectionalLight(0xffccaa, 0.15);
+  const rimLight = new THREE.DirectionalLight(0xffd4b8, 0.55);
   rimLight.position.set(-5, 10, 20);
   group.add(rimLight);
 
    // Ambient
-  const ambient = new THREE.AmbientLight(0x111828, 0.3);
+  const ambient = new THREE.AmbientLight(0x263b5c, 0.7);
   group.add(ambient);
 
    // Hemisphere light for sky/ground bounce
-  const hemi = new THREE.HemisphereLight(0x1a2a44, 0x050810, 0.2);
+  const hemi = new THREE.HemisphereLight(0x41658c, 0x07101d, 0.75);
   group.add(hemi);
 
   return { group, fog, wallHeight };

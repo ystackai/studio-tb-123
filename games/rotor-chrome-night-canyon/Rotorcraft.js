@@ -3,11 +3,11 @@ import * as THREE from 'three';
 
 export function createRotorcraftVisual({
   scale = 1,
-  bodyColor = 0x1a2233,
-  accentColor = 0x335577,
-  rotorColor = 0x556677,
-  glowColor = 0x44aaff,
-  emissiveIntensity = 0.6
+  bodyColor = 0x263a52,
+  accentColor = 0x4c7396,
+  rotorColor = 0x86a9c1,
+  glowColor = 0x4ecbff,
+  emissiveIntensity = 0.95
 }) {
   const group = new THREE.Group();
 
@@ -54,7 +54,8 @@ export function createRotorcraftVisual({
   // Cockpit canopy
   const canopyGeo = new THREE.BoxGeometry(0.25, 0.15, 0.4);
   const canopyMat = new THREE.MeshStandardMaterial({
-    color: 0x224466, roughness: 0.1, metalness: 0.8,
+    color: 0x397ba2, emissive: 0x0b3d5c, emissiveIntensity: 0.45,
+    roughness: 0.1, metalness: 0.8,
     transparent: true, opacity: 0.7
   });
   const canopy = new THREE.Mesh(canopyGeo, canopyMat);

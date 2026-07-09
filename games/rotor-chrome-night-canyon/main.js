@@ -11,7 +11,7 @@ const CANON_WIDTH = 28;
 const CANON_WALL = 38;
 const GATE_COUNT = 5;
 const PYLON_COUNT = 4;
-const RC_SCALE = 1.4;
+const RC_SCALE = 2.2;
 const BASE_SPEED = 26;
 const BOOST_SPEED = 48;
 
@@ -26,6 +26,7 @@ let keys = {};
 let stemLights = [];
 let foundryLoaded = { friendly: false, unknown: false };
 let friendlyGLB = null, unknownGLB = null;
+let finalHangar = null, finalBloom = null, debriefTimer = null;
 
 // ===== DOM =====
 const $overlay = document.getElementById('overlay');
@@ -43,16 +44,19 @@ const $debGates = document.getElementById('debGates');
 // ===== Init =====
 function init() {
   scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x03050b);
   clock = new THREE.Clock();
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.setSize(innerWidth, innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.5;
   document.body.appendChild(renderer.domElement);
 
   camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.5, 900);
+  camera.position.set(6, 9, -14);
+  camera.lookAt(0, 5, 24);
 
    // Canyon
   const cw = createCanyonWorld({
@@ -72,10 +76,14 @@ function init() {
    };
   rc.mesh.position.copy(rc.pos);
   scene.add(rc.mesh);
+  const craftKey = new THREE.PointLight(0xc6e8ff, 12, 30);
+  craftKey.position.set(2.5, 4, -3);
+  rc.mesh.add(craftKey);
 
    // Gates & pylons
   spawnGates();
   spawnPylons();
+  createFinalHangar();
 
    // Stem light layers (one per pylon)
   const colors = [0x44ffaa, 0xff66aa, 0x4488ff, 0xffaa44];
@@ -84,7 +92,8 @@ function init() {
     l.position.set(0, 14, 80 + i * 110);
     scene.add(l);
     stemLights.push(l);
-   }
+  }
+  hudUpdate();
 
    // Stem slot UI
   const stemSlots = document.getElementById('stemSlots');
@@ -130,7 +139,7 @@ function makeGate(z, idx) {
     transparent: true, opacity: 0.85, roughness: 0.2, metalness: 0.5
     });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(5.5, 0.4, 10, 32), ringM);
-  ring.rotation.y = Math.PI / 2;
+  ring.position.y = 7;
   g.add(ring);
 
    // Inner ring
@@ -141,7 +150,7 @@ function makeGate(z, idx) {
       transparent: true, opacity: 0.5, roughness: 0.1
       })
    );
-  iRing.rotation.y = Math.PI / 2;
+  iRing.position.y = 7;
   g.add(iRing);
 
    // Pillars
@@ -236,6 +245,61 @@ function makePylon(x, z, idx) {
   return { group: g, ant, beacon, z, x, collected: false, idx, phase: idx * 0.7 };
 }
 
+// ===== Mirrored hangar finale =====
+function createFinalHangar() {
+  finalHangar = new THREE.Group();
+  finalHangar.position.z = CANON_LENGTH - 20;
+
+  const chrome = new THREE.MeshStandardMaterial({
+    color: 0xb9d8ee, emissive: 0x244a66, emissiveIntensity: 0.35,
+    roughness: 0.12, metalness: 0.95
+  });
+  const mirror = new THREE.MeshStandardMaterial({
+    color: 0x172536, emissive: 0x07111f, emissiveIntensity: 0.3,
+    roughness: 0.08, metalness: 1
+  });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(CANON_WIDTH * 1.25, 52), mirror);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(0, -0.8, 22);
+  finalHangar.add(floor);
+
+  for (const z of [4, 13, 22, 31, 40]) {
+    for (const side of [-1, 1]) {
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 18, 0.55), chrome);
+      pillar.position.set(side * 13.5, 8, z);
+      finalHangar.add(pillar);
+    }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(27.5, 0.55, 0.55), chrome);
+    beam.position.set(0, 17, z);
+    finalHangar.add(beam);
+  }
+
+  finalBloom = new THREE.Group();
+  finalBloom.position.set(0, 8, 34);
+  const bloomColors = [0x74d8ff, 0xff72c6, 0xffd36b];
+  bloomColors.forEach((color, index) => {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(3.8 + index * 2.1, 0.16, 12, 64),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 2.4, roughness: 0.18 })
+    );
+    ring.position.z = index * 0.5;
+    finalBloom.add(ring);
+  });
+  const light = new THREE.PointLight(0xc8e9ff, 0, 65);
+  finalBloom.add(light);
+  finalBloom.userData.light = light;
+  finalBloom.visible = false;
+  finalHangar.add(finalBloom);
+  scene.add(finalHangar);
+}
+
+function triggerFinale() {
+  finalBloom.visible = true;
+  finalBloom.userData.light.intensity = 14;
+  scene.fog.density = 0.001;
+  renderer.toneMappingExposure = 1.75;
+}
+
 // ===== Foundry GLB Loading =====
 function loadFoundryGLBs() {
   const loader = new GLTFLoader();
@@ -249,7 +313,7 @@ function loadFoundryGLBs() {
       foundryLoaded.friendly = true;
       gates.forEach(g => {
         const m = gltf.scene.clone();
-        m.scale.setScalar(2.5);
+        m.scale.setScalar(5);
         g.group.userData.foundryHolder.add(m);
         m.position.set(0, 0, 0);
        });
@@ -266,7 +330,7 @@ function loadFoundryGLBs() {
       foundryLoaded.unknown = true;
       pylons.forEach(p => {
         const m = gltf.scene.clone();
-        m.scale.setScalar(2.8);
+        m.scale.setScalar(6);
         p.group.userData.foundryHolder.add(m);
         m.position.set(0, 0, 0);
        });
@@ -277,18 +341,20 @@ function loadFoundryGLBs() {
 }
 
 // ===== Game State =====
-function startGame() {
-  audio.init();
+async function startGame() {
+  $start.disabled = true;
+  $start.textContent = 'TUNING SIGNAL...';
+  await audio.init();
   started = true;
   $overlay.classList.add('hidden');
-
-   // Load audio
-  loadAudio();
-   // Start music after gesture
+  await loadAudio();
   audio.startMusic();
+  $start.textContent = 'LAUNCH';
+  $start.disabled = false;
 }
 
 function restartGame() {
+  if (debriefTimer) clearTimeout(debriefTimer);
   ended = false;
   $debrief.classList.remove('show');
   score = 0; passedGates = 0; collectedStems = 0;
@@ -299,7 +365,9 @@ function restartGame() {
   stemLights.forEach(l => l.intensity = 0);
   document.querySelectorAll('.stem-slot').forEach(s => s.classList.remove('active'));
   scene.fog.density = 0.008;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.5;
+  finalBloom.visible = false;
+  finalBloom.userData.light.intensity = 0;
   hudUpdate();
   audio.startMusic();
 }
@@ -321,11 +389,11 @@ async function loadAudio() {
 
 // ===== Input =====
 function getIn() {
-  const u = keys['ArrowUp'] || keys['KeyW'];
-  const d = keys['ArrowDown'] || keys['KeyS'];
-  const l = keys['ArrowLeft'] || keys['KeyA'];
-  const r = keys['ArrowRight'] || keys['KeyD'];
-  return { u, d, l, r, boost: keys['Space'] };
+  const u = Number(Boolean(keys['ArrowUp'] || keys['KeyW']));
+  const d = Number(Boolean(keys['ArrowDown'] || keys['KeyS']));
+  const l = Number(Boolean(keys['ArrowLeft'] || keys['KeyA']));
+  const r = Number(Boolean(keys['ArrowRight'] || keys['KeyD']));
+  return { u, d, l, r, boost: Boolean(keys['Space']) };
 }
 
 // ===== HUD =====
@@ -341,12 +409,13 @@ function hudUpdate() {
 // ===== Game End =====
 function endGame(won) {
   ended = true;
-  audio.playSFX(won ? 'reveal' : 'impact');
-  $debTitle.textContent = won ? 'SIGNAL ACQUIRED' : 'CRAFT LOST';
+  audio.playSFX(won ? 'reveal' : 'danger');
+  if (won) triggerFinale();
+  $debTitle.textContent = won ? 'SIGNAL ACQUIRED' : 'SIGNAL INCOMPLETE';
   $debScore.textContent = `Score: ${score}`;
   $debStems.textContent = `Stems: ${collectedStems}/${PYLON_COUNT}`;
   $debGates.textContent = `Gates: ${passedGates}/${GATE_COUNT}`;
-  $debrief.classList.add('show');
+  debriefTimer = setTimeout(() => $debrief.classList.add('show'), won ? 1400 : 250);
 }
 
 // ===== Main Loop =====
@@ -362,6 +431,7 @@ function animate() {
   rc.speed += (tgtSpeed - rc.speed) * dt * 4;
 
    // Movement
+  const previousZ = rc.pos.z;
   const dx = (inp.r - inp.l) * 16 * dt;
   const dy = (inp.u - inp.d) * 12 * dt;
   const dz = rc.speed * dt;
@@ -388,19 +458,18 @@ function animate() {
   if (rc.tailRotor) rc.tailRotor.rotation.x += dt * 45;
 
    // Camera — chase cam with smooth follow
-  const camBack = 12 + (inp.boost ? 3 : 0);
-  const camUp = 3.5;
+  const camBack = 9.5 + (inp.boost ? 2 : 0);
+  const camUp = 2.8;
   const camTarget = new THREE.Vector3(rc.pos.x, rc.pos.y + camUp, rc.pos.z - camBack);
   camera.position.lerp(camTarget, dt * 3.5);
-  const lookFwd = new THREE.Vector3(rc.pos.x, rc.pos.y, rc.pos.z + 30);
+  const lookFwd = new THREE.Vector3(rc.pos.x, rc.pos.y + 0.6, rc.pos.z + 25);
   camera.lookAt(lookFwd);
 
    // Gate checks
   for (const gate of gates) {
     if (gate.passed) continue;
-    const dz = Math.abs(rc.pos.z - gate.z);
     const dx = Math.abs(rc.pos.x);
-    if (dz < 2.5 && dx < 5) {
+    if (previousZ <= gate.z && rc.pos.z >= gate.z && dx < 5.5) {
       gate.passed = true;
       score += 100;
       passedGates++;
@@ -420,8 +489,9 @@ function animate() {
    // Pylon checks
   for (const py of pylons) {
     if (py.collected) continue;
-    const dist = rc.pos.distanceTo(new THREE.Vector3(py.x, 3, py.z));
-    if (dist < 4.5) {
+    const crossesPylon = previousZ <= py.z && rc.pos.z >= py.z;
+    const aligned = Math.abs(rc.pos.x - py.x) < 5 && Math.abs(rc.pos.y - 3) < 5;
+    if (crossesPylon && aligned) {
       py.collected = true;
       py.group.visible = false;
       score += 250;
@@ -433,7 +503,7 @@ function animate() {
         stemLights[collectedStems - 1].intensity = 4;
         }
        // Brighten scene
-      renderer.toneMappingExposure = 1.2 + collectedStems * 0.15;
+      renderer.toneMappingExposure = 1.5 + collectedStems * 0.14;
        // Reduce fog
       scene.fog.density = Math.max(0.002, 0.008 - collectedStems * 0.0015);
       hudUpdate();
@@ -444,13 +514,20 @@ function animate() {
     py.group.rotation.y += dt * 1.2;
    }
 
-   // Win condition
-  if (rc.pos.z >= CANON_LENGTH - 20) endGame(true);
+   // The chord bloom is earned only when the run actually assembled a signal.
+  if (rc.pos.z >= CANON_LENGTH - 20) {
+    endGame(passedGates >= 3 && collectedStems >= 2);
+  }
 
    // Rotor SFX (periodic)
   if (Math.random() < dt * 0.3) audio.playSFX('movement', 0.1);
 
   renderer.render(scene, camera);
+  window.__rotorChromeState = {
+    position: { x: rc.pos.x, y: rc.pos.y, z: rc.pos.z },
+    score, passedGates, collectedStems, ended,
+    foundryLoaded: { ...foundryLoaded }
+  };
 }
 
 // ===== Go =====

@@ -12,6 +12,7 @@ export class AudioManager {
     this.activeStems = 0;
     this.musicPlaying = false;
     this.musicSource = null;
+    this.musicSources = [];
     this._musicStartTime = 0;
     this._musicOffset = 0;
     this.stemGains = [];   // one gain node per stem
@@ -61,11 +62,38 @@ export class AudioManager {
   startMusic() {
     if (this.musicPlaying || !this.ctx) return;
     if (this.musicBuffer) {
+      const offset = this._musicOffset % this.musicBuffer.duration;
       this.musicSource = this.ctx.createBufferSource();
       this.musicSource.buffer = this.musicBuffer;
       this.musicSource.loop = true;
-      this.musicSource.connect(this.musicGain);
-      this.musicSource.start(0, this._musicOffset % this.musicBuffer.duration);
+      const bedGain = this.ctx.createGain();
+      bedGain.gain.value = 0.22;
+      this.musicSource.connect(bedGain).connect(this.musicGain);
+      this.musicSource.start(0, offset);
+
+      const bands = [
+        { type: 'lowpass', frequency: 190, q: 0.7 },
+        { type: 'bandpass', frequency: 650, q: 0.85 },
+        { type: 'bandpass', frequency: 1800, q: 0.75 },
+        { type: 'highpass', frequency: 3600, q: 0.7 }
+      ];
+      this.musicSources = [];
+      this.stemGains = [];
+      bands.forEach((band) => {
+        const source = this.ctx.createBufferSource();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+        source.buffer = this.musicBuffer;
+        source.loop = true;
+        filter.type = band.type;
+        filter.frequency.value = band.frequency;
+        filter.Q.value = band.q;
+        gain.gain.value = 0;
+        source.connect(filter).connect(gain).connect(this.musicGain);
+        source.start(0, offset);
+        this.musicSources.push(source);
+        this.stemGains.push(gain);
+      });
       this._musicStartTime = this.ctx.currentTime;
       this.musicPlaying = true;
     } else {
@@ -100,6 +128,12 @@ export class AudioManager {
       this.musicSource.disconnect();
       this.musicSource = null;
     }
+    this.musicSources.forEach((source) => {
+      try { source.stop(); } catch (_) { /* already stopped */ }
+      source.disconnect();
+    });
+    this.musicSources = [];
+    this.stemGains = [];
     this.musicPlaying = false;
   }
 
@@ -181,9 +215,13 @@ export class AudioManager {
 
   addStem() {
     this.activeStems = Math.min(this.activeStems + 1, 4);
-     // Increase music volume slightly with each stem
+    const stem = this.stemGains[this.activeStems - 1];
+    if (stem && this.ctx) {
+      stem.gain.cancelScheduledValues(this.ctx.currentTime);
+      stem.gain.linearRampToValueAtTime(0.42, this.ctx.currentTime + 0.35);
+    }
     if (this.musicGain) {
-      this.musicGain.gain.value = 0.3 + this.activeStems * 0.1;
+      this.musicGain.gain.value = 0.45 + this.activeStems * 0.06;
      }
     return this.activeStems;
   }

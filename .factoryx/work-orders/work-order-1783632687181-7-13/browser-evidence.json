@@ -1,0 +1,206 @@
+{
+  "consoleErrors": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "badResponses": [],
+  "assetResponses": [
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_friendly.glb"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_unknown.glb"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/foundry_music_loop.wav"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_movement.wav"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_interaction.wav"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_reveal.wav"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_danger.wav"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_impact.wav"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/reveal_sting.wav"
+    }
+  ],
+  "snapshots": [
+    {
+      "label": "launched",
+      "overlayHidden": true,
+      "debriefShown": false,
+      "score": "SCORE 0",
+      "stems": "STEMS 0/4",
+      "gates": "GATES 0/5",
+      "debrief": "RUN COMPLETE\n\nRELAUNCH",
+      "debugState": {
+        "position": {
+          "x": 0,
+          "y": 5,
+          "z": 49.24140000247955
+        },
+        "score": 0,
+        "passedGates": 0,
+        "collectedStems": 0,
+        "ended": false,
+        "foundryLoaded": {
+          "friendly": true,
+          "unknown": true
+        }
+      },
+      "canvas": {
+        "width": 1440,
+        "height": 900,
+        "dataUrlBytes": 38290
+      },
+      "resources": [
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_friendly.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_unknown.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/foundry_music_loop.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_movement.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_interaction.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_reveal.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_danger.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_impact.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/reveal_sting.wav"
+      ]
+    },
+    {
+      "label": "mid-flight",
+      "overlayHidden": true,
+      "debriefShown": false,
+      "score": "SCORE 600",
+      "stems": "STEMS 2/4",
+      "gates": "GATES 1/5",
+      "debrief": "RUN COMPLETE\n\nRELAUNCH",
+      "debugState": {
+        "position": {
+          "x": 0.07839999961853128,
+          "y": 5,
+          "z": 220.12197876660525
+        },
+        "score": 600,
+        "passedGates": 1,
+        "collectedStems": 2,
+        "ended": false,
+        "foundryLoaded": {
+          "friendly": true,
+          "unknown": true
+        }
+      },
+      "canvas": {
+        "width": 1440,
+        "height": 900,
+        "dataUrlBytes": 38290
+      },
+      "resources": [
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_friendly.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_unknown.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/foundry_music_loop.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_movement.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_interaction.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_reveal.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_danger.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_impact.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/reveal_sting.wav"
+      ]
+    },
+    {
+      "label": "chord-bloom",
+      "overlayHidden": true,
+      "debriefShown": false,
+      "score": "SCORE 1400",
+      "stems": "STEMS 4/4",
+      "gates": "GATES 4/5",
+      "debrief": "SIGNAL ACQUIRED\n\nScore: 1400\n\nStems: 4/4\n\nGates: 4/5\n\nRELAUNCH",
+      "debugState": {
+        "position": {
+          "x": 0.07839999961853128,
+          "y": 5,
+          "z": 480.49712735547575
+        },
+        "score": 1400,
+        "passedGates": 4,
+        "collectedStems": 4,
+        "ended": true,
+        "foundryLoaded": {
+          "friendly": true,
+          "unknown": true
+        }
+      },
+      "canvas": {
+        "width": 1440,
+        "height": 900,
+        "dataUrlBytes": 38290
+      },
+      "resources": [
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_friendly.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_unknown.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/foundry_music_loop.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_movement.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_interaction.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_reveal.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_danger.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_impact.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/reveal_sting.wav"
+      ]
+    },
+    {
+      "label": "debrief",
+      "overlayHidden": true,
+      "debriefShown": true,
+      "score": "SCORE 1400",
+      "stems": "STEMS 4/4",
+      "gates": "GATES 4/5",
+      "debrief": "SIGNAL ACQUIRED\n\nScore: 1400\n\nStems: 4/4\n\nGates: 4/5\n\nRELAUNCH",
+      "debugState": {
+        "position": {
+          "x": 0.07839999961853128,
+          "y": 5,
+          "z": 480.49712735547575
+        },
+        "score": 1400,
+        "passedGates": 4,
+        "collectedStems": 4,
+        "ended": true,
+        "foundryLoaded": {
+          "friendly": true,
+          "unknown": true
+        }
+      },
+      "canvas": {
+        "width": 1440,
+        "height": 900,
+        "dataUrlBytes": 38290
+      },
+      "resources": [
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_friendly.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sonar_unknown.glb",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/foundry_music_loop.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_movement.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_interaction.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_reveal.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_danger.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/sfx_impact.wav",
+        "http://127.0.0.1:8767/games/rotor-chrome-night-canyon/assets/generated/reveal_sting.wav"
+      ]
+    }
+  ]
+}
