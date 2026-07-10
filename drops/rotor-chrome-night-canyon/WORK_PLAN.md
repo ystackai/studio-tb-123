@@ -149,5 +149,36 @@ tickets:
       before terminal success.
     depends_on: [rotor-craft-asset-kit-and-first-flight]
 
+  - id: tb-123-rotor-chrome-night-canyon--payoff-pass-04-make-the-final-mirrored-hangar-chord-blo
+    title: Make the mirrored-hangar ending land
+    goal: >
+      Make the earned final mirrored-hangar chord bloom bright, spatially
+      legible, and musically synchronized without disturbing the working run.
+      The player should clearly cross from the midnight canyon into a distinct
+      reflective hangar, see the authored rotorcraft held as the visual subject,
+      and experience one readable light-and-space transformation on the final
+      chord rather than another dark ring or generic neon field.
+    scope: >
+      This is the selected payoff intervention from production snapshot
+      tb-123-rotor-chrome-night-canyon:production:6986dbf:authored-hero-v5.
+      Preserve the authored rotorcraft integration, steering, boost, radar
+      gates, score, four collectible music stems, real music files, real SFX,
+      debrief, and clean relaunch. Reuse existing authored materials and assets
+      where possible. Add a bounded authored payoff asset only when the current
+      scene cannot make the hangar readable; do not broaden into a canyon,
+      control, HUD, or full-game rewrite.
+    verify: >
+      In the exact public browser preview, complete the run and capture the
+      approach, threshold crossing, chord-bloom peak, and debrief. Prove the
+      authored rotorcraft GLB and named rotor nodes remain active, all five
+      gates and four stems register, file-based music and at least three SFX
+      load, the bloom is synchronized with the final musical event, the ending
+      is brighter and spatially distinct from active canyon flight, relaunch is
+      clean, and there are zero console, page, request, or bad-response errors.
+      Commit the exact screenshots, manifest/verification notes, and source
+      changes before terminal success.
+    depends_on:
+      - tb-123-rotor-chrome-night-canyon--assets-pass-03-using-the-registered-qwen3-6-27b-coding-m
+
 done: false
 ```
