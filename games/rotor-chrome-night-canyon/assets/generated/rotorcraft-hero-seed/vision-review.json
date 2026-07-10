@@ -1,0 +1,31 @@
+[
+  {
+    "audio_active": null,
+    "canvas_variance": 2550.5794691932556,
+    "failure_message": null,
+    "failure_signature": null,
+    "label": "target-01",
+    "model_judgment": {
+      "error": null,
+      "model": "qwen3-vl:8b",
+      "note": "parsed from prose response: Got it, let's score this. First, R1 graphics. The screenshots show a drone/vehicle with sleek design, metallic textures, vibrant colors (cyan, yellow, pink). The pre and post are the same? Wait, canvas variance is 2550.5795 which is high, s",
+      "rubric_sha": "4c0a96e33c5498a0298984036b527e5d0b957d69aecd3ed51de6b0503a4e9c4b",
+      "scores": {
+        "r1": 5,
+        "r2": 2,
+        "r3": 5,
+        "r4": 5
+      }
+    },
+    "motion_frame_paths": [
+      "/tmp/rotorcraft-seed34-review/frame-00.png"
+    ],
+    "passed": true,
+    "pre_screenshot_path": "/tmp/rotorcraft-seed34-review/browser-runtime-pre.png",
+    "screenshot_path": "/tmp/rotorcraft-seed34-review/browser-runtime-post.png",
+    "screenshot_url": "https://www.ystackai.com/factoryx/tb-123/object-store/tmp%2Frotorcraft-seed34-review/browser-runtime-post.png",
+    "source": "/tmp/rotorcraft-hero-seed34/rotorcraft_contact_sheet.png",
+    "url": "file:///tmp/rotorcraft-hero-seed34/rotorcraft_contact_sheet.png",
+    "warning": null
+  }
+]
