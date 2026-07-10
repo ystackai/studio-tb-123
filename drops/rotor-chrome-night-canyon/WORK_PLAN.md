@@ -55,6 +55,37 @@ tickets:
       no longer read as rings inside dark procedural walls.
     depends_on: [rotor-craft-asset-kit-and-first-flight]
 
+  - id: tb-123-rotor-chrome-night-canyon--assets-pass-02-create-one-new-bright-authored-rotorcraf
+    title: Recover one durable, vision-gated Rotor Chrome hero
+    goal: >
+      Create one new bright authored rotorcraft from scratch. Do not attempt to
+      salvage the prior replacement: work-order-1783641517957-7-2 produced a
+      blank dark contact sheet and its uncommitted Blender source and GLB did
+      not survive the worker restart. Build a single readable stealth
+      rotorcraft with a distinctive chrome silhouette, cockpit/body structure,
+      rotor and propulsion details, and materials that remain legible against
+      the midnight canyon. Preserve the baseline's working flight, gates,
+      pickups, real music, SFX, payoff, and relaunch behavior.
+    scope: >
+      This is one bounded authored_assets intervention from creative snapshot
+      tb-123-rotor-chrome-night-canyon:production:c4822b3:recovery-source-missing-v2.
+      Produce one hero, not a batch and not a broad canyon or hangar rewrite.
+      Keep the Blender source, exported GLB, render views, contact sheet,
+      reviewer report, provenance, and integration changes in git before
+      expanding the pass. Supporting primitives may remain for collision and
+      atmosphere, but they may not substitute for the visible hero.
+    verify: >
+      Render a bright, tightly framed contact sheet and immediately run the
+      installed runtime vision reviewer. A blank, dark, cropped, primitive, or
+      unreadable result fails the gate and must be repaired or committed as
+      explicit failure evidence; file existence and Blender exit zero are not
+      approval. After a passing asset review, integrate the GLB and capture the
+      exact served experience in active flight with the craft large enough to
+      judge. Prove zero browser/page/request errors, input changing flight
+      state, real music and at least three SFX still active, payoff reachable,
+      relaunch clean, and every source/export/render/report/manifest file
+      committed and pushed on the canonical Work Order branch.
+    depends_on: [rotor-craft-asset-kit-and-first-flight]
+
 done: false
 ```
-
