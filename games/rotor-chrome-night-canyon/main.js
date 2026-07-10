@@ -26,6 +26,7 @@ let keys = {};
 let stemLights = [];
 let foundryLoaded = { friendly: false, unknown: false };
 let friendlyGLB = null, unknownGLB = null;
+let authoredRotorcraftLoaded = false;
 let finalHangar = null, finalBloom = null, debriefTimer = null;
 
 // ===== DOM =====
@@ -55,8 +56,8 @@ function init() {
   document.body.appendChild(renderer.domElement);
 
   camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.5, 900);
-  camera.position.set(6, 9, -14);
-  camera.lookAt(0, 5, 24);
+  camera.position.set(3, 7, -10);
+  camera.lookAt(0, 5, 18);
 
    // Canyon
   const cw = createCanyonWorld({
@@ -76,9 +77,9 @@ function init() {
    };
   rc.mesh.position.copy(rc.pos);
   scene.add(rc.mesh);
-  const craftKey = new THREE.PointLight(0xc6e8ff, 12, 30);
-  craftKey.position.set(2.5, 4, -3);
-  rc.mesh.add(craftKey);
+  addCraftKey(rc.mesh);
+  renderer.domElement.dataset.rotorcraftAsset = 'procedural-fallback';
+  loadRotorcraftHero();
 
    // Gates & pylons
   spawnGates();
@@ -300,6 +301,46 @@ function triggerFinale() {
   renderer.toneMappingExposure = 1.75;
 }
 
+function addCraftKey(mesh) {
+  const craftKey = new THREE.PointLight(0xc6e8ff, 12, 30);
+  craftKey.position.set(2.5, 4, -3);
+  mesh.add(craftKey);
+}
+
+function loadRotorcraftHero() {
+  const loader = new GLTFLoader();
+  const assetPath = 'assets/generated/rotorcraft-hero-seed/rotorcraft_hero.glb';
+
+  loader.load(
+    assetPath,
+    (gltf) => {
+      const hero = gltf.scene;
+      const mainRotor = hero.getObjectByName('MainRotor');
+      const tailRotor = hero.getObjectByName('TailRotor');
+      if (!mainRotor || !tailRotor) {
+        console.warn('authored rotorcraft is missing required rotor nodes');
+        return;
+      }
+
+      hero.scale.setScalar(1.1);
+      hero.position.copy(rc.pos);
+      hero.rotation.copy(rc.mesh.rotation);
+      addCraftKey(hero);
+      scene.add(hero);
+      scene.remove(rc.mesh);
+
+      rc.mesh = hero;
+      rc.mainRotor = mainRotor;
+      rc.tailRotor = tailRotor;
+      authoredRotorcraftLoaded = true;
+      renderer.domElement.dataset.rotorcraftAsset = 'rotorcraft_hero.glb';
+      renderer.domElement.dataset.rotorcraftNodes = 'MainRotor,TailRotor';
+    },
+    undefined,
+    (error) => console.warn('authored rotorcraft failed; keeping procedural fallback', error)
+  );
+}
+
 // ===== Foundry GLB Loading =====
 function loadFoundryGLBs() {
   const loader = new GLTFLoader();
@@ -455,12 +496,18 @@ function animate() {
   rc.mesh.rotation.set(rc.pitch, 0, rc.roll, 'YXZ');
 
    // Rotor animation
-  if (rc.mainRotor) rc.mainRotor.rotation.y += dt * 28;
-  if (rc.tailRotor) rc.tailRotor.rotation.x += dt * 45;
+  if (rc.mainRotor) {
+    if (authoredRotorcraftLoaded) rc.mainRotor.rotateY(dt * 28);
+    else rc.mainRotor.rotation.y += dt * 28;
+  }
+  if (rc.tailRotor) {
+    if (authoredRotorcraftLoaded) rc.tailRotor.rotateY(dt * 45);
+    else rc.tailRotor.rotation.x += dt * 45;
+  }
 
    // Camera — chase cam with smooth follow
-  const camBack = 9.5 + (inp.boost ? 2 : 0);
-  const camUp = 2.8;
+  const camBack = 7 + (inp.boost ? 2 : 0);
+  const camUp = 2;
   const camTarget = new THREE.Vector3(rc.pos.x, rc.pos.y + camUp, rc.pos.z - camBack);
   camera.position.lerp(camTarget, dt * 3.5);
   const lookFwd = new THREE.Vector3(rc.pos.x, rc.pos.y + 0.6, rc.pos.z + 25);
