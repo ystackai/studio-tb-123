@@ -118,5 +118,36 @@ tickets:
       integration and exact evidence before terminal success.
     depends_on: [rotor-craft-asset-kit-and-first-flight]
 
+  - id: tb-123-rotor-chrome-night-canyon--assets-pass-03-using-the-registered-qwen3-6-27b-coding-m
+    title: Integrate the reviewed hero on the registered worker
+    goal: >
+      Using the registered qwen3.6:27b-coding-mxfp8 worker, integrate the
+      immutable worker-verified rotorcraft_hero.glb into the exact served chase
+      view. Keep the procedural craft only as a load fallback, animate the
+      exported MainRotor and TailRotor nodes, frame the authored hero large
+      enough to judge, rerun the installed reviewer, and preserve the working
+      music, SFX, gates, pickups, payoff, and relaunch.
+    scope: >
+      This is the compatible-runtime replacement selected from snapshot
+      tb-123-rotor-chrome-night-canyon:production:c4822b3:qwen-worker-ready-v4.
+      The previous pass was cancelled before claim because it requested GPT-5.5
+      while TB-123 had no GPT-5.5 worker or configured GPT gateway backend. It
+      consumed zero model capacity. Do not rewrite or regenerate the seed.
+      Treat files under assets/generated/rotorcraft-hero-seed and the source
+      generator as immutable unless exact integration evidence identifies one
+      bounded defect. Do not broaden into canyon, audio, or gameplay redesign.
+    verify: >
+      Confirm the installed reviewer still passes the committed contact sheet,
+      then verify the exact browser preview. The hero GLB must return HTTP 200,
+      be the visible player subject after load, remain readable during chase
+      motion, and expose animated MainRotor and TailRotor nodes. Steering and
+      boost must change state; real music and at least three real SFX must load;
+      gates and pickups must score; the earned chord bloom must be reached; and
+      relaunch must reset cleanly. Capture close-hero, active-flight, mid-run
+      stem, payoff, and debrief evidence with zero console, page, request, or
+      bad-response errors. Commit and push the integration and exact evidence
+      before terminal success.
+    depends_on: [rotor-craft-asset-kit-and-first-flight]
+
 done: false
 ```
