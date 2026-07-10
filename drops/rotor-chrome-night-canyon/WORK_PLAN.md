@@ -87,5 +87,36 @@ tickets:
       committed and pushed on the canonical Work Order branch.
     depends_on: [rotor-craft-asset-kit-and-first-flight]
 
+  - id: tb-123-rotor-chrome-night-canyon--assets-pass-02-integrate-the-already-committed-and-work
+    title: Integrate the reviewed Rotor Chrome hero seed
+    goal: >
+      Integrate the already committed and worker-verified
+      assets/generated/rotorcraft-hero-seed/rotorcraft_hero.glb into the exact
+      served chase view. Do not rewrite the generator. Keep the procedural
+      craft only as a load fallback, frame the authored hero large enough to
+      judge during motion, animate the exported MainRotor and TailRotor nodes,
+      and preserve the working music, SFX, gates, pickups, payoff, and relaunch.
+    scope: >
+      This is the selected authored_assets intervention from snapshot
+      tb-123-rotor-chrome-night-canyon:production:c4822b3:recovery-seed-available-v3.
+      The source, Blender 3.4 export, BLEND file, four renders, contact sheet,
+      checksums, and passing deployed vision report are already durable on
+      main at bbeb95b. Treat the seed as immutable unless exact integration
+      evidence exposes a bounded defect. Do not spend the pass rebuilding the
+      asset, broadening into canyon or audio work, or accepting a file that is
+      loaded but hidden, off-camera, tiny, or replaced by the procedural craft.
+    verify: >
+      Rerun the installed vision reviewer against the committed seed before
+      integration and preserve its report. In the exact browser preview prove
+      the hero GLB returns HTTP 200 and is the visible player subject, the
+      authored silhouette and materials remain readable in active chase motion,
+      rotor nodes animate, steering and boost change state, real music and at
+      least three real SFX still load, gates and pickups score, the earned chord
+      bloom is reached, and relaunch resets cleanly. Capture close-hero,
+      active-flight, mid-run stem, payoff, and debrief evidence with zero
+      console, page, request, or bad-response errors. Commit and push the
+      integration and exact evidence before terminal success.
+    depends_on: [rotor-craft-asset-kit-and-first-flight]
+
 done: false
 ```
