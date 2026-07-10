@@ -28,6 +28,7 @@ let foundryLoaded = { friendly: false, unknown: false };
 let friendlyGLB = null, unknownGLB = null;
 let authoredRotorcraftLoaded = false;
 let finalHangar = null, finalBloom = null, debriefTimer = null;
+let finaleActive = false, finaleTime = 0, finaleCamOrigin = null, finaleCamLook = null;
 
 // ===== DOM =====
 const $overlay = document.getElementById('overlay');
@@ -295,10 +296,95 @@ function createFinalHangar() {
 }
 
 function triggerFinale() {
+  finaleActive = true;
+  finaleTime = 0;
+  finaleCamOrigin = camera.position.clone();
+  finaleCamLook = camera.userData.lookTarget || new THREE.Vector3(rc.pos.x, rc.pos.y + 0.6, rc.pos.z + 25);
   finalBloom.visible = true;
-  finalBloom.userData.light.intensity = 14;
+  finalBloom.userData.light.intensity = 28;
   scene.fog.density = 0.001;
-  renderer.toneMappingExposure = 1.75;
+  renderer.toneMappingExposure = 2.2;
+
+  // Play a synchronized musical chord — one note per collected stem layer
+  if (audio.ctx && audio.musicGain) {
+    const now = audio.ctx.currentTime;
+    const chord = [261.63, 329.63, 392.00, 523.25]; // C4 E4 G4 C5
+    chord.forEach((freq, i) => {
+      if (i >= collectedStems) return;
+      const osc = audio.ctx.createOscillator();
+      const g = audio.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.12);
+      g.gain.setValueAtTime(0, now + i * 0.12);
+      g.gain.linearRampToValueAtTime(0.28, now + i * 0.12 + 0.06);
+      g.gain.setValueAtTime(0.28, now + i * 0.12 + 1.2);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 3.2);
+      osc.connect(g).connect(audio.musicGain);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 3.4);
+    });
+    // Sub bass layer
+    const sub = audio.ctx.createOscillator();
+    const subG = audio.ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(55, now);
+    subG.gain.setValueAtTime(0, now);
+    subG.gain.linearRampToValueAtTime(0.35, now + 0.15);
+    subG.gain.setValueAtTime(0.35, now + 1.5);
+    subG.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
+    sub.connect(subG).connect(audio.musicGain);
+    sub.start(now);
+    sub.stop(now + 3.7);
+  }
+}
+
+// Animate the finale sequence — camera arc, bloom pulse, ring rotation
+function updateFinale(dt) {
+  if (!finaleActive) return;
+  finaleTime += dt;
+
+  // Bloom pulse — rings throb with the chord
+  const pulse = 1.0 + 0.35 * Math.sin(finaleTime * 2.8);
+  finalBloom.children.forEach((child, i) => {
+    if (child.isMesh) {
+      const s = (1.0 + 0.18 * Math.sin(finaleTime * 2.8 + i * 0.9)) * pulse;
+      child.scale.set(s, s, s);
+      // Rotate each ring at different rates
+      child.rotation.z += dt * (0.25 + i * 0.12);
+      child.rotation.x = Math.sin(finaleTime * 0.6 + i * 1.1) * 0.15;
+      // Pulse emissive intensity
+      if (child.material) {
+        child.material.emissiveIntensity = 2.4 + 1.8 * Math.sin(finaleTime * 2.8 + i * 0.5);
+      }
+    }
+  });
+
+  // Bloom light pulse
+  if (finalBloom.userData.light) {
+    finalBloom.userData.light.intensity = 28 + 12 * Math.sin(finaleTime * 2.8);
+  }
+
+  // Camera arc around the bloom — cinematic shoulder angle
+  const hangarWorldZ = finalHangar.position.z;
+  const bloomWorld = new THREE.Vector3(0, 8, hangarWorldZ + 34);
+  const arcT = Math.min(finaleTime / 4.0, 1.0);
+  const angle = arcT * Math.PI * 0.6;
+  const radius = 28 * (1.0 - arcT * 0.3);
+  const camX = Math.sin(angle) * radius;
+  const camY = 4 + 6 * (1.0 - arcT * 0.2);
+  const camZ = bloomWorld.z - Math.cos(angle) * radius;
+  camera.position.lerp(new THREE.Vector3(camX, camY, camZ), dt * 1.8);
+  camera.lookAt(bloomWorld);
+
+  // Rotorcraft idle in the hangar — gentle hover
+  rc.pos.z += Math.sin(finaleTime * 0.8) * dt * 0.3;
+  rc.pos.x += Math.sin(finaleTime * 0.5) * dt * 0.15;
+  rc.mesh.position.copy(rc.pos);
+  rc.mesh.rotation.set(0, finaleTime * 0.2, 0, 'YXZ');
+
+  // Keep rotors spinning
+  if (rc.mainRotor) rc.mainRotor.rotateY(dt * 28);
+  if (rc.tailRotor) rc.tailRotor.rotateY(dt * 45);
 }
 
 function addCraftKey(mesh) {
@@ -410,6 +496,8 @@ function restartGame() {
   renderer.toneMappingExposure = 1.5;
   finalBloom.visible = false;
   finalBloom.userData.light.intensity = 0;
+  finaleActive = false;
+  finaleTime = 0;
   hudUpdate();
   audio.startMusic();
 }
@@ -463,9 +551,17 @@ function endGame(won) {
 // ===== Main Loop =====
 function animate() {
   requestAnimationFrame(animate);
-  if (!started || ended) { renderer.render(scene, camera); return; }
+  if (!started) { renderer.render(scene, camera); return; }
 
   const dt = Math.min(clock.getDelta(), 0.05);
+
+  if (ended) {
+    if (finaleActive) {
+      updateFinale(dt);
+     }
+    renderer.render(scene, camera);
+    return;
+   }
   const inp = getIn();
 
    // Speed
