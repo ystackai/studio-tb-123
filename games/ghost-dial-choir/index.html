@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Ghost Dial Choir</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { background:#0a0a12; overflow:hidden; width:100%; height:100%; }
+canvas { display:block; margin:0 auto; touch-action:none; cursor:pointer; }
+#info { position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+  color:#556; font:12px monospace; text-align:center; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info">click a dial side to tune · Space to start/restart</div>
+<!-- Foundry blocks (loaded first) -->
+<script src="lib/rng.js"></script>
+<script src="lib/game-loop.js"></script>
+<script src="lib/input.js"></script>
+<script src="lib/tween.js"></script>
+<script src="lib/particles.js"></script>
+<script src="lib/scenes.js"></script>
+<script src="lib/screen-shake.js"></script>
+<script src="lib/webaudio-kit.js"></script>
+<!-- Game logic -->
+<script src="main.js"></script>
+</body>
+</html>
