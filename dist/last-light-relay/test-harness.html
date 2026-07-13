@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Last-Light Relay — Test Harness</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e1a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  canvas { display: block; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="game" width="960" height="640"></canvas>
+<script src="rng.js"></script>
+<script src="game-loop.js"></script>
+<script src="input.js"></script>
+<script src="scenes.js"></script>
+<script src="tween.js"></script>
+<script src="particles.js"></script>
+<script src="screen-shake.js"></script>
+<script src="webaudio-kit.js"></script>
+<script src="game.js"></script>
+<script>
+/* Test harness: exposes game state for manual testing */
+window.__test = {
+  transmit: function() {
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+  },
+  getState: function() {
+    return window.G ? {
+      carrier: G.carrier, power: G.power, phase: G.phase,
+      misses: G.misses, totalHits: G.totalHits,
+      scene: FoundryScenes.name(), finished: G.finished, win: G.win
+    } : { error: 'G not defined' };
+  }
+};
+</script>
+</body>
+</html>
