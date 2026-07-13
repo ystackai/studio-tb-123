@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Test Canvas</title>
+<style>body{margin:0;background:#000;}</style></head>
+<body><canvas id="c"></canvas><script>
+var cv=document.getElementById('c'),C=cv.getContext('2d'),W=960,H=640;cv.width=W;cv.height=H;
+C.fillStyle='rgba(0,0,0,.88)';C.fillRect(0,0,W,H);
+C.fillStyle='#7ffcac';C.font='bold 32px monospace';C.textAlign='center';
+C.fillText('HELLO',W/2,H/2);
+console.log("canvas ok");
+</script></body></html>

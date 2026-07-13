@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Firefly Numbers Station</title>
+<style>body{margin:0;background:#0a0a12;overflow:hidden;font-family:monospace;color:#c8ffc8;user-select:none}
+canvas{display:block;margin:0 auto;cursor:crosshair}</style></head><body>
+<canvas id="c"></canvas><script>
+var cv=document.getElementById('c'),C=cv.getContext('2d'),W=960,H=640;cv.width=W;cv.height=H;
+var state=0,t=0,score=0,round=1,maxRound=3,phaseIdx=0,pattern=[],decoded=[],attempts=0;
+var success=false,resultMsg="",resultSub="";
+var chPos=[[256,500],[432,500],[608,500],[784,500]];
+var ac=null;try{ac=new AudioContext();}catch(e){}
+function beep(f,d,v){if(!v)v=.12;if(!ac)return;
+try{var o=ac.createOscillator(),g=ac.createGain();
+o.type='sine';o.frequency.value=f;g.gain.value=v;
+g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);
+o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);}catch(e){}}
+function buzz(d){if(!ac)return;
+try{var s=ac.sampleRate*d,b=ac.createBuffer(1,s,ac.sampleRate),
+dt=b.getChannelData(0);for(var i=0;i<s;i++)dt[i]=Math.random()*2-1;
+var sr=ac.createBufferSource(),g=ac.createGain();sr.buffer=b;g.gain.value=.04;
+sr.connect(g);g.connect(ac.destination);sr.start();}catch(e){}}
+function genPattern(){pattern=[];var len=2+round;for(var i=0;i<len;i++)pattern.push(Math.floor(Math.random()*4));decoded=[];phaseIdx=0;}
+function drawSignal(){for(var i=0;i<pattern.length;i++){
+var ch=pattern[i],px=chPos[ch][0],py=chPos[ch][1]-80;
+var r=15+Math.sin(t*4+i)*10,a=.4+Math.sin(t*3+i)*.3;
+var gr=C.createRadialGradient(px,py,0,px,py,r);
+gr.addColorStop(0,'rgba(120,255,180,'+a+')');
+gr.addColorStop(1,'rgba(60,180,100,0)');
+C.fillStyle=gr;C.beginPath();C.arc(px,py,r,0,Math.PI*2);C.fill();
+C.strokeStyle='rgba(120,255,180,'+(a*.3)+')';C.lineWidth=1;
+C.beginPath();C.moveTo(px,py+r);C.lineTo(px,chPos[ch][1]-25);C.stroke();}}
+var noisePx=[];for(var i=0;i<150;i++)noisePx.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+1});
+function drawStatic(){for(var i=0;i<noisePx.length;i++){var p=noisePx[i];
+C.fillStyle='rgba(140,180,140,'+(.08+Math.random()*.06)+')';
+C.fillRect(p.x,p.y,p.s,p.s);p.x+=.3;if(p.x>W)p.x=0;}}
+function drawChannels(){for(var i=0;i<4;i++){
+C.fillStyle='rgba(20,40,20,.6)';C.strokeStyle='#3a6a3a';
+C.lineWidth=1.5;C.fillRect(chPos[i][0]-42,chPos[i][1]-22,84,44);
+C.strokeRect(chPos[i][0]-42,chPos[i][1]-22,84,44);
+C.fillStyle='#8abf8a';C.font='bold 16px monospace';C.textAlign='center';
+C.fillText('CH'+(i+1),chPos[i][0],chPos[i][1]+6);}}
+function drawTitle(){C.fillStyle='rgba(0,0,0,.88)';C.fillRect(0,0,W,H);
+C.fillStyle='#7ffcac';C.font='bold 32px monospace';C.textAlign='center';
+C.fillText('FIREFLY NUMBERS STATION',W/2,H/2-60);
+C.fillStyle='#5a8a5a';C.font='16px monospace';
+C.fillText('Catch the signal. Decode the pattern.',W/2,H/2-20);
+C.fillStyle='#3a6a3a';C.font='14px monospace';
+C.fillText('[ CLICK TO BEGIN ]',W/2,H/2+30);}
+function drawOutcome(){C.fillStyle='rgba(0,0,0,.85)';C.fillRect(0,0,W,H);
+C.fillStyle=success?'#7ffcac':'#ff6f6f';C.font='bold 26px monospace';C.textAlign='center';
+C.fillText(resultMsg,W/2,H/2-40);C.fillStyle='#c8ffc8';C.font='14px monospace';
+C.fillText(resultSub,W/2,H/2);C.fillStyle='#5a8a5a';C.font='13px monospace';
+C.fillText('Score: '+score+' | Round: '+round+' | Runs: '+attempts,W/2,H/2+35);
+C.fillStyle='#4a7a4a';C.font='12px monospace';
+C.fillText('[ CLICK TO RESTART ]',W/2,H/2+70);}
+function drawHUD(){C.fillStyle='rgba(0,0,0,.5)';C.fillRect(W/2-180,20,360,50);
+C.fillStyle='#c8ffc8';C.font='bold 16px monospace';C.textAlign='center';
+C.fillText('ROUND '+round+'/'+maxRound,W/2,42);
+C.fillStyle='#8abf8a';C.font='13px monospace';
+var sig='Signal: ['+pattern.map(function(d){return ''+(d+1);}).join('   ')+']';
+C.fillText(sig,W/2,62);
+if(decoded.length){var dec='Decoded: ['+decoded.map(function(d){return ''+(d+1);}).join('   ')+']';C.fillText(dec,W/2,78);}}
+cv.addEventListener('click',function(e){var r=cv.getBoundingClientRect();
+var mx=(e.clientX-r.left)*(W/r.width),my=(e.clientY-r.top)*(H/r.height);
+if(state===0){state=1;round=1;score=0;genPattern();beep(440,.25);buzz(.4);return;}
+if(state===3){state=1;round=1;score=0;genPattern();beep(440,.15);return;}
+if(state===1){for(var i=0;i<4;i++){
+if(Math.abs(mx-chPos[i][0])<42&&Math.abs(my-chPos[i][1])<22){
+if(i===pattern[phaseIdx]){
+decoded.push(i);beep(500+phaseIdx*200,.15);phaseIdx++;
+if(phaseIdx>=pattern.length){
+if(round>=maxRound){success=true;score+=20;
+resultMsg='TRANSMISSION DECODED';resultSub='All rounds completed. You heard the full signal.';
+state=3;attempts++;beep(1000,.5);}
+else{round++;score+=10;genPattern();beep(800,.2);}}
+}else{success=false;
+resultMsg='SIGNAL LOST';resultSub='Wrong channel. The fireflies faded into static.';
+state=3;attempts++;beep(180,.5);buzz(.3);}}}});
+function loop(){t+=.016;C.clearRect(0,0,W,H);
+var bg=C.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0a0a18');bg.addColorStop(1,'#0a1a0a');
+C.fillStyle=bg;C.fillRect(0,0,W,H);drawStatic();
+if(state===0)drawTitle();
+else if(state===1){drawSignal();drawChannels();drawHUD();
+C.fillStyle='#4a6a4a';C.font='11px monospace';C.textAlign='left';
+C.fillText('Click the channel matching the next signal digit',30,H-20);}
+else if(state===3)drawOutcome();
+requestAnimationFrame(loop);}
+loop();
+</script></body></html>
