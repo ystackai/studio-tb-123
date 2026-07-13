@@ -1,0 +1,12 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Test: Route Phase</title></head><body>
+<canvas id="c" width="960" height="640"></canvas>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),W=960,H=640;
+const CHANS=[{n:'Alpha',c:'#4af',f:261},{n:'Beta',c:'#f4a',f:329},{n:'Gamma',c:'#af4',f:392}];
+let state='route',round=0,maxRounds=6,signalArrived=true,interference=0,resonance=1,particles=[],glassCracks=[],hoveredChan=-1,outcomeType='';
+function drawMeter(){const y=60;X.fillStyle='#222';X.fillRect(280,y,400,20);X.fillStyle='#4af';X.fillRect(280,y,resonance/maxRounds*400,20);X.fillStyle='#fff';X.font='11px monospace';X.textAlign='center';X.fillText('RESONANCE '+Math.round(resonance/maxRounds*100)+'%',480,y+15);X.fillStyle='#f44';X.fillText('Interf: '+interference,780,y+15)}
+function drawHUD(){X.fillStyle='#888';X.font='13px monospace';X.textAlign='left';X.fillText('Round '+(round+1)+'/'+maxRounds,20,25)}
+function drawSignal(cx,cy){const pulse=Math.sin(Date.now()/200)*4;X.fillStyle='#ff0';X.beginPath();X.arc(cx,cy,12+pulse,0,Math.PI*2);X.fill();X.fillStyle='#fff';X.font='12px monospace';X.textAlign='center';X.fillText('SIGNAL',cx,cy-22)}
+function drawChans(ly){const lh=70;CHANS.forEach((ch,i)=>{const x=100+i*250;X.strokeStyle=ch.c;X.lineWidth=1;X.strokeRect(x,ly,200,lh);X.fillStyle=ch.c;X.font='15px monospace';X.textAlign='center';X.fillText(ch.n,x+100,ly+22);X.font='11px monospace';X.fillText('f='+ch.f+'Hz',x+100,ly+40)})}
+X.clearRect(0,0,W,H);drawHUD();drawMeter();drawSignal(480,180);X.strokeStyle='#ff0';X.lineWidth=1;X.setLineDash([4,4]);X.beginPath();X.moveTo(480,200);X.lineTo(480,370);X.stroke();X.setLineDash([]);drawChans(380);X.fillStyle='#ccc';X.font='13px monospace';X.textAlign='center';X.fillText('Decision 1: Route to a channel',480,540);
+</script></body></html>
