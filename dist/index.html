@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Firefly Numbers Station</title>
+<style>body{margin:0;background:#0a0a12;overflow:hidden;font-family:monospace;color:#c8ffc8;user-select:none;cursor:crosshair}
+canvas{display:block;margin:0 auto}</style></head><body>
+<canvas id="c"></canvas><script>
+var cv=document.getElementById('c'),C=cv.getContext('2d'),W=960,H=640;
+cv.width=W;cv.height=H;
+// State machine
+var state=0; // 0=title, 1=mode-select, 2=signal-showing, 3=decode-phase, 4=ending
+var t=0,score=0,round=0,maxRound=3;
+var mode=null; // 'visual' or 'audio' — Decision 1
+var pattern=[],decoded=[],phaseIdx=0;
+var signalTimer=0,signalDuration=0;
+var showSignal=null; // which channel is currently flashing during signal phase
+var showTimer=0;
+var attempts=0,success=false,resultMsg="",resultSub="";
+var decoyFlash=0; // for round 3 decoys
+var endingAnim=0; // for payoff animation
+var staticLevel=0; // 0-1, noise intensity
+var chPos=[[240,510],[400,510],[560,510],[720,510]];
+var chColors=['#7fda7f','#7fb8da','#daa67f','#da7f7f'];
+// Audio
+var ac=null;
+try{ac=new AudioContext();}catch(e){}
+function resumeAudio(){if(ac&&ac.state==='suspended')ac.resume();}
+function beep(f,d,v){
+  if(!v)v=.1;if(!ac)return;
+  try{var o=ac.createOscillator(),g=ac.createGain();
+  o.type='sine';o.frequency.value=f;g.gain.value=v;
+  g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);
+  o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);}catch(e){}}
+function buzz(d){
+  if(!ac)return;
+  try{var s=ac.sampleRate*(d||.3),b=ac.createBuffer(1,s,ac.sampleRate),
+  dt=b.getChannelData(0);for(var i=0;i<s;i++)dt[i]=(Math.random()*2-1)*.06;
+  var sr=ac.createBufferSource(),g=ac.createGain();sr.buffer=b;
+  g.gain.value=.05;sr.connect(g);g.connect(ac.destination);sr.start();}catch(e){}}
+function sweepUp(d,v){
+  if(!ac)return;
+  try{var o=ac.createOscillator(),g=ac.createGain();
+  o.type='sine';o.frequency.setValueAtTime(200,ac.currentTime);
+  o.frequency.exponentialRampToValueAtTime(1200,ac.currentTime+d);
+  g.gain.value=v||.12;g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);
+  o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);}catch(e){}}
+// Pattern generation
+// Seeded PRNG for deterministic patterns
+var _seed=42;
+function seededRand(){_seed=(_seed*1103515245+12345)&0x7fffffff;return _seed/0x7fffffff;}
+function genPattern(){
+  pattern=[];var len=2+round;
+  for(var i=0;i<len;i++)pattern.push(Math.floor(seededRand()*4));
+  decoded=[];phaseIdx=0;
+}
+// Noise particles
+var noisePx=[];for(var i=0;i<200;i++)noisePx.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+1});
+function drawStatic(intensity){
+  var count=Math.floor(200*intensity);
+  for(var i=0;i<count;i++){var p=noisePx[i];
+  C.fillStyle='rgba(140,180,140,'+(.04+Math.random()*.06)+')';
+  C.fillRect(p.x,p.y,p.s,p.s);p.x+=.5;if(p.x>W)p.x=0;}
+}
+// Draw channels (clickable)
+function drawChannels(){
+  for(var i=0;i<4;i++){
+    var x=chPos[i][0],y=chPos[i][1];
+    C.fillStyle='rgba(20,40,20,.7)';C.strokeStyle='#3a6a3a';
+    C.lineWidth=1.5;C.fillRect(x-48,y-22,96,44);
+    C.strokeRect(x-48,y-22,96,44);
+    C.fillStyle=chColors[i];C.font='bold 18px monospace';C.textAlign='center';
+    C.fillText('CH'+(i+1),x,y+6);
+  }
+}
+// Draw signal flash above a channel
+function drawSignalFlash(chIdx,intensity){
+  if(chIdx===null)return;
+  var x=chPos[chIdx][0],y=chPos[chIdx][1]-100;
+  var r=20+Math.sin(t*5)*12;
+  var gr=C.createRadialGradient(x,y,0,x,y,r);
+  var col=chColors[chIdx];
+  gr.addColorStop(0,col.replace(')',','+(intensity||.7)+')').replace('rgb','rgba'));
+  gr.addColorStop(1,'rgba(0,0,0,0)');
+  C.fillStyle=gr;C.beginPath();C.arc(x,y,r,0,Math.PI*2);C.fill();
+  // Dashed connection line
+  C.strokeStyle=col;C.fillStyle='rgba(255,255,255,'+(intensity*.3)+')';
+  C.setLineDash([6,4]);C.lineWidth=2;
+  C.beginPath();C.moveTo(x,y+r);C.lineTo(x,chPos[chIdx][1]-22);C.stroke();
+  C.setLineDash([]);
+}
+// Title screen
+function drawTitle(){
+  C.fillStyle='rgba(0,0,0,.9)';C.fillRect(0,0,W,H);
+  // Firefly background
+  for(var i=0;i<12;i++){
+    var fx=200+Math.sin(t*1.5+i*.7)*300;
+    var fy=200+Math.cos(t*1.2+i*.5)*150;
+    var fr=5+Math.sin(t*3+i)*3;
+    C.fillStyle='rgba(120,255,180,'+(.15+Math.sin(t*2+i)*.1)+')';
+    C.beginPath();C.arc(fx,fy,fr,0,Math.PI*2);C.fill();
+  }
+  C.fillStyle='#7ffcac';C.font='bold 36px monospace';C.textAlign='center';
+  C.fillText('FIREFLY NUMBERS STATION',W/2,H/2-100);
+  C.fillStyle='#5a8a5a';C.font='16px monospace';
+  C.fillText('Decode the signal. Trust your instincts.',W/2,H/2-50);
+  C.fillStyle='#3a6a3a';C.font='14px monospace';
+  C.fillText('[ CLICK TO BEGIN ]',W/2,H/2+30);
+}
+// Mode selection — Decision 1
+function drawModeSelect(){
+  C.fillStyle='rgba(0,0,0,.88)';C.fillRect(0,0,W,H);
+  C.fillStyle='#7ffcac';C.font='bold 24px monospace';C.textAlign='center';
+  C.fillText('CHOOSE YOUR DECODE MODE',W/2,160);
+  C.fillStyle='#8abf8a';C.font='14px monospace';
+  C.fillText('This choice persists for all rounds.',W/2,200);
+  // Visual button
+  var bx1=W/2-250,by1=260,bw=200,bh=120;
+  C.fillStyle='rgba(40,80,40,.6)';C.strokeStyle='#7ffcac';C.lineWidth=2;
+  C.fillRect(bx1,by1,bw,bh);C.strokeRect(bx1,by1,bw,bh);
+  C.fillStyle='#7ffcac';C.font='bold 18px monospace';
+  C.fillText('VISUAL',bx1+bw/2,by1+35);
+  C.fillStyle='#5a8a5a';C.font='12px monospace';
+  C.fillText('See full signal,',bx1+bw/2,by1+65);
+  C.fillText('then decode by sight.',bx1+bw/2,by1+82);
+  // Audio button
+  var bx2=W/2+50,by2=260;
+  C.fillStyle='rgba(40,40,80,.6)';C.strokeStyle='#7fb8da';C.lineWidth=2;
+  C.fillRect(bx2,by2,bw,bh);C.strokeRect(bx2,by2,bw,bh);
+  C.fillStyle='#7fb8da';C.font='bold 18px monospace';
+  C.fillText('AUDIO',bx2+bw/2,by2+35);
+  C.fillStyle='#5a8a5a';C.font='12px monospace';
+  C.fillText('Listen to the tones,',bx2+bw/2,by2+65);
+  C.fillText('decode by ear.',bx2+bw/2,by2+82);
+  C.fillStyle='#3a6a3a';C.font='12px monospace';
+  C.fillText('[ CLICK A BUTTON TO LOCK IN ]',W/2,440);
+}
+// Signal phase — show the pattern
+function drawSignalPhase(){
+  C.fillStyle='rgba(0,0,0,.02)';C.fillRect(0,0,W,H);
+  drawStatic(staticLevel);drawChannels();
+  // Show current signal digit
+  if(showSignal!==null){
+    drawSignalFlash(showSignal, .6+Math.sin(t*6)*.3);
+  }
+  // HUD
+  C.fillStyle='rgba(0,0,0,.6)';C.fillRect(W/2-150,10,300,45);
+  C.fillStyle='#c8ffc8';C.font='bold 15px monospace';C.textAlign='center';
+  C.fillText('ROUND '+round+'/'+maxRound,W/2,32);
+  C.fillStyle='#8abf8a';C.font='12px monospace';
+  C.fillText('Signal transmitting...',W/2,50);
+  // Timer bar
+  var barW=300,barX=W/2-barW/2,barY=58;
+  C.fillStyle='rgba(40,40,40,.6)';C.fillRect(barX,barY,barW,6);
+  var pct=Math.max(0,1-(t-signalTimer)/signalDuration);
+  C.fillStyle=mode==='visual'?'#7ffcac':'#7fb8da';
+  C.fillRect(barX,barY,barW*pct,6);
+}
+// Decode phase — player clicks channels
+function drawDecodePhase(){
+  C.fillStyle='rgba(0,0,0,.02)';C.fillRect(0,0,W,H);
+  drawStatic(staticLevel);drawChannels();
+  // Decoded so far
+  C.fillStyle='rgba(0,0,0,.6)';C.fillRect(W/2-200,10,400,50);
+  C.fillStyle='#c8ffc8';C.font='bold 15px monospace';C.textAlign='center';
+  C.fillText('ROUND '+round+'/'+maxRound+' — DECODE',W/2,28);
+  C.fillStyle='#8abf8a';C.font='13px monospace';
+  var disp='Pattern: ';
+  for(var i=0;i<pattern.length;i++){
+    if(i<phaseIdx)disp+='['+(pattern[i]+1)+'] ';
+    else if(i===phaseIdx)disp+='? ';
+    else disp+='_ ';
+  }
+  C.fillText(disp,W/2,48);
+  if(decoded.length){
+    var dec='Decoded: '+decoded.map(function(d){return '['+(d+1)+']';}).join(' ');
+    C.fillStyle='#7ffcac';C.font='12px monospace';
+    C.fillText(dec,W/2,68);
+  }
+  // Round 3: decoy flash
+  if(round===3&&Math.random()<.02){
+    var decoy=Math.floor(Math.random()*4);
+    if(decoy!==pattern[phaseIdx]){
+      drawSignalFlash(decoy,.3);
+    }
+  }
+  // Timer for decode phase
+  var remaining=Math.max(3,6-pattern.length*0.5-round*0.5);
+  var pct=Math.max(0,1-(t-decodeTimer)/remaining);
+  var barW=300,barX=W/2-barW/2,barY=76;
+  C.fillStyle='rgba(40,40,40,.6)';C.fillRect(barX,barY,barW,4);
+  C.fillStyle=pct>.5?'#7ffcac':'#ff6f6f';
+  C.fillRect(barX,barY,barW*pct,4);
+  C.fillStyle='#4a6a4a';C.font='11px monospace';C.textAlign='left';
+  C.fillText('Click the channel matching the next digit',30,H-18);
+}
+var decodeTimer=0;
+// Ending / Payoff
+function drawEnding(){
+  endingAnim+=.016;
+  if(success){
+    // Victory: cascading fireflies
+    C.fillStyle='rgba(0,0,0,.03)';C.fillRect(0,0,W,H);
+    for(var i=0;i<30;i++){
+      var fx=100+Math.sin(t*2+i*.3+i*1.7)*350+180;
+      var fy=H-50-Math.sin(t*1.5+i*.2)*200-i*10;
+      fy=((fy%H)+H)%H;
+      var fr=4+Math.sin(t*4+i)*3;
+      C.fillStyle='rgba(120,255,180,'+(.1+Math.sin(t*2+i)*.08)+')';
+      C.beginPath();C.arc(fx,fy,fr,0,Math.PI*2);C.fill();
+    }
+    drawStatic(staticLevel*.3);
+  } else {
+    // Failure: growing static
+    var failIntensity=Math.min(1,endingAnim*.4);
+    drawStatic(failIntensity);
+    C.fillStyle='rgba(0,0,0,'+Math.min(.7,endingAnim*.15)+')';
+    C.fillRect(0,0,W,H);
+  }
+  // Overlay
+  C.fillStyle='rgba(0,0,0,'+Math.min(.85,endingAnim*.3)+')';
+  C.fillRect(0,H/2-120,W,240);
+  C.fillStyle=success?'#7ffcac':'#ff6f6f';
+  C.font='bold 26px monospace';C.textAlign='center';
+  C.fillText(resultMsg,W/2,H/2-60);
+  C.fillStyle='#c8ffc8';C.font='14px monospace';
+  C.fillText(resultSub,W/2,H/2-25);
+  C.fillStyle='#8abf8a';C.font='12px monospace';
+  C.fillText('Score: '+score+' | Mode: '+(mode||'—')+' | Attempts: '+attempts,W/2,H/2+10);
+  if(success){
+    C.fillStyle='#5a8a5a';C.font='bold 13px monospace';
+    C.fillText('DECODED PATTERN: ['+pattern.map(function(d){return d+1;}).join(',')+']',W/2,H/2+40);
+  } else {
+    C.fillStyle='#6a4a4a';C.font='13px monospace';
+    C.fillText('Expected: ['+pattern.map(function(d){return d+1;}).join(',')+']  Your: ['+decoded.map(function(d){return d+1;}).join(',')+']',W/2,H/2+40);
+  }
+  C.fillStyle='#4a7a4a';C.font='13px monospace';
+  C.fillText('[ CLICK TO RESTART ]',W/2,H/2+80);
+}
+// Input
+cv.addEventListener('click',function(e){resumeAudio();
+  var r=cv.getBoundingClientRect();
+  var mx=(e.clientX-r.left)*(W/r.width),my=(e.clientY-r.top)*(H/r.height);
+  if(state===0){
+    state=1; // mode select
+    beep(440,.15);
+    trace('start');return;
+  }
+  if(state===1){
+    // Decision 1: choose mode
+    var bx1=W/2-250,by1=260,bw=200,bh=120;
+    var bx2=W/2+50,by2=260;
+    if(mx>=bx1&&mx<=bx1+bw&&my>=by1&&my<=by1+bh){
+      mode='visual';beep(600,.2);sweepUp(.3,.1);
+      trace('meaningful_decision',{mode:'visual'});
+    } else if(mx>=bx2&&mx<=bx2+bw&&my>=by2&&my<=by2+bh){
+      mode='audio';beep(400,.2);buzz(.2);
+      trace('meaningful_decision',{mode:'audio'});
+    } else return;
+    round=1;score=0;startRound();return;
+  }
+  if(state===4){
+    // Restart
+    state=0;round=0;score=0;mode=null;
+    t=0;beep(440,.12);
+    trace('restart');return;
+  }
+  if(state===3){
+    // Decision 2: click a channel during decode
+    for(var i=0;i<4;i++){
+      if(Math.abs(mx-chPos[i][0])<48&&Math.abs(my-chPos[i][1])<22){
+        if(i===pattern[phaseIdx]){
+          decoded.push(i);
+          beep(500+phaseIdx*150,.12);
+          phaseIdx++;
+          trace('meaningful_decision',{correct:true,round:round,position:phaseIdx});
+          if(phaseIdx>=pattern.length){
+            if(round>=maxRound){
+              success=true;score+=20;
+              resultMsg='TRANSMISSION DECODED';
+              resultSub='All rounds completed. The fireflies align.';
+              state=4;attempts++;endingAnim=0;
+              sweepUp(.8,.15);beep(1000,.3);
+              trace('payoff',{type:'success',score:score});
+              trace('outcome',{success:true,round:round,score:score});
+            } else {
+              round++;score+=10;
+              beep(800,.15);
+              trace('escalation',{round:round,noiseLevel:staticLevel});
+              startRound();
+            }
+          }
+        } else {
+          // Wrong — Decision 2 gone wrong
+          success=false;
+          resultMsg='SIGNAL LOST';
+          resultSub='Wrong channel. The fireflies scattered into static.';
+          state=4;attempts++;endingAnim=0;
+          beep(180,.5);buzz(.4);
+          trace('outcome',{success:false,round:round,score:score});
+        }
+        return;
+      }
+    }
+  }
+});
+// Start a round
+function startRound(){
+  _seed = round * 7919 + 104723; // deterministic pattern seed
+  genPattern();
+  staticLevel=Math.min(.7, .15+round*.18);
+  signalDuration=3+round*.3; // how long signal shows
+  signalTimer=t;showSignal=null;showTimer=0;
+  // In audio mode, we show less visual info
+  if(mode==='audio'){
+    // Show fewer visual hints, rely on audio cues
+    // Decision 3: audio mode means you must listen
+    signalDuration=2+round*.2; // shorter visual, more reliance on ear
+  }
+  state=2; // signal showing
+}
+// Trace events for playtest
+var traceLog=[];
+function trace(evt,data){
+  data=data||{};data.timestamp=Date.now();
+  traceLog.push({event:evt,data:data});
+  try{window.__FACTORYX_TRACE=traceLog;}catch(e){}
+  console.log('[trace]',evt,JSON.stringify(data));
+}
+// Main loop
+function loop(){
+  t+=.016;
+  C.clearRect(0,0,W,H);
+  var bg=C.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0a0a18');bg.addColorStop(1,'#0a1a0a');
+  C.fillStyle=bg;C.fillRect(0,0,W,H);
+  if(state===0)drawTitle();
+  else if(state===1)drawModeSelect();
+  else if(state===2){
+    // Signal phase: cycle through pattern digits
+    drawSignalPhase();
+    var elapsed=t-signalTimer;
+    var perDigit=signalDuration/pattern.length;
+    var idx=Math.floor(elapsed/perDigit);
+    if(idx<pattern.length){
+      showSignal=pattern[idx];
+      // Audio cue for each digit
+      if(mode==='audio'||mode==='visual'){
+        // Subtle tone per channel
+        var lastDigit=pattern[Math.max(0,idx-1)];
+        if(lastDigit!==pattern[idx]){
+          beep(300+pattern[idx]*100,.15,.08);
+        }
+      }
+      // Ambient static
+      if(Math.random()<staticLevel*.1)buzz(.05);
+    } else {
+      // Signal phase done, move to decode
+      showSignal=null;
+      state=3;
+      decodeTimer=t;
+      beep(500,.1,.1);
+      trace('escalation',{round:round,noiseLevel:staticLevel,phase:'decode'});
+    }
+  } else if(state===3){
+    drawDecodePhase();
+    // In audio mode, play a hint tone for the current digit
+    if(mode==='audio'&&Math.random()<.05){
+      beep(300+pattern[phaseIdx]*100,.2,.06);
+    }
+    // Static interference during decode
+    if(Math.random()<staticLevel*.08)buzz(.03);
+    // Check if decode timer expired
+    var remaining=Math.max(3,6-pattern.length*0.5-round*0.5);
+    if(t-decodeTimer>remaining){
+      success=false;
+      resultMsg='TIMEOUT';
+      resultSub='The signal faded. Too slow to decode.';
+      state=4;attempts++;endingAnim=0;
+      buzz(.5);beep(120,.4);
+      trace('outcome',{success:false,round:round,score:score,reason:'timeout'});
+    }
+  } else if(state===4){
+    drawEnding();
+    // Continuation audio
+    if(endingAnim<2){
+      if(success&&Math.random()<.03)beep(600+Math.random()*400,.1,.04);
+      if(!success&&Math.random()<staticLevel*.05)buzz(.02);
+    }
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script></body></html>
