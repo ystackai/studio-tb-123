@@ -1,0 +1,217 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Numbers Station Bloom</title>
+<style>*{margin:0;padding:0}body{background:#0a0a12;display:flex;justify-content:center;align-items:center;height:100vh;font-family:monospace}</style></head><body><canvas id="c" width="800" height="600"></canvas>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),W=800,H=600;
+let actx;function audio(){if(!actx)actx=new(AudioContext||webkitAudioContext)();if(actx.state==='suspended')actx.resume();}
+function tone(f,d=.4,t='sine'){audio();let o=actx.createOscillator(),g=actx.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(.25,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+d);}
+// Game state
+const PAL=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c084fc'];
+let state='title',plants=[],score=0,round=0,MAX=8,totalClicks=0;
+// Signal types: 'color', 'freq', 'pos'
+let sig=null,sigTimer=0,sigType='',btns=[];
+let particles=[]; // bloom particles
+// Title
+function drawTitle(){
+  X.fillStyle='#0a0a12';X.fillRect(0,0,W,H);
+  X.fillStyle='#c084fc';X.font='bold 36px monospace';X.textAlign='center';
+  X.fillText('NUMBERS STATION BLOOM',W/2,160);
+  X.fillStyle='#888';X.font='16px monospace';
+  X.fillText('A numbers station is broadcasting. Decode its signals.',W/2,210);
+  X.fillText('Each decoded signal grows a new plant in your garden.',W/2,235);
+  X.fillStyle='#5a5';X.font='14px monospace';
+  X.fillText('Round 1-3: Color signals  |  Round 4-6: + Pitch signals',W/2,280);
+  X.fillText('Round 7-8: + Position signals  |  Speed increases each round',W/2,300);
+  X.fillStyle='#ffd93d';X.font='bold 22px monospace';
+  X.fillText('Press ENTER or click to tune in',W/2,400);
+}
+// Particles for bloom effect
+function spawnParticles(x,y,color){for(let i=0;i<12;i++){particles.push({x,y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4-2,life:1,color,r:3+Math.random()*4});}}
+function updateParticles(dt){for(let p of particles){p.x+=p.vx;p.y+=p.vy;p.life-=dt*1.5;p.vy+=.05;}particles=particles.filter(p=>p.life>0);}
+function drawParticles(){for(let p of particles){X.globalAlpha=p.life;X.fillStyle=p.color;X.beginPath();X.arc(p.x,p.y,p.r,0,Math.PI*2);X.fill();}X.globalAlpha=1;}
+// Spawn a signal
+function spawnSig(){
+  let r=round+1; // 1-indexed
+  if(r<=3) sigType='color';
+  else if(r<=6) sigType=Math.random()<.5?'color':'freq';
+  else sigType=['color','freq','pos'][Math.floor(Math.random()*3)];
+  // Time budget: starts at 6s, decreases by .5s per round
+  sigTimer=Math.max(2.5,6-round*.5);
+  btns=[];
+  if(sigType==='color'){
+    let ci=Math.floor(Math.random()*PAL.length);
+    sig={color:PAL[ci],cx:150+Math.random()*500,cy:120+Math.random()*250,ans:ci};
+    tone(220+ci*120,.5,'triangle');
+    // 3 color options
+    let opts=[ci];while(opts.length<3){let r2=Math.floor(Math.random()*PAL.length);if(!opts.includes(r2))opts.push(r2);}
+    for(let i=0;i<3;i++){btns.push({x:200+i*200,y:500,v:opts[i],label:'Option '+(i+1),type:'color'});}
+    sig.hint='Decode: match the color and tone';
+  }else if(sigType==='freq'){
+    // 3 pitch levels: low(220), mid(440), high(880)
+    let levels=['low','mid','high'],idx=Math.floor(Math.random()*3);
+    let freqs={low:220,mid:440,high:880};
+    sig={ans:idx,freq:freqs[levels[idx]],cx:W/2,cy:200};
+    tone(freqs[levels[idx]],.6,'sine');
+    // Play it twice
+    setTimeout(()=>tone(freqs[levels[idx]],.4,'sine'),700);
+    sig.hint='Decode: was the tone low, mid, or high?';
+    btns=[{x:250,y:500,v:0,label:'LOW 220Hz',type:'freq'},{x:400,y:500,v:1,label:'MID 440Hz',type:'freq'},{x:550,y:500,v:2,label:'HIGH 880Hz',type:'freq'}];
+  }else{
+    // Position: signal flashes left, center, or right
+    let zones=['left','center','right'],idx=Math.floor(Math.random()*3);
+    let xcoords={left:150,center:400,right:650};
+    sig={ans:idx,x:xcoords[zones[idx]],cy:200,color:'#fff'};
+    tone(660,.3,'square');
+    sig.hint='Decode: where did the flash appear?';
+    btns=[{x:250,y:500,v:0,label:'LEFT',type:'pos'},{x:400,y:500,v:1,label:'CENTER',type:'pos'},{x:550,y:500,v:2,label:'RIGHT',type:'pos'}];
+  }
+}
+// Draw signal indicator
+function drawSig(){
+  if(!sig)return;
+  if(sigType==='color'){
+    let p=.3+.7*Math.sin(Date.now()/200);
+    X.globalAlpha=p;X.fillStyle=sig.color;X.beginPath();X.arc(sig.cx,sig.cy,45,0,Math.PI*2);X.fill();
+    X.globalAlpha=1;X.strokeStyle=sig.color;X.lineWidth=2;
+    X.beginPath();X.arc(sig.cx,sig.cy,60,0,Math.PI*2);X.stroke();
+    X.beginPath();X.arc(sig.cx,sig.cy,75,0,Math.PI*2);X.stroke();
+  }else if(sigType==='freq'){
+    X.fillStyle='#ffd93d';X.font='bold 16px monospace';X.textAlign='center';
+    X.fillText('♪',sig.cx,sig.cy);
+    // Waveform visualization
+    X.strokeStyle='#ffd93d';X.lineWidth=2;X.beginPath();
+    for(let i=0;i<100;i++){let px=sig.cx-80+i*1.6,py=sig.cy+Math.sin(i*.15+Date.now()/150)*25;X.lineTo(px,py);}X.stroke();
+  }else{
+    // Flash zone indicator
+    X.strokeStyle=sig.color;X.lineWidth=3;X.beginPath();X.arc(sig.x,sig.cy,50,0,Math.PI*2);X.stroke();
+    // Show 3 zones dimly
+    for(let[zn,zx]of[['left',150],['center',400],['right',650]]){
+      X.globalAlpha=zx===sig.x?.6:.15;X.fillStyle='#fff';X.font='12px monospace';X.textAlign='center';
+      X.fillText(zn.toUpperCase(),zx,sig.cy+70);X.globalAlpha=1;
+    }
+  }
+  // Timer bar
+  X.fillStyle='#333';X.fillRect(W/2-150,80,300,8);
+  let pct=sigTimer/Math.max(2.5,6-(round<1?0:round)*.5);
+  X.fillStyle=pct<.3?'#ff6b6b':'#6bcb77';X.fillRect(W/2-150,80,300*pct,8);
+  // Hint
+  X.fillStyle='#aaa';X.font='14px monospace';X.textAlign='center';
+  X.fillText(sig.hint,W/2,120);
+}
+// Draw buttons
+function drawBtns(){
+  for(let b of btns){
+    X.fillStyle='#1a1a2e';X.strokeStyle='#555';X.lineWidth=2;
+    X.beginPath();X.roundRect(b.x-70,b.y-22,140,44,8);X.fill();X.stroke();
+    X.fillStyle='#ddd';X.font='bold 14px monospace';X.textAlign='center';X.textBaseline='middle';
+    X.fillText(b.label,b.x,b.y);
+    if(b.type==='color'){X.fillStyle=PAL[b.v];X.beginPath();X.arc(b.x,b.y-30,12,0,Math.PI*2);X.fill();}
+  }
+  X.textBaseline='alphabetic';
+}
+// Draw garden
+function drawPlants(){
+  for(let p of plants){
+    X.strokeStyle='#3a6b35';X.lineWidth=3;X.beginPath();X.moveTo(p.x,p.y);
+    X.quadraticCurveTo(p.x+5,p.y-20,p.x,p.y-45);X.stroke();
+    X.fillStyle='#4a8b45';X.beginPath();X.ellipse(p.x-10,p.y-25,8,4,.3,0,Math.PI*2);X.fill();
+    X.beginPath();X.ellipse(p.x+10,p.y-28,8,4,-.3,0,Math.PI*2);X.fill();
+    X.fillStyle=p.color;X.beginPath();X.arc(p.x,p.y-55,12,0,Math.PI*2);X.fill();
+    X.fillStyle='#ffd93d';X.beginPath();X.arc(p.x,p.y-55,5,0,Math.PI*2);X.fill();
+    // Label
+    X.fillStyle='#666';X.font='10px monospace';X.textAlign='center';
+    X.fillText('sig'+(p.idx||1),p.x,p.y+15);
+  }
+}
+function drawSoil(){
+  let g=X.createLinearGradient(0,H-80,0,H);g.addColorStop(0,'#1a2e1a');g.addColorStop(1,'#0f1a0f');
+  X.fillStyle=g;X.fillRect(0,H-80,W,80);
+  X.strokeStyle='#2a4a2a';X.lineWidth=1;for(let i=0;i<W;i+=40){X.beginPath();X.moveTo(i,H-80);X.lineTo(i+20,H-65);X.stroke();}
+}
+// Result
+let resultChordPlayed=false;
+function drawResult(){
+  X.fillStyle='rgba(10,10,18,.88)';X.fillRect(0,0,W,H);
+  // Draw final garden underneath
+  drawSoil();drawPlants();
+  X.fillStyle='rgba(10,10,18,.7)';X.fillRect(0,0,W,H);
+  X.textAlign='center';
+  let won=score>=MAX;
+  if(won){
+    X.fillStyle='#6bcb77';X.font='bold 32px monospace';
+    X.fillText('GARDEN FULLY BLOOMED',W/2,200);
+    X.fillStyle='#ffd93d';X.font='18px monospace';
+    X.fillText('All '+MAX+' signals decoded. The garden sings.',W/2,240);
+    X.fillText('Score: '+score+'/'+MAX+' | Clicks: '+totalClicks,W/2,270);
+    if(!resultChordPlayed){tone(440,1.2);tone(554,1.2);tone(659,1.2);tone(880,.8);resultChordPlayed=true;}
+  }else{
+    X.fillStyle='#ff6b6b';X.font='bold 32px monospace';
+    X.fillText('SIGNAL LOST',W/2,200);
+    X.fillStyle='#ccc';X.font='18px monospace';
+    X.fillText('The station went silent. Your garden stalled.',W/2,240);
+    X.fillText('Decoded: '+score+'/'+MAX+' at round '+(round+1),W/2,270);
+    X.fillStyle='#888';X.font='14px monospace';
+    X.fillText('The garden retains what you decoded. Try again to grow more.',W/2,300);
+  }
+  X.fillStyle='#ffd93d';X.font='bold 20px monospace';
+  X.fillText('Press ENTER or click to restart',W/2,400);
+}
+// Game logic
+function correct(v){
+  score++;totalClicks++;
+  let px=80+score*90;
+  plants.push({x:px,y:H-80,color:sigType==='freq'?'#ffd93d':(sig.color||'#6bcb77'),idx:score});
+  spawnParticles(px,H-120,sigType==='freq'?'#ffd93d':(sig.color||'#6bcb77'));
+  tone(880,.15,'sine');tone(660,.1,'sine');
+  sig=null;round++;
+  if(round>=MAX){state='result';resultChordPlayed=false;}
+  else{setTimeout(()=>spawnSig(),600);state='spawn';}
+}
+function wrong(){
+  totalClicks++;sig=null;
+  tone(100,.6,'sawtooth');tone(80,.4,'sawtooth');
+  state='result';resultChordPlayed=false;
+}
+// Update
+function update(dt){
+  if(state==='playing'&&sig)sigTimer-=dt;
+  if(sigTimer<=0&&state==='playing'){wrong();}
+  updateParticles(dt);
+}
+function draw(){
+  X.clearRect(0,0,W,H);
+  if(state==='title'){drawTitle();return;}
+  X.fillStyle='#0a0a12';X.fillRect(0,0,W,H);
+  drawSoil();drawPlants();drawParticles();
+  if(state==='playing'){drawSig();drawBtns();
+    X.fillStyle='#aaa';X.font='14px monospace';X.textAlign='left';
+    X.fillText('Signal '+(round+1)+'/'+MAX,20,30);
+    X.textAlign='right';X.fillText('Decoded: '+score,W-20,30);
+  }
+  if(state==='spawn'){
+    X.fillStyle='#ffd93d';X.font='20px monospace';X.textAlign='center';
+    X.fillText('Tuning...',W/2,300);
+  }
+  if(state==='result')drawResult();
+}
+// Main loop
+let last=0;function loop(t){let dt=(t-last)/1000;last=t;update(dt);draw();requestAnimationFrame(loop);}
+// Input
+function click(e){
+  let r=C.getBoundingClientRect(),mx=(e.clientX-r.left)*(W/r.width),my=(e.clientY-r.top)*(H/r.height);
+  if(state==='title'){reset();return;}
+  if(state==='result'){state='title';return;}
+  if(state==='playing'&&sig)for(let b of btns){
+    if(Math.abs(mx-b.x)<70&&Math.abs(my-b.y)<22){
+      if(b.v===sig.ans)correct(b.v);else wrong();return;
+    }
+  }
+}
+function key(e){if(e.key==='Enter'||e.key===' '){
+  if(state==='title')reset();else if(state==='result')state='title';
+}}
+function reset(){state='playing';round=0;score=0;plants=[];totalClicks=0;resultChordPlayed=false;particles=[];setTimeout(()=>spawnSig(),400);state='spawn';}
+C.addEventListener('click',click);window.addEventListener('keydown',key);
+// Polyfill roundRect
+if(!X.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){this.moveTo(x+r,y);this.lineTo(x+w-r,y);this.arcTo(x+w,y,x+w,y+r,r);this.lineTo(x+w,y+h-r);this.arcTo(x+w,y+h,x+w-r,y+h,r);this.lineTo(x+r,y+h);this.arcTo(x,y+h,x,y+h-r,r);this.lineTo(x,y+r);this.arcTo(x,y,x+r,y,r);};}
+requestAnimationFrame(loop);
+</script></body></html>

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "campaign_candidate_id": "tb123-signal-portfolio--campaign-1783920863104--candidate-04-decode",
+  "campaign_graybox_attempt": 1,
+  "artifact_type": "browser_game2d",
+  "trace_events": [
+    {
+      "event": "start",
+      "time": "2.3",
+      "description": "Title screen: NUMBERS STATION BLOOM with instructions"
+    },
+    {
+      "event": "meaningful_decision",
+      "time": "2.4",
+      "description": "Decision 1: Press Enter to tune into the numbers station — first action"
+    },
+    {
+      "event": "meaningful_decision",
+      "time": "4.4",
+      "description": "Decision 2: Signal 1 is a color signal — click Option 1 to guess the matching color and tone"
+    },
+    {
+      "event": "meaningful_decision",
+      "time": "6.3",
+      "description": "Decision 3: Signal 2 — choose Option 2 to match"
+    },
+    {
+      "event": "escalation",
+      "time": "10.0",
+      "description": "Escalation: round 4 introduces pitch-based signals (low/mid/high frequency), time budget decreases"
+    },
+    {
+      "event": "outcome",
+      "time": "21.4",
+      "description": "Final outcome: failure, score displayed with debrief"
+    },
+    {
+      "event": "payoff",
+      "time": "21.4",
+      "description": "Sensory payoff: garden visible with decoded plants, musical chord or error tone played"
+    },
+    {
+      "event": "restart",
+      "time": "21.4",
+      "description": "Press Enter to restart — clean new run begins from title"
+    }
+  ],
+  "start_time": "2026-07-13T08:22:39.920Z",
+  "duration_seconds": 41,
+  "audio_evidence": "Web Audio API: sine/triangle/square/sawtooth oscillators for tones per signal type; success chord (C major) on win; error buzz on fail",
+  "screenshots": [
+    "title",
+    "active-start",
+    "active-signal1",
+    "active-signal2",
+    "active-signal3",
+    "active-escalation",
+    "active-signal5",
+    "active-late",
+    "result-screen",
+    "restart-title",
+    "run2-result"
+  ]
+}
