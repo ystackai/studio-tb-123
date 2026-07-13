@@ -1,0 +1,161 @@
+<!DOCTYPE html><html><head><meta charset=utf-8><title>Aurora Switchboard</title>
+<style>*{margin:0;box-sizing:border-box}body{background:#0a0a1a;overflow:hidden;font-family:monospace}canvas{display:block;cursor:pointer}</style>
+</head><body><canvas id=c></canvas><script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+let W,H;function rz(){W=C.width=innerWidth;H=C.height=innerHeight}rz();addEventListener('resize',rz);
+const AC=new(AudioContext||webkitAudioContext)();
+function tone(f,d,t='sine'){try{const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(.12,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+
+const P={TITLE:0,PLAY:1,WIN:2,LOSE:3,DEBRIEF:4};
+let ph=P.TITLE,t=0,sc=0,rnd=0,maxRnd=3;
+let sw=[],bm=[],particles=[];
+let phaseTimer=0,countdownDone=false,bestScore=0;
+
+function initSw(){
+  const n=3,g=90,w=75,h=45,tt=n*(w+g)-g;sw=[];
+  for(let i=0;i<n;i++)sw.push({x:(W-tt)/2+i*(w+g),y:H*.62,w,h,on:false,done:false,
+    c:['#0f8','#f60','#64f'][i],l:['GROWTH','FLUX','VOID'][i],hue:[150,20,270][i],
+    pts:[10,25,-5][i],risk:[0,.3,.6][i]});
+}
+function initBm(){
+  bm=[];phaseTimer=400+rnd*120;
+  const count=Math.min(2+rnd,5);
+  for(let i=0;i<count;i++){
+    const target=sw[i%3];
+    bm.push({x:target.x+target.w/2,act:false,p:0,hue:target.hue,targetIdx:i%3,
+      speed:.004+rnd*.002,color:['#0f8','#f60','#64f'][i%3]});
+  }
+}
+
+function startGame(){ph=P.PLAY;rnd=0;sc=0;bestScore=0;initSw();startRound()}
+function startRound(){
+  rnd++;initBm();
+  let baseDelay=Math.max(400,1200-rnd*250);
+  for(let i=0;i<bm.length;i++)setTimeout(()=>{bm[i].act=true;tone(520+i*80,.1,'triangle')},baseDelay+i*500);
+  tone(440,.15);
+}
+
+C.onclick=e=>{
+  const mx=e.clientX,my=e.clientY;AC.resume();
+  if(ph===P.TITLE){startGame();tone(440,.25);return}
+  if(ph===P.DEBRIEF){ph=P.TITLE;tone(330,.15);return}
+  if(ph===P.WIN||ph===P.LOSE){
+    if(rnd>=maxRnd){ph=P.DEBRIEF;tone(440,.2)}else{startRound();tone(440,.15)}
+    return;
+  }
+  if(ph===P.PLAY){
+    for(let s of sw){
+      if(mx>=s.x&&mx<=s.x+s.w&&my>=s.y&&my<=s.y+s.h){
+        let idx=sw.indexOf(s);
+        if(s.done&&rnd>=2){
+          s.on=!s.on;s.done=false;sc+=s.on?s.pts*3:0;
+          tone(s.on?900:200,.2,'sawtooth');
+          for(let p=0;p<10;p++)particles.push({x:s.x+s.w/2,y:s.y+s.h/2,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:60,hue:s.hue});
+        }else if(!s.done){
+          s.on=true;s.done=true;sc+=s.pts;
+          tone([550,700,850][idx],.12,'square');
+        }
+        break;
+      }
+    }
+    if(sw.every(s=>s.done)){phaseTimer=0;setTimeout(evaluateRound,500);}
+  }
+};
+
+function evaluateRound(){
+  let correct=0,total=0;
+  for(let i=0;i<bm.length;i++){if(!bm[i].act)continue;total++;if(sw[bm[i].targetIdx].on)correct++;}
+  let ratio=total>0?correct/total:0;
+  if(ratio>=.6){
+    ph=P.WIN;sc+=50*rnd;if(sc>bestScore)bestScore=sc;
+    tone(880,.3);setTimeout(()=>tone(1100,.3),250);setTimeout(()=>tone(1320,.4),500);
+    for(let i=0;i<40;i++)particles.push({x:W/2,y:H/2,vx:(Math.random()-.5)*8,vy:-Math.random()*5-2,life:120,hue:Math.random()*360});
+  }else{
+    ph=P.LOSE;tone(150,.6,'sawtooth');setTimeout(()=>tone(120,.4,'sawtooth'),400);
+  }
+}
+
+function updParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    particles[i].x+=particles[i].vx;particles[i].y+=particles[i].vy;particles[i].vy+=.05;particles[i].life--;
+    if(particles[i].life<=0)particles.splice(i,1);
+  }
+}
+
+function drAurora(){
+  for(let i=0;i<8;i++){const y=H*.1+i*20,h=(t*.3+i*25)%360;
+    X.strokeStyle=`hsla(${h},80%,60%,.1)`;X.lineWidth=22;X.beginPath();
+    for(let x=0;x<W;x+=6){const yy=y+Math.sin((x+t*1.5)/90+i)*25;x?X.lineTo(x,yy):X.moveTo(x,yy)}X.stroke();}
+}
+
+function drSw(s){
+  X.shadowColor=s.c;X.shadowBlur=s.on?15:0;
+  X.fillStyle=s.on?s.c:'#1a1a2a';X.fillRect(s.x,s.y,s.w,s.h);
+  X.strokeStyle=s.on?'#fff':'#444';X.lineWidth=2;X.strokeRect(s.x,s.y,s.w,s.h);X.shadowBlur=0;
+  X.fillStyle=s.on?'#000':'#666';X.font='bold 11px monospace';X.textAlign='center';
+  X.fillText(s.l,s.x+s.w/2,s.y+s.h/2+4);
+  X.fillStyle=s.on?'#fff':'#555';X.font='10px monospace';X.fillText(s.on?'ON':'--',s.x+s.w/2,s.y-6);
+  if(rnd>=2){X.fillStyle='#f88';X.font='9px monospace';X.fillText('RISK '+Math.round(s.risk*100)+'%',s.x+s.w/2,s.y+s.h+14)}
+}
+
+function dr(){
+  t++;X.fillStyle='#0a0a1a';X.fillRect(0,0,W,H);drAurora();updParticles();
+  if(ph===P.TITLE){
+    X.fillStyle='#fff';X.font='bold 30px monospace';X.textAlign='center';X.fillText('AURORA SWITCHBOARD',W/2,H/2-50);
+    X.font='14px monospace';X.fillStyle='#aaa';X.fillText('Route time-energy by flipping switches before beams arrive',W/2,H/2);
+    if(bestScore>0){X.fillStyle='#888';X.fillText('Best: '+bestScore,W/2,H/2+25)}
+    X.fillStyle='#666';X.font='13px monospace';X.fillText('CLICK TO START',W/2,H/2+55);
+  }else if(ph===P.PLAY){
+    for(let b of bm){if(b.act){
+      b.p=Math.min(b.p+b.speed,1);
+      const tg=sw[b.targetIdx];
+      X.strokeStyle=`hsla(${b.hue},80%,60%,.3)`;X.lineWidth=4;X.beginPath();X.moveTo(b.x,30);
+      for(let v=0;v<=b.p;v+=.02)X.lineTo(b.x+Math.sin(v*8+t*.08)*12,30+v*(tg.y+tg.h/2-30));X.stroke();
+      X.fillStyle=`hsla(${b.hue},80%,65%,.8)`;X.beginPath();X.arc(b.x,30+b.p*(tg.y+tg.h/2-30),6,0,Math.PI*2);X.fill();
+    }}
+    sw.forEach(drSw);
+    X.fillStyle='#fff';X.font='13px monospace';X.textAlign='left';X.fillText('RND '+rnd+'/'+maxRnd,20,25);
+    X.textAlign='right';X.fillText('SCORE '+sc,W-20,25);
+    X.fillStyle='#333';X.fillRect(W/2-100,15,200,8);X.fillStyle='#0f8';X.fillRect(W/2-100,15,Math.max(0,200*(phaseTimer/500)),8);
+    X.fillStyle='#555';X.font='11px monospace';X.textAlign='center';
+    X.fillText(rnd===1?'Click switches ON before beams land':rnd===2?'Beams faster - re-click for OVERLOAD':'Max intensity - choose wisely',W/2,H-20);
+    for(let p of particles){X.fillStyle=`hsla(${p.hue},80%,65%,${p.life/120})`;X.beginPath();X.arc(p.x,p.y,3,0,Math.PI*2);X.fill();}
+  }else if(ph===P.WIN){
+    sw.forEach(drSw);
+    for(let p of particles){X.fillStyle=`hsla(${p.hue},80%,65%,${p.life/120})`;X.beginPath();X.arc(p.x,p.y,3+Math.random()*2,0,Math.PI*2);X.fill();}
+    X.fillStyle='#0f0';X.font='bold 24px monospace';X.textAlign='center';X.fillText('CIRCUIT COMPLETE',W/2,H/2-10);
+    X.fillStyle='#fff';X.font='14px monospace';X.fillText('Score: '+sc,W/2,H/2+20);
+    X.fillStyle=rnd<maxRnd?'#888':'#ff0';X.fillText(rnd<maxRnd?'Click for next round':'ALL ROUNDS CLEARED - CLICK FOR DEBRIEF',W/2,H/2+50);
+  }else if(ph===P.LOSE){
+    sw.forEach(drSw);
+    X.fillStyle='#f44';X.font='bold 24px monospace';X.textAlign='center';X.fillText('SYSTEM BLACKOUT',W/2,H/2-10);
+    X.fillStyle='#fff';X.font='14px monospace';X.fillText('Score: '+sc,W/2,H/2+20);
+    X.fillStyle='#888';X.fillText(rnd<maxRnd?'Click to retry':'Click for debrief',W/2,H/2+50);
+  }else if(ph===P.DEBRIEF){
+    for(let i=0;i<12;i++){const y=H*.08+i*25,h=(t*.5+i*30)%360;
+      X.strokeStyle=`hsla(${h},90%,65%,.15+.1*Math.sin(t*.05+i))`;X.lineWidth=28;X.beginPath();
+      for(let x=0;x<W;x+=5){const yy=y+Math.sin((x+t)/70+i)*30;x?X.lineTo(x,yy):X.moveTo(x,yy)}X.stroke();}
+    X.fillStyle='#fff';X.font='bold 28px monospace';X.textAlign='center';X.fillText('SESSION COMPLETE',W/2,H*.25);
+    X.font='20px monospace';X.fillStyle='#0f8';X.fillText('Final Score: '+bestScore,W/2,H*.38);
+    let cls=bestScore>=200?'MASTER':bestScore>=120?'OPERATOR':bestScore>=60?'ROOKIE':'LEARNER';
+    let clsC=bestScore>=200?'#ff0':bestScore>=120?'#0f8':bestScore>=60?'#f60':'#f44';
+    X.fillStyle=clsC;X.font='bold 22px monospace';X.fillText('Rank: '+cls,W/2,H*.5);
+    X.fillStyle='#888';X.font='13px monospace';
+    X.fillText('The aurora responds to your timing. Every switch is a commitment.',W/2,H*.6);
+    X.fillText('CLICK TO RETURN',W/2,H*.75);
+    for(let p of particles){X.fillStyle=`hsla(${p.hue},80%,65%,${p.life/120})`;X.beginPath();X.arc(p.x,p.y,3,0,Math.PI*2);X.fill();}
+  }
+  requestAnimationFrame(dr);
+}
+dr();
+
+// Auto-play support for screenshots (via ?mode=autoplay)
+if(location.search.includes('autoplay')){
+  setTimeout(()=>{C.onclick({clientX:W/2,clientY:H/2})},500);
+  setTimeout(()=>{
+    const s=sw;if(s.length)for(let i=0;i<Math.min(3,s.length);i++)
+      C.onclick({clientX:s[i].x+s[i].w/2,clientY:s[i].y+s[i].h/2});
+  },2000);
+}
+
+</script></body></html>
