@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Firefly Switchyard</title>
+<style>
+   * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#0a0a14; font-family:system-ui,sans-serif; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  #overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+   }
+  #overlay.active { pointer-events:auto; }
+   .panel {
+    background:rgba(10,10,20,0.92); border:1px solid rgba(180,160,80,0.25);
+    border-radius:12px; padding:32px 40px; text-align:center; max-width:420px;
+    color:#d4c878;
+   }
+   .panel h1 { font-size:28px; margin-bottom:8px; color:#ffe066; }
+   .panel h2 { font-size:22px; margin-bottom:6px; }
+   .panel p { font-size:14px; line-height:1.5; margin-bottom:12px; color:#b0a870; }
+   .panel .stat { font-size:18px; color:#ffe066; margin:8px 0; }
+   .panel .sub { font-size:12px; color:#888; margin-top:16px; }
+   .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="overlay" class="active">
+   <div id="title-panel" class="panel">
+     <h1>&#128142; Firefly Switchyard</h1>
+     <p>Guide luminous fireflies to glowing beacons around the meadow.<br>
+        <b>Click or tap</b> a beacon to route the next firefly there.<br>
+       Fill beacons before fireflies drift away!</p>
+     <p class="sub">Press Space or click to begin</p>
+   </div>
+   <div id="end-panel" class="panel hidden">
+     <h2 id="end-title">Done</h2>
+     <div class="stat" id="end-score">Score: 0</div>
+     <p id="end-copy"></p>
+     <p class="sub">Press Space or click to play again</p>
+   </div>
+</div>
+<script src="rng.js"></script>
+<script src="game-loop.js"></script>
+<script src="scenes.js"></script>
+<script src="input.js"></script>
+<script src="tween.js"></script>
+<script src="particles.js"></script>
+<script src="screen-shake.js"></script>
+<script src="webaudio-kit.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
