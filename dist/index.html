@@ -1,0 +1,247 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Moonwire Dispatch</title>
+<style>*{margin:0}body{background:#0a0a1a;color:#c8d0e0;font:16px monospace;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh}canvas{border:2px solid #2a3a5a}</style>
+</head><body><canvas id="c" width="900" height="600"></canvas><script>
+const C=document.getElementById('c'),X=C.getContext('2d'),W=900,H=600;
+// Round data: signals, interference rate, decode time pressure
+const rounds=[
+ {signals:[{f:250,label:"Alpha"},{f:650,label:"Gamma"}],ir:.002,dt:240},
+ {signals:[{f:200,label:"Beta"},{f:500,label:"Delta"},{f:750,label:"Epsilon"}],ir:.004,dt:200},
+ {signals:[{f:150,label:"Zeta"},{f:450,label:"Eta"},{f:700,label:"Theta"}],ir:.006,dt:160}
+];
+const msgs=["Relay 7: fuel leak—divert to bay","Colony Alpha: recyclers offline","Storm Beta: solar flare incoming",
+ "Beacon 12: drift detected—recalibrate","Deep Range: unknown signal—investigate","Landing: cargo mismatch—verify"];
+let state='title',dial=450,t=0,score=0,round=0,captured=0;
+let phase='tune',str=0,lockProg=0,decProg=0,msg="";
+let interference=0,boosted=false,boostRisk=0,decodeMsg="",msgT=0;
+let audioCtx=null,osc=null,noiseG=null;
+// Active play trace events
+const trace=[];
+function traceEv(e){trace.push({t:Date.now(),e,round,phase,score});}
+
+function initAudio(){if(audioCtx)return;audioCtx=new(AudioContext||webkitAudioContext)();
+ noiseG=audioCtx.createGain();noiseG.gain.value=0.02;
+ const b=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate),d=b.getChannelData(0);
+ for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+ const n=audioCtx.createBufferSource();n.buffer=b;n.loop=true;n.connect(noiseG);noiseG.connect(audioCtx.destination);n.start();
+}
+function beep(f,dur){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+ o.frequency.value=f;g.gain.value=0.12;g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+ o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
+function stopOsc(){if(osc){try{osc.stop();}catch(e){}osc=null;}}
+
+function sigStr(){
+ const rd=rounds[round];let best=0;
+ for(const s of rd.signals){const d=Math.abs(dial-s.f);best=Math.max(best,90*Math.max(0,1-d/220)*(1-interference*.4));}
+ return best;
+}
+function nearestSignal(){
+ const rd=rounds[round];let best=null,bd=1e9;
+ for(const s of rd.signals){const d=Math.abs(dial-s.f);if(d<bd){bd=d;best=s;}}
+ return best;
+}
+
+function startRound(){
+ phase='tune';lockProg=0;decProg=0;boosted=false;boostRisk=0;decodeMsg="";
+ interference+=round*.15;
+ msg=round===0?"Arrow keys: tune. SPACE: lock signal.":"Round "+(round+1)+". Interference rising!";
+ msgT=240;beep(330,.15);
+}
+function doRestart(){
+ state='title';dial=450;t=0;score=0;round=0;captured=0;
+ phase='tune';str=0;lockProg=0;decProg=0;msg="";
+ interference=0;msgT=0;traceEv({e:'restart'});stopOsc();if(noiseG)noiseG.gain.value=0.02;
+}
+
+const K={};
+document.addEventListener('keydown',e=>{K[e.code]=true;e.preventDefault();
+ if(state==='title'){initAudio();state='play';round=0;captured=0;score=0;interference=0;startRound();traceEv({e:'start'});beep(440,.2);}
+ else if(state==='play'&&phase==='outcome'&&e.code==='Space'){doRestart();}
+ else if(state==='play'&&phase==='tune'&&e.code==='Space'&&str>35){
+  phase='lock';lockProg=0;boosted=false;traceEv({e:'meaningful_decision_1',detail:'lock'});beep(660,.25);
+  msg="HOLD or press B to BOOST (risky). Shift: abort.";msgT=180;
+ }
+ else if(state==='play'&&phase==='lock'&&e.code==='KeyB'){
+  // Decision 2: boost or not
+  boosted=true;boostRisk=Math.random()*30+15;
+  msg="Boosted! Signal amplified but interference risk added.";msgT=120;
+  traceEv({e:'meaningful_decision_2',detail:'boost'});beep(880,.2);
+ }
+ else if(state==='play'&&lockProg>=100){
+  // Lock complete - go to decode
+  const sigStrVal=sigStr();
+  const rd=rounds[round];
+  const sigIdx=Math.min(captured,msgs.length-1);
+  decodeMsg=msgs[sigIdx];phase='decode';decProg=0;
+  const bonus=boosted?1.5:1;
+  score+=Math.round((sigStrVal+10)*10*bonus);
+  if(boosted)interference+=boostRisk*.02;
+  traceEv({e:'meaningful_decision_3',detail:'decode'});beep(990,.3);beep(1200,.2);
+ }
+ else if(state==='play'&&phase==='decode'&&decProg>=rd[round]?.dt||phase==='decode'&&decProg>=rounds[round].dt){
+  // Decision 3 outcome: decode success or fail
+  const failChance=interference>.5?0.6:interference*.4;
+  if(Math.random()<failChance){
+   phase='round_fail';msg="Decoding failed—interference corrupted the signal.";score=Math.max(0,score-50);
+   beep(150,.5);traceEv({e:'failure'});
+   setTimeout(()=>{round++;if(round>=rounds.length){phase='outcome';traceEv({e:'outcome',detail:'end'});}else startRound();},2500);
+  }else{
+   captured++;
+   phase='round_success';msg="Signal decoded: "+decodeMsg;msgT=180;
+   traceEv({e:'success'});
+   setTimeout(()=>{round++;if(round>=rounds.length){phase='outcome';traceEv({e:'payoff',detail:'finale'});}else startRound();},2500);
+  }
+ }
+});
+document.addEventListener('keyup',e=>{K[e.code]=false;});
+
+function update(){
+ if(state!=='play')return;t++;
+ if(phase==='tune'){
+  if(K.ArrowLeft)dial=Math.max(20,dial-5);
+  if(K.ArrowRight)dial=Math.min(880,dial+5);
+  str=sigStr();
+  if(str>10){stopOsc();osc=audioCtx.createOscillator();const g=audioCtx.createGain();
+   osc.frequency.value=250+str*5;g.gain.value=Math.min(str/130,.14);osc.connect(g);g.connect(audioCtx.destination);osc.start();}
+  else stopOsc();
+  interference=Math.min(interference+rounds[round].ir,0.7);
+  noiseG.gain.value=0.02+interference*.08;
+  if(msgT>0)msgT--;
+ }
+ else if(phase==='lock'){
+  lockProg+=boosted?3.5:2;
+  // If not boosted, lock progresses steadily. If boosted, faster but interference rises.
+  if(boosted)interference=Math.min(interference+.003,0.7);
+  if(K.ShiftLeft){phase='tune';lockProg=0;boosted=false;beep(220,.15);msg="Lock aborted. Retune.";msgT=120;}
+  str=sigStr();noiseG.gain.value=0.02+interference*.08;
+  if(msgT>0)msgT--;
+ }
+ else if(phase==='decode'){
+  decProg++;
+  str=sigStr();
+  noiseG.gain.value=0.04+interference*.1;
+  // Play decoding sound
+  if(t%8===0)beep(400+Math.random()*400,.05);
+  if(msgT>0)msgT--;
+ }
+ else if(phase==='outcome'){
+  noiseG.gain.value=0.01;
+ }
+ else if(phase==='round_fail'||phase==='round_success'){
+  noiseG.gain.value=0.03;
+  if(msgT>0)msgT--;
+ }
+}
+
+function draw(){
+ X.fillStyle='#0a0a1a';X.fillRect(0,0,W,H);
+ // stars
+ X.fillStyle='#335';for(let i=0;i<30;i++)X.fillRect((i*137+t*.04)%W,(i*97+40)%H,1,1);
+ // moon
+ X.fillStyle='#b8c8e0';X.beginPath();X.arc(W-70,70,32,0,Math.PI*2);X.fill();
+ X.fillStyle='#8a9';for(let i=0;i<4;i++){const mx=W-70+Math.cos(i*1.5)*20,my=70+Math.sin(i*1.5)*20;X.beginPath();X.arc(mx,my,3,0,Math.PI*2);X.fill();}
+
+ if(state==='title'){
+  X.textAlign='center';
+  X.fillStyle='#7af';X.font='bold 42px monospace';X.fillText('MOONWIRE DISPATCH',W/2,H/3-10);
+  X.fillStyle='#567';X.font='16px monospace';X.fillText('A Signal Operator\'s Toy',W/2,H/3+18);
+  X.strokeStyle='#4a8';X.lineWidth=2;X.beginPath();
+  for(let i=0;i<200;i++){const x=W/2-100+i,y=H/2+Math.sin(i*.1+t*.1)*30;i?X.lineTo(x,y):X.moveTo(x,y);}X.stroke();
+  X.fillStyle='#89a';X.font='16px monospace';X.fillText('Press any key to begin',W/2,H-60);
+  X.fillStyle='#456';X.font='13px monospace';X.fillText('◄► Tune dial   |  SPACE: Lock   |  B: Boost   |  Shift: Abort',W/2,H-35);
+  // scanlines
+  for(let y=0;y<H;y+=3){X.fillStyle='rgba(0,0,0,0.1)';X.fillRect(0,y,W,1);}
+  return;
+ }
+
+ // Frequency scale
+ X.fillStyle='#1a2a3a';X.fillRect(30,510,W-60,28);
+ const dx=30+(dial/900)*(W-60);
+ X.fillStyle='#0f0';X.beginPath();X.moveTo(dx,512);X.lineTo(dx-7,498);X.lineTo(dx+7,498);X.fill();
+ // signal band markers
+ const rd=rounds[round];
+ for(const s of rd.signals){const bx=30+(s.f/900)*(W-60);X.fillStyle='rgba(0,200,100,0.25)';X.fillRect(bx-2,488,4,25);}
+ X.fillStyle='#456';X.font='10px monospace';X.textAlign='left';
+ X.fillText('100',35,538);X.fillText('450',W/2-15,538);X.fillText('900',W-90,538);
+
+ // Signal strength bar
+ str=phase==='tune'||phase==='lock'?sigStr():str;
+ X.fillStyle='#1a2a3a';X.fillRect(30,18,W-60,22);
+ const hc=`hsl(${120-str*1.3},70%,45%)`;
+ X.fillStyle=hc;X.fillRect(30,18,(W-60)*(Math.min(str,100)/100),22);
+ X.fillStyle='#fff';X.font='bold 12px monospace';X.textAlign='left';X.fillText('SIGNAL: '+Math.round(str)+'%',40,34);
+
+ // Interference bar
+ X.fillStyle='#1a2a3a';X.fillRect(30,46,W-60,18);
+ X.fillStyle=`rgba(255,80,60,${Math.min(interference,1)})`;X.fillRect(30,46,(W-60)*interference,18);
+ X.fillStyle='#f86';X.font='bold 11px monospace';X.fillText('INTERFERENCE: '+Math.round(interference*100)+'%',40,60);
+
+ // Phase + round info
+ X.textAlign='left';X.fillStyle='#568';X.font='13px monospace';
+ X.fillText('Phase: '+phase.toUpperCase(),30,85);
+ X.fillText('Round: '+(round+1)+' / '+rounds.length,30,102);
+ X.fillText('Captured: '+captured,30,119);
+ X.fillText('Score: '+score,30,136);
+
+ // Waveform display
+ X.strokeStyle=hc;X.lineWidth=2;X.beginPath();
+ for(let i=0;i<200;i++){const x=W/2-100+i,y=250+Math.sin(i*.1+t*.12)*str*.35+(Math.random()-.5)*interference*40;
+  i?X.lineTo(x,y):X.moveTo(x,y);}X.stroke();
+
+ // Lock progress
+ if(phase==='lock'){
+  X.fillStyle='#1a2a3a';X.fillRect(W/2-140,340,280,24);
+  X.fillStyle=boosted?'#f84':'#4af';X.fillRect(W/2-140,340,280*(lockProg/100),24);
+  X.fillStyle='#fff';X.font='bold 12px monospace';X.textAlign='center';
+  X.fillText('LOCKING: '+Math.round(lockProg)+'%'+(boosted?' [BOOSTED]':''),W/2,357);
+  X.fillStyle='#a86';X.font='12px monospace';X.fillText('Shift: abort lock',W/2,380);
+ }
+ // Decode progress
+ if(phase==='decode'){
+  X.fillStyle='#1a2a3a';X.fillRect(W/2-140,320,280,24);
+  const rdt=rd[round]?.dt||rounds[round].dt;
+  X.fillStyle='#4f8';X.fillRect(W/2-140,320,280*(decProg/rdt),24);
+  X.fillStyle='#fff';X.font='bold 12px monospace';X.textAlign='center';
+  X.fillText('DECODING: '+decodeMsg,W/2,337);
+ }
+ // Round result
+ if(phase==='round_success'){
+  X.fillStyle='rgba(0,40,0,0.7)';X.fillRect(W/2-200,300,400,80);
+  X.fillStyle='#4f8';X.font='bold 18px monospace';X.textAlign='center';
+  X.fillText('SIGNAL CAPTURED',W/2,335);
+  X.fillStyle='#8f8';X.font='14px monospace';X.fillText(decodeMsg,W/2,360);
+ }
+ if(phase==='round_fail'){
+  X.fillStyle='rgba(40,0,0,0.7)';X.fillRect(W/2-200,300,400,80);
+  X.fillStyle='#f84';X.font='bold 18px monospace';X.textAlign='center';
+  X.fillText('SIGNAL CORRUPTED',W/2,335);
+  X.fillStyle='#f88';X.font='14px monospace';X.fillText('Interference overwhelmed the decode.',W/2,360);
+ }
+
+ // Final outcome
+ if(phase==='outcome'){
+  X.fillStyle='rgba(0,0,30,0.85)';X.fillRect(0,120,W,350);
+  X.textAlign='center';
+  const pass=captured>=2;
+  X.fillStyle=pass?'#4f8':'#f84';X.font='bold 32px monospace';
+  X.fillText(pass?'DISPATCH COMPLETE':'DISPATCH FAILED',W/2,190);
+  X.fillStyle='#fff';X.font='22px monospace';X.fillText('Final Score: '+score,W/2,240);
+  X.fillStyle='#89a';X.font='18px monospace';
+  X.fillText('Signals captured: '+captured+' / '+rounds.length,W/2,280);
+  X.fillText('Peak interference: '+Math.round(interference*100)+'%',W/2,310);
+  // Rating
+  let rating='C';if(score>1500)rating='A';else if(score>800)rating='B';
+  X.fillStyle=pass?'#ff0':'#f84';X.font='bold 28px monospace';
+  X.fillText('Dispatch Rating: '+rating,W/2,365);
+  X.fillStyle='#567';X.font='14px monospace';X.fillText('Press SPACE for a new dispatch',W/2,420);
+ }
+
+ // Message bar
+ X.fillStyle='rgba(10,10,26,0.8)';X.fillRect(0,H-44,W,44);
+ X.fillStyle=msgT>0?'#fff':'#678';X.font='14px monospace';X.textAlign='center';X.fillText(msg,W/2,H-18);
+
+ // Scanlines
+ for(let y=0;y<H;y+=3){X.fillStyle='rgba(0,0,0,0.1)';X.fillRect(0,y,W,1);}
+}
+
+(function lp(){update();draw();requestAnimationFrame(lp);})();
+</script></body></html>
