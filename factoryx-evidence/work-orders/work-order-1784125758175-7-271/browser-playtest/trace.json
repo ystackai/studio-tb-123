@@ -1,0 +1,980 @@
+{
+  "schema_version": 1,
+  "url": "file:///workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/dist/index.html",
+  "requested_viewport": {
+    "width": 1200,
+    "height": 800
+  },
+  "rendered_viewport": {
+    "width": 1200,
+    "height": 800
+  },
+  "interaction_plan_sha256": "01e383d1eac9136365acc1b8682676c99232fa3d46241a26f8f8199ab65fa1dc",
+  "started_at_ms": 1784126923843,
+  "completed_at_ms": 1784127140043,
+  "duration_ms": 216200,
+  "total_wait_ms": 72600,
+  "actions": [
+    {
+      "index": 0,
+      "action": {
+        "type": "screenshot",
+        "name": "initial"
+      },
+      "elapsed_ms": 0,
+      "duration_ms": 785
+    },
+    {
+      "index": 1,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 785,
+      "duration_ms": 63
+    },
+    {
+      "index": 2,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 848,
+      "duration_ms": 13
+    },
+    {
+      "index": 3,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 861,
+      "duration_ms": 3000
+    },
+    {
+      "index": 4,
+      "action": {
+        "type": "screenshot",
+        "name": "decision-1"
+      },
+      "elapsed_ms": 3861,
+      "duration_ms": 1897
+    },
+    {
+      "index": 5,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 5758,
+      "duration_ms": 5
+    },
+    {
+      "index": 6,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 5763,
+      "duration_ms": 3
+    },
+    {
+      "index": 7,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 5766,
+      "duration_ms": 3000
+    },
+    {
+      "index": 8,
+      "action": {
+        "type": "screenshot",
+        "name": "decision-2"
+      },
+      "elapsed_ms": 8766,
+      "duration_ms": 2555
+    },
+    {
+      "index": 9,
+      "action": {
+        "type": "key_down",
+        "key": "ArrowRight"
+      },
+      "elapsed_ms": 11321,
+      "duration_ms": 5
+    },
+    {
+      "index": 10,
+      "action": {
+        "type": "key_up",
+        "key": "ArrowRight"
+      },
+      "elapsed_ms": 11326,
+      "duration_ms": 1
+    },
+    {
+      "index": 11,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 11327,
+      "duration_ms": 3000
+    },
+    {
+      "index": 12,
+      "action": {
+        "type": "screenshot",
+        "name": "escalation"
+      },
+      "elapsed_ms": 14327,
+      "duration_ms": 3692
+    },
+    {
+      "index": 13,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 18019,
+      "duration_ms": 2
+    },
+    {
+      "index": 14,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 18021,
+      "duration_ms": 1
+    },
+    {
+      "index": 15,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 18022,
+      "duration_ms": 3003
+    },
+    {
+      "index": 16,
+      "action": {
+        "type": "screenshot",
+        "name": "payoff"
+      },
+      "elapsed_ms": 21025,
+      "duration_ms": 4393
+    },
+    {
+      "index": 17,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 25418,
+      "duration_ms": 9
+    },
+    {
+      "index": 18,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 25427,
+      "duration_ms": 4
+    },
+    {
+      "index": 19,
+      "action": {
+        "type": "wait",
+        "ms": 5000
+      },
+      "elapsed_ms": 25431,
+      "duration_ms": 5000
+    },
+    {
+      "index": 20,
+      "action": {
+        "type": "screenshot",
+        "name": "outcome"
+      },
+      "elapsed_ms": 30431,
+      "duration_ms": 4566
+    },
+    {
+      "index": 21,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 34997,
+      "duration_ms": 3
+    },
+    {
+      "index": 22,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 35000,
+      "duration_ms": 1
+    },
+    {
+      "index": 23,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 35001,
+      "duration_ms": 3003
+    },
+    {
+      "index": 24,
+      "action": {
+        "type": "screenshot",
+        "name": "restart"
+      },
+      "elapsed_ms": 38004,
+      "duration_ms": 4704
+    },
+    {
+      "index": 25,
+      "action": {
+        "type": "wait",
+        "ms": 2000
+      },
+      "elapsed_ms": 42708,
+      "duration_ms": 2004
+    },
+    {
+      "index": 26,
+      "action": {
+        "type": "screenshot",
+        "name": "initial-2"
+      },
+      "elapsed_ms": 44712,
+      "duration_ms": 5831
+    },
+    {
+      "index": 27,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 50543,
+      "duration_ms": 1
+    },
+    {
+      "index": 28,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 50544,
+      "duration_ms": 3
+    },
+    {
+      "index": 29,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 50547,
+      "duration_ms": 3002
+    },
+    {
+      "index": 30,
+      "action": {
+        "type": "screenshot",
+        "name": "decision-1-2"
+      },
+      "elapsed_ms": 53549,
+      "duration_ms": 6828
+    },
+    {
+      "index": 31,
+      "action": {
+        "type": "key_down",
+        "key": "ArrowLeft"
+      },
+      "elapsed_ms": 60377,
+      "duration_ms": 3
+    },
+    {
+      "index": 32,
+      "action": {
+        "type": "key_up",
+        "key": "ArrowLeft"
+      },
+      "elapsed_ms": 60380,
+      "duration_ms": 2
+    },
+    {
+      "index": 33,
+      "action": {
+        "type": "wait",
+        "ms": 2000
+      },
+      "elapsed_ms": 60382,
+      "duration_ms": 2002
+    },
+    {
+      "index": 34,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 62384,
+      "duration_ms": 2
+    },
+    {
+      "index": 35,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 62386,
+      "duration_ms": 2
+    },
+    {
+      "index": 36,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 62388,
+      "duration_ms": 3002
+    },
+    {
+      "index": 37,
+      "action": {
+        "type": "screenshot",
+        "name": "decision-2-2"
+      },
+      "elapsed_ms": 65390,
+      "duration_ms": 7809
+    },
+    {
+      "index": 38,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 73199,
+      "duration_ms": 3
+    },
+    {
+      "index": 39,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 73202,
+      "duration_ms": 2
+    },
+    {
+      "index": 40,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 73204,
+      "duration_ms": 3000
+    },
+    {
+      "index": 41,
+      "action": {
+        "type": "screenshot",
+        "name": "escalation-2"
+      },
+      "elapsed_ms": 76204,
+      "duration_ms": 9809
+    },
+    {
+      "index": 42,
+      "action": {
+        "type": "key_down",
+        "key": "ArrowRight"
+      },
+      "elapsed_ms": 86013,
+      "duration_ms": 1
+    },
+    {
+      "index": 43,
+      "action": {
+        "type": "key_up",
+        "key": "ArrowRight"
+      },
+      "elapsed_ms": 86014,
+      "duration_ms": 1
+    },
+    {
+      "index": 44,
+      "action": {
+        "type": "wait",
+        "ms": 2000
+      },
+      "elapsed_ms": 86015,
+      "duration_ms": 2003
+    },
+    {
+      "index": 45,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 88018,
+      "duration_ms": 1
+    },
+    {
+      "index": 46,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 88019,
+      "duration_ms": 1
+    },
+    {
+      "index": 47,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 88020,
+      "duration_ms": 3000
+    },
+    {
+      "index": 48,
+      "action": {
+        "type": "screenshot",
+        "name": "payoff-2"
+      },
+      "elapsed_ms": 91020,
+      "duration_ms": 9102
+    },
+    {
+      "index": 49,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 100122,
+      "duration_ms": 1
+    },
+    {
+      "index": 50,
+      "action": {
+        "type": "wait",
+        "ms": 600
+      },
+      "elapsed_ms": 100123,
+      "duration_ms": 604
+    },
+    {
+      "index": 51,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 100727,
+      "duration_ms": 2
+    },
+    {
+      "index": 52,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 100729,
+      "duration_ms": 3000
+    },
+    {
+      "index": 53,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 103729,
+      "duration_ms": 1
+    },
+    {
+      "index": 54,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 103730,
+      "duration_ms": 1
+    },
+    {
+      "index": 55,
+      "action": {
+        "type": "wait",
+        "ms": 4000
+      },
+      "elapsed_ms": 103731,
+      "duration_ms": 4000
+    },
+    {
+      "index": 56,
+      "action": {
+        "type": "screenshot",
+        "name": "outcome-2"
+      },
+      "elapsed_ms": 107731,
+      "duration_ms": 7972
+    },
+    {
+      "index": 57,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 115703,
+      "duration_ms": 2
+    },
+    {
+      "index": 58,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 115705,
+      "duration_ms": 2
+    },
+    {
+      "index": 59,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 115707,
+      "duration_ms": 3000
+    },
+    {
+      "index": 60,
+      "action": {
+        "type": "screenshot",
+        "name": "restart-2"
+      },
+      "elapsed_ms": 118707,
+      "duration_ms": 9495
+    },
+    {
+      "index": 61,
+      "action": {
+        "type": "wait",
+        "ms": 2000
+      },
+      "elapsed_ms": 128202,
+      "duration_ms": 2000
+    },
+    {
+      "index": 62,
+      "action": {
+        "type": "screenshot",
+        "name": "initial-3"
+      },
+      "elapsed_ms": 130202,
+      "duration_ms": 9536
+    },
+    {
+      "index": 63,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 139738,
+      "duration_ms": 4
+    },
+    {
+      "index": 64,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 139742,
+      "duration_ms": 2
+    },
+    {
+      "index": 65,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 139744,
+      "duration_ms": 3001
+    },
+    {
+      "index": 66,
+      "action": {
+        "type": "screenshot",
+        "name": "decision-1-3"
+      },
+      "elapsed_ms": 142745,
+      "duration_ms": 9353
+    },
+    {
+      "index": 67,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 152098,
+      "duration_ms": 0
+    },
+    {
+      "index": 68,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 152098,
+      "duration_ms": 1
+    },
+    {
+      "index": 69,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 152099,
+      "duration_ms": 3001
+    },
+    {
+      "index": 70,
+      "action": {
+        "type": "screenshot",
+        "name": "decision-2-3"
+      },
+      "elapsed_ms": 155100,
+      "duration_ms": 10223
+    },
+    {
+      "index": 71,
+      "action": {
+        "type": "key_down",
+        "key": "ArrowLeft"
+      },
+      "elapsed_ms": 165323,
+      "duration_ms": 4
+    },
+    {
+      "index": 72,
+      "action": {
+        "type": "key_up",
+        "key": "ArrowLeft"
+      },
+      "elapsed_ms": 165327,
+      "duration_ms": 1
+    },
+    {
+      "index": 73,
+      "action": {
+        "type": "wait",
+        "ms": 2000
+      },
+      "elapsed_ms": 165328,
+      "duration_ms": 2000
+    },
+    {
+      "index": 74,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 167328,
+      "duration_ms": 1
+    },
+    {
+      "index": 75,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 167329,
+      "duration_ms": 1
+    },
+    {
+      "index": 76,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 167330,
+      "duration_ms": 3000
+    },
+    {
+      "index": 77,
+      "action": {
+        "type": "screenshot",
+        "name": "escalation-3"
+      },
+      "elapsed_ms": 170330,
+      "duration_ms": 9015
+    },
+    {
+      "index": 78,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 179345,
+      "duration_ms": 2
+    },
+    {
+      "index": 79,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 179347,
+      "duration_ms": 4
+    },
+    {
+      "index": 80,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 179351,
+      "duration_ms": 3000
+    },
+    {
+      "index": 81,
+      "action": {
+        "type": "screenshot",
+        "name": "payoff-3"
+      },
+      "elapsed_ms": 182351,
+      "duration_ms": 8339
+    },
+    {
+      "index": 82,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 190690,
+      "duration_ms": 3
+    },
+    {
+      "index": 83,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 190693,
+      "duration_ms": 3
+    },
+    {
+      "index": 84,
+      "action": {
+        "type": "wait",
+        "ms": 5000
+      },
+      "elapsed_ms": 190696,
+      "duration_ms": 5001
+    },
+    {
+      "index": 85,
+      "action": {
+        "type": "screenshot",
+        "name": "outcome-3"
+      },
+      "elapsed_ms": 195697,
+      "duration_ms": 8944
+    },
+    {
+      "index": 86,
+      "action": {
+        "type": "key_down",
+        "key": "Space"
+      },
+      "elapsed_ms": 204641,
+      "duration_ms": 1
+    },
+    {
+      "index": 87,
+      "action": {
+        "type": "key_up",
+        "key": "Space"
+      },
+      "elapsed_ms": 204642,
+      "duration_ms": 1
+    },
+    {
+      "index": 88,
+      "action": {
+        "type": "wait",
+        "ms": 3000
+      },
+      "elapsed_ms": 204643,
+      "duration_ms": 3001
+    },
+    {
+      "index": 89,
+      "action": {
+        "type": "screenshot",
+        "name": "restart-3"
+      },
+      "elapsed_ms": 207644,
+      "duration_ms": 8556
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "initial",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/initial.png",
+      "sha256": "bb643c356b45efde7002862c96bb947bddaea3baeb3b4cd8d9bec4295b29785e",
+      "bytes": 38086
+    },
+    {
+      "name": "decision-1",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/decision-1.png",
+      "sha256": "7fe1e1381505b4a183b887377b57f04ea39ea9abfaa5f88062a86c103ab0fb91",
+      "bytes": 11737
+    },
+    {
+      "name": "decision-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/decision-2.png",
+      "sha256": "d5f09a06fbb4f25025ea07ee963113e6d503920eaf2feca500341c935f8fc29d",
+      "bytes": 11304
+    },
+    {
+      "name": "escalation",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/escalation.png",
+      "sha256": "26e20a50e1e07600b479da2940bd6d192ae290d0b3738da03425b9fed253a1ba",
+      "bytes": 11544
+    },
+    {
+      "name": "payoff",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/payoff.png",
+      "sha256": "3a353fd95b8e59c920f1c0f8a123bd056c5e2be141fa16f816d80547446d3a00",
+      "bytes": 11806
+    },
+    {
+      "name": "outcome",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/outcome.png",
+      "sha256": "9925a65b24628a7b24c830aa36e5759e9f37fa06653864039a45aef7d482816a",
+      "bytes": 18738
+    },
+    {
+      "name": "restart",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/restart.png",
+      "sha256": "ed9c021320286bc0214578448e5fbe50fbbf533f1da691c3b02b8a75c4fa17fc",
+      "bytes": 11552
+    },
+    {
+      "name": "initial-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/initial-2.png",
+      "sha256": "a6537d821bc617b36b7df2834255ced451993b594deb20a877b49cf74420b79d",
+      "bytes": 11917
+    },
+    {
+      "name": "decision-1-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/decision-1-2.png",
+      "sha256": "7adcb5c686632e205edd0b088d93995528e0ee08f8dd9da77f358439dc596970",
+      "bytes": 11260
+    },
+    {
+      "name": "decision-2-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/decision-2-2.png",
+      "sha256": "7f43c1af386b2ba9c78b0e759d6c1306e9dd803331bd1457e37c5c81d85be725",
+      "bytes": 11858
+    },
+    {
+      "name": "escalation-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/escalation-2.png",
+      "sha256": "a590a3a1559064ec2940b0032cc7e206747cefb459a6cdfecdfd24531f1750d9",
+      "bytes": 13131
+    },
+    {
+      "name": "payoff-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/payoff-2.png",
+      "sha256": "9925a65b24628a7b24c830aa36e5759e9f37fa06653864039a45aef7d482816a",
+      "bytes": 18738
+    },
+    {
+      "name": "outcome-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/outcome-2.png",
+      "sha256": "be702b5017bcd29527dad69ff34d9e5a8eb4cff95530b245faad70579ce27bda",
+      "bytes": 13403
+    },
+    {
+      "name": "restart-2",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/restart-2.png",
+      "sha256": "1ef0d83c517049c28ce69895617252f04b27dad4f356706bef6566ac87a6c9b5",
+      "bytes": 15667
+    },
+    {
+      "name": "initial-3",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/initial-3.png",
+      "sha256": "c9160cdcf5d6829a424b903a6a154c66643bdbeac2c769d650580212cece57ca",
+      "bytes": 13289
+    },
+    {
+      "name": "decision-1-3",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/decision-1-3.png",
+      "sha256": "8d4725b88dbc1f6dc8c959f3d72cdac611876f4b9a81526f38e15ea8b31ff491",
+      "bytes": 14802
+    },
+    {
+      "name": "decision-2-3",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/decision-2-3.png",
+      "sha256": "fdceee78605160cd5c19dcf215e59a271821a616f49f9b41d2e3b46eecab6a62",
+      "bytes": 13147
+    },
+    {
+      "name": "escalation-3",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/escalation-3.png",
+      "sha256": "fa8b726aae0e1f0450403c2c6a8ac5c845aa589e283ef7c562fd24081a480887",
+      "bytes": 15807
+    },
+    {
+      "name": "payoff-3",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/payoff-3.png",
+      "sha256": "eb7c6e8c30981b99c07322df3475f151e80ede4c2523966618c9115f9867e79e",
+      "bytes": 11385
+    },
+    {
+      "name": "outcome-3",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/outcome-3.png",
+      "sha256": "0d7e6f2685ff08afaeabea051a6ceda742ab1116c11f32cb0acacb4c1ce3b486",
+      "bytes": 11934
+    },
+    {
+      "name": "restart-3",
+      "path": "/workspaces/factory-tb-123/worker-1/ystackai_studio-tb-123/checkout/factoryx-evidence/work-orders/work-order-1784125758175-7-271/browser-playtest/restart-3.png",
+      "sha256": "6690a90912b5aa746c455df6fc90e61fe1b25b6ae3f7bade177d2fda04b070f5",
+      "bytes": 11428
+    }
+  ],
+  "audio_events": [
+    {
+      "kind": "audible_output",
+      "at_ms": 1784126924705,
+      "peak": 0.119239,
+      "rms": 0.077817,
+      "observed_at_ms": 1784126924711
+    }
+  ],
+  "audio_events_truncated": 0,
+  "audio_events_total": 1,
+  "console_messages": [],
+  "console_messages_truncated": 0,
+  "console_messages_total": 0,
+  "runtime_errors": [],
+  "runtime_errors_truncated": 0,
+  "runtime_errors_total": 0,
+  "playthrough": {
+    "path": "/tmp/factoryx-browser-playthroughs/52964-13433658cc6d7efeae50c8d82fda5220.webm",
+    "format": "video/webm",
+    "sha256": "9e8cedfc371d60205e3263ece9f4aca7370c063b027c2a4c281038bb63ee4acc",
+    "bytes": 3369801
+  }
+}

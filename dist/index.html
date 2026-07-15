@@ -1,0 +1,288 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Firefly Numbers Station</title>
+<style>body{margin:0;background:#0a0a12;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh;font-family:monospace}canvas{image-rendering:pixelated}</style></head><body>
+<canvas id="c" width="800" height="600"></canvas><script>
+const C=document.getElementById('c'),X=C.getContext('2d'),W=800,H=600,PI=6.28318;
+let ac=null;
+function ia(){if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();}
+function beep(f,d,v,ty){if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type=ty||'sine';o.frequency.value=f;g.gain.setValueAtTime(v||.1,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);}
+// Game state
+let st='title',freq=1,ffs=[],caught=[],missed=0,round=0,totalRounds=6,sc=0,ct=0,cw=false,res='',over=false,win=false,t=0,lt=performance.now();
+let lockOn=false,lockTimer=0,lockTarget=null,staticCooldown=0;
+let spawnInterval=0,spawnTimer=0;
+let signalComplete=false,celebration=0;
+let decisionLog=[];
+// Firefly colors by digit
+const FC=['#ff6b35','#ffa726','#ffee58','#66bb6a','#42a5f5','#ab47bc','#e57373','#81c784'];
+// Difficulty scaling
+function getDiff(){const r=Math.min(round,totalRounds);return{spawnDelay:Math.max(800,2400-r*250),catchWindow:Math.max(1500,3500-r*300),maxActive:Math.min(1+Math.floor(r/2),3),decoyChance:r>=4?.3:0};}
+function spawnFirefly(){
+  const diff=getDiff();
+  const ff={x:120+Math.random()*560,y:140+Math.random()*280,d:Math.floor(Math.random()*10),
+    freq:Math.floor(Math.random()*3),age:0,p:Math.random()*PI,c:false,m:false,isDecoy:false};
+  if(diff.decoyChance>0&&Math.random()<diff.decoyChance){ff.isDecoy=true;ff.freq=-1;}
+  ffs.push(ff);
+  beep(400+ff.d*80,.3,.12,'sine');
+  // Log
+  decisionLog.push({t:Date.now(),e:'firefly_spawned',digit:ff.d,freq:ff.freq,decoy:ff.isDecoy});
+}
+function resetGame(){
+  st='playing';ffs=[];caught=[];missed=0;round=0;sc=0;ct=0;cw=false;res='';over=false;win=false;
+  freq=1;lockOn=false;lockTimer=0;staticCooldown=0;signalComplete=false;celebration=0;
+  decisionLog=[];spawnInterval=0;spawnTimer=0;
+  spawnFirefly();spawnInterval=getDiff().spawnDelay;spawnTimer=spawnInterval;
+  beep(500,.15,.1);
+}
+// Input handling
+let spaceDown=false,spacePressTime=0;
+document.addEventListener('keydown',e=>{
+  if(e.repeat)return;ia();
+  if(e.code==='Space'){
+    e.preventDefault();spaceDown=true;spacePressTime=Date.now();
+    if(st==='title'){resetGame();decisionLog.push({t:Date.now(),e:'game_started'});return;}
+    if(st==='result'){resetGame();decisionLog.push({t:Date.now(),e:'restart'});return;}
+    if(st==='playing'&&cw&&staticCooldown<=0){
+      const f=ffs[ffs.length-1];if(!f)return;
+      const diff=getDiff();const q=1-(ct/diff.catchWindow);
+      if(q>.25){
+        if(f.isDecoy){
+          // Caught a decoy — penalty!
+          missed++;beep(100,.5,.3,'sawtooth');
+          decisionLog.push({t:Date.now(),e:'decoy_caught',penalty:true});
+          if(missed>=3){over=true;st='result';win=false;beep(100,.6,.3,'sawtooth');decisionLog.push({t:Date.now(),e:'outcome_failure'});}
+          else{ffs.pop();setTimeout(spawnFirefly,1200);}
+        }else if(f.freq===freq){
+          // Correct catch!
+          f.c=true;caught.push(f.d);sc+=Math.floor(q*150);
+          beep(800,.2,.2);beep(1200,.15,.1);
+          res+=f.d;round++;
+          decisionLog.push({t:Date.now(),e:'firefly_caught',digit:f.d,quality:q,decision:'timed_catch'});
+          if(round>=totalRounds){
+            win=true;over=true;st='result';signalComplete=true;celebration=0;
+            beep(600,.3,.2);beep(900,.25,.15);beep(1200,.4,.1);
+            decisionLog.push({t:Date.now(),e:'outcome_success'});
+          }else{ffs.pop();spawnInterval=getDiff().spawnDelay;spawnTimer=spawnInterval;setTimeout(spawnFirefly,500);}
+        }else{
+          // Wrong frequency — no catch
+          beep(200,.3,.2);
+          decisionLog.push({t:Date.now(),e:'wrong_frequency',fireflyFreq:f.freq,playerFreq:freq});
+        }
+      }else{
+        // Too late
+        missed++;beep(150,.4,.25,'square');
+        decisionLog.push({t:Date.now(),e:'catch_too_late'});
+        if(missed>=3){over=true;st='result';win=false;beep(100,.6,.3,'sawtooth');decisionLog.push({t:Date.now(),e:'outcome_failure'});}
+        else{ffs.pop();setTimeout(spawnFirefly,1200);}
+      }
+      cw=false;
+    }
+  }
+  if(e.code==='ArrowLeft'&&st==='playing'){
+    if(staticCooldown>0)return;
+    freq=Math.max(0,freq-1);beep(300,.15,.1,'triangle');
+    staticCooldown=300; // Brief static after frequency shift
+    decisionLog.push({t:Date.now(),e:'freq_shift',newFreq:freq,decision:'freq_change'});
+  }
+  if(e.code==='ArrowRight'&&st==='playing'){
+    if(staticCooldown>0)return;
+    freq=Math.min(2,freq+1);beep(600,.15,.1,'triangle');
+    staticCooldown=300;
+    decisionLog.push({t:Date.now(),e:'freq_shift',newFreq:freq,decision:'freq_change'});
+  }
+});
+document.addEventListener('keyup',e=>{
+  if(e.code==='Space'&&spaceDown){
+    spaceDown=false;
+    const holdTime=Date.now()-spacePressTime;
+    if(st==='playing'&&holdTime>=500&&!lockOn&&staticCooldown<=0){
+      // Lock-on mechanic — guarantees catch but costs 1s
+      lockOn=true;lockTimer=0;
+      beep(1000,.1,.15);beep(1000,.1,.15);
+      decisionLog.push({t:Date.now(),e:'lock_on',decision:'lock_on'});
+    }
+  }
+});
+function drawFF(f,tm){
+  const pulse=Math.sin(tm*3+f.p)*.5+.5;
+  const sz=8+pulse*12;
+  // Glow
+  X.globalAlpha=.1+pulse*.2;
+  X.fillStyle=f.isDecoy?'#f44336':FC[f.d%8];
+  X.beginPath();X.arc(f.x,f.y,sz*3,0,PI);X.fill();
+  // Core
+  X.globalAlpha=.6+pulse*.4;
+  X.beginPath();X.arc(f.x,f.y,sz*.5,0,PI);X.fill();
+  // Label
+  X.globalAlpha=1;X.fillStyle='#fff';X.font='bold 16px monospace';
+  const label=f.isDecoy?'\u26A0':String(f.d);
+  X.fillText(label,f.x-6,f.y-18);
+  // Frequency indicator
+  if(f.freq>=0){
+    X.fillStyle=f.freq===freq?'#4caf50':'#555';
+    X.font='10px monospace';
+    X.fillText(['LF','MF','HF'][f.freq],f.x-10,f.y+25);
+  }else{
+    X.fillStyle='#f44336';X.font='10px monospace';X.fillText('??',f.x-5,f.y+25);
+  }
+}
+function drawTitle(tm){
+  X.fillStyle='#0a0a12';X.fillRect(0,0,W,H);
+  // Animated starfield
+  for(let i=0;i<50;i++){
+    const sx=(i*137.5+tm*.02*(i%3+1))%W,sy=(i*97.3)%H;
+    X.globalAlpha=.2+Math.sin(tm*2+i)*.2;X.fillStyle='#ffe082';
+    X.beginPath();X.arc(sx,sy,1+Math.sin(tm+i)*.5,0,PI);X.fill();
+  }
+  // Title
+  X.globalAlpha=1;X.fillStyle='#ffe082';X.font='bold 34px monospace';X.textAlign='center';
+  X.fillText('FIREFLY NUMBERS STATION',W/2,160);
+  X.font='15px monospace';X.fillStyle='#ccc';
+  X.fillText('You are a signal operator. Catch firefly pulses to decode the secret message.',W/2,220);
+  X.fillText('Each firefly has a frequency band (LF/MF/HF) and a digit.',W/2,245);
+  X.font='14px monospace';X.fillStyle='#aaa';
+  X.fillText('SPACE to catch (timed!) | <- -> to shift frequency band',W/2,290);
+  X.fillText('Hold SPACE 0.5s for lock-on (guaranteed catch, costs 1s)',W/2,310);
+  X.fillText('Decode 6 digits to win. 3 misses and you lose the signal.',W/2,340);
+  // Blinking prompt
+  X.fillStyle='#ff9800';X.font='bold 20px monospace';
+  if(Math.sin(tm*3)>0)X.fillText('[ PRESS SPACE TO START ]',W/2,430);
+  X.textAlign='left';
+}
+function drawPlaying(tm){
+  X.fillStyle='#0a0a12';X.fillRect(0,0,W,H);
+  // Progress bar
+  X.fillStyle='#1a1a2e';X.fillRect(10,10,W-20,20);
+  const pct=round/totalRounds;
+  X.fillStyle=pct<.5?'#ff9800':pct<.8?'#4caf50':'#2196f3';
+  X.fillRect(10,10,(W-20)*pct,20);
+  X.fillStyle='#fff';X.font='bold 12px monospace';X.textAlign='center';
+  X.fillText(`${round}/${totalRounds} signals caught`,W/2,25);
+  // Frequency band indicator
+  X.fillStyle='#2a2a3e';X.fillRect(200,35,400,28);
+  const bands=['LF','MF','HF'];
+  for(let i=0;i<3;i++){
+    X.fillStyle=i===freq?'#ff9800':'#333';
+    X.fillRect(210+i*130,38,118,22);
+    X.fillStyle=i===freq?'#000':'#666';X.font='bold 12px monospace';
+    X.fillText(bands[i],210+i*130+59,54);
+  }
+  // Static cooldown indicator
+  if(staticCooldown>0){
+    X.fillStyle='rgba(244,67,54,0.3)';X.fillRect(200,35,400,28);
+    X.fillStyle='#f44336';X.font='bold 14px monospace';
+    X.fillText('STATIC',W/2,56);
+  }
+  // Decoded digits
+  if(res.length>0){
+    X.fillStyle='#4caf50';X.font='bold 22px monospace';
+    X.fillText('DECODED: '+res,W/2,90);
+  }
+  // Missed counter
+  X.fillStyle=missed>=2?'#f44336':'#aaa';X.font='14px monospace';X.textAlign='right';
+  X.fillText(`MISSED: ${missed}/3`,W-20,30);
+  // Lock-on indicator
+  if(lockOn){
+    X.fillStyle='#2196f3';X.font='bold 16px monospace';X.textAlign='center';
+    X.fillText('LOCK-ON ACTIVE',W/2,120);
+  }
+  // Draw fireflies
+  const last=ffs[ffs.length-1];
+  if(cw&&last){
+    const diff=getDiff();const rp=Math.min(1,ct/diff.catchWindow);
+    X.strokeStyle=rp<.6?'#4caf50':'#f44336';X.lineWidth=3;
+    X.beginPath();X.arc(last.x,last.y,40,0,PI*(1-rp*.85));X.stroke();X.lineWidth=1;
+  }
+  for(const f of ffs)drawFF(f,tm);
+  // Round indicator with difficulty hint
+  X.fillStyle='#555';X.font='12px monospace';X.textAlign='center';
+  const diffLabels=['Calm','Rising','Intense','Chaos','Firestorm','Climax'];
+  X.fillText(`Phase ${round+1}: ${diffLabels[Math.min(round,diffLabels.length-1)]}`,W/2,H-30);
+  X.textAlign='left';
+}
+function drawResult(tm){
+  X.fillStyle='#0a0a12';X.fillRect(0,0,W,H);
+  // Background fireflies if win
+  if(win){
+    for(let i=0;i<20;i++){
+      const fx=(i*173+Math.sin(tm+i)*50)%W,fy=(i*131+Math.cos(tm*.7+i)*30)%H;
+      X.globalAlpha=.15+Math.sin(tm*2+i)*.1;X.fillStyle=FC[i%8];
+      X.beginPath();X.arc(fx,fy,4+Math.sin(tm+i)*2,0,PI);X.fill();
+    }
+    X.globalAlpha=1;
+  }
+  X.textAlign='center';
+  if(win){
+    // Victory animation
+    celebration+=.016;
+    X.fillStyle='#4caf50';X.font='bold 36px monospace';
+    X.fillText('SIGNAL DECODED',W/2,150);
+    // Glowing message
+    const glow=Math.sin(tm*4)*.3+.7;
+    X.globalAlpha=glow;X.fillStyle='#ffe082';X.font='bold 40px monospace';
+    X.fillText('['+res+']',W/2,230);
+    X.globalAlpha=1;
+    X.fillStyle='#aaa';X.font='16px monospace';
+    X.fillText(`Score: ${sc} | Phase: ${round}/${totalRounds}`,W/2,290);
+    X.fillStyle='#888';X.font='14px monospace';
+    X.fillText('The numbers station has spoken. Your message is secure.',W/2,330);
+  }else{
+    X.fillStyle='#f44336';X.font='bold 36px monospace';
+    X.fillText('SIGNAL LOST',W/2,150);
+    X.fillStyle='#aaa';X.font='16px monospace';
+    X.fillText(`Decoded: ${res||'...'} | Score: ${sc}`,W/2,220);
+    X.fillStyle='#888';X.font='14px monospace';
+    X.fillText('Too many signals drifted away. The station goes dark.',W/2,260);
+  }
+  // Restart prompt
+  X.fillStyle='#ff9800';X.font='bold 18px monospace';
+  if(Math.sin(tm*3)>0)X.fillText('[ PRESS SPACE TO RETRY ]',W/2,400);
+  X.textAlign='left';
+}
+// Game loop
+function frame(nw){
+  const dt=Math.min(50,nw-lt);lt=nw;t+=dt/1000;
+  // Update
+  if(st==='playing'){
+    // Static cooldown
+    if(staticCooldown>0)staticCooldown=Math.max(0,staticCooldown-dt);
+    // Lock-on logic
+    if(lockOn){
+      lockTimer+=dt;
+      if(lockTimer>=1000){
+        lockOn=false;lockTimer=0;
+        // Auto-catch the current firefly if on correct frequency
+        const last=ffs[ffs.length-1];
+        if(last&&last.freq===freq&&!last.isDecoy){
+          last.c=true;caught.push(last.d);sc+=100;res+=last.d;round++;
+          beep(800,.2,.2);beep(1200,.15,.1);
+          decisionLog.push({t:Date.now(),e:'lock_on_success',digit:last.d});
+          if(round>=totalRounds){win=true;over=true;st='result';signalComplete=true;beep(600,.3,.2);beep(900,.25,.15);beep(1200,.4,.1);decisionLog.push({t:Date.now(),e:'outcome_success'});}
+          else{ffs.pop();spawnInterval=getDiff().spawnDelay;spawnTimer=spawnInterval;}
+        }else{
+          beep(200,.3,.2);
+          decisionLog.push({t:Date.now(),e:'lock_on_failed','reason':'wrong_frequency_or_decoy'});
+        }
+      }
+    }
+    // Catch window timer
+    if(cw)ct+=dt;
+    // Auto-spawn
+    spawnTimer-=dt;
+    if(spawnTimer<=0&&!over){
+      if(ffs.length<getDiff().maxActive)spawnFirefly();
+      spawnInterval=getDiff().spawnDelay;spawnTimer=spawnInterval;
+    }
+    // Time out old fireflies
+    ffs=ffs.filter(f=>{if(!f.c&&!f.m){f.age+=dt/1000;return f.age<10;}return f.c;});
+    // Reset catch window for last firefly
+    if(ffs.length>0&&!ffs[ffs.length-1].c&&!ffs[ffs.length-1].m)cw=true;
+  }
+  // Draw
+  if(st==='title')drawTitle(t);else if(st==='playing')drawPlaying(t);else drawResult(t);
+  requestAnimationFrame(frame);
+}
+// Seed
+cw=true;
+requestAnimationFrame(frame);
+// Expose for external verification
+window._gameState=()=>({st,freq,round,missed,sc,res,ffs:ffs.map(f=>({d:f.d,c:f.c,m:f.m,freq:f.freq,decoy:f.isDecoy})),log:decisionLog});
+</script></body></html>

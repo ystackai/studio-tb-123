@@ -1,0 +1,365 @@
+{
+  "schema_version": 1,
+  "actions": [
+    {
+      "type": "screenshot",
+      "name": "initial"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "decision-1"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "decision-2"
+    },
+    {
+      "type": "key_down",
+      "key": "ArrowRight"
+    },
+    {
+      "type": "key_up",
+      "key": "ArrowRight"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "escalation"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "payoff"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 5000
+    },
+    {
+      "type": "screenshot",
+      "name": "outcome"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "restart"
+    },
+    {
+      "type": "wait",
+      "ms": 2000
+    },
+    {
+      "type": "screenshot",
+      "name": "initial-2"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "decision-1-2"
+    },
+    {
+      "type": "key_down",
+      "key": "ArrowLeft"
+    },
+    {
+      "type": "key_up",
+      "key": "ArrowLeft"
+    },
+    {
+      "type": "wait",
+      "ms": 2000
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "decision-2-2"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "escalation-2"
+    },
+    {
+      "type": "key_down",
+      "key": "ArrowRight"
+    },
+    {
+      "type": "key_up",
+      "key": "ArrowRight"
+    },
+    {
+      "type": "wait",
+      "ms": 2000
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "payoff-2"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 600
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 4000
+    },
+    {
+      "type": "screenshot",
+      "name": "outcome-2"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "restart-2"
+    },
+    {
+      "type": "wait",
+      "ms": 2000
+    },
+    {
+      "type": "screenshot",
+      "name": "initial-3"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "decision-1-3"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "decision-2-3"
+    },
+    {
+      "type": "key_down",
+      "key": "ArrowLeft"
+    },
+    {
+      "type": "key_up",
+      "key": "ArrowLeft"
+    },
+    {
+      "type": "wait",
+      "ms": 2000
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "escalation-3"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "payoff-3"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 5000
+    },
+    {
+      "type": "screenshot",
+      "name": "outcome-3"
+    },
+    {
+      "type": "key_down",
+      "key": "Space"
+    },
+    {
+      "type": "key_up",
+      "key": "Space"
+    },
+    {
+      "type": "wait",
+      "ms": 3000
+    },
+    {
+      "type": "screenshot",
+      "name": "restart-3"
+    }
+  ]
+}
