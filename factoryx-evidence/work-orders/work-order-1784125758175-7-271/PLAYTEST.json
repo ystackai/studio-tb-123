@@ -1,54 +1,6 @@
 {
-  "schema_version": 1,
-  "campaign_candidate_id": "tb123-signal-portfolio--campaign-1783920863104--candidate-19-time",
   "artifact_type": "browser_game2d",
-  "primary_verb": "time",
-  "work_order_id": "work-order-1784125758175-7-271",
-  "creative_intent": "This should feel like sitting at a vintage numbers station radio, catching fleeting firefly-like signal pulses and using precise timing to decode their digits before they fade away.",
-  "playtest_results": {
-    "total_cycles": 3,
-    "total_actions": 90,
-    "total_wait_ms": 72600,
-    "duration_ms": 216200,
-    "runtime_errors": 0,
-    "audio_events": 1,
-    "screenshots": 21,
-    "cycles": [
-      {
-        "cycle": 1,
-        "outcome": "failure",
-        "decoded": "47",
-        "score": 270,
-        "inputs": 11,
-        "wait_ms": 17000,
-        "trace_events": ["start", "meaningful_decision", "escalation", "payoff", "outcome", "restart"]
-      },
-      {
-        "cycle": 2,
-        "outcome": "success",
-        "decoded": "177521",
-        "score": 839,
-        "inputs": 14,
-        "wait_ms": 24600,
-        "trace_events": ["start", "meaningful_decision", "escalation", "payoff", "outcome", "restart"]
-      },
-      {
-        "cycle": 3,
-        "outcome": "failure",
-        "decoded": "107",
-        "score": 171,
-        "inputs": 17,
-        "wait_ms": 31000,
-        "trace_events": ["start", "meaningful_decision", "escalation", "payoff", "outcome", "restart"]
-      }
-    ]
-  },
-  "meaningful_decisions": [
-    "Timing: press SPACE at the right moment within the catch window to capture each firefly digit",
-    "Frequency: shift between LF/MF/HF bands (arrow keys) to match each firefly's frequency",
-    "Lock-on: hold SPACE for 0.5s to guarantee a catch at the cost of 1 second of vulnerability"
-  ],
-  "escalation": "6 progressive phases (Calm→Rising→Intense→Chaos→Firestorm→Climax) with faster spawns, multiple simultaneous fireflies, and decoy signals",
-  "payoff": "Full signal decoded with celebratory firefly field; failed runs show 'SIGNAL LOST' debrief",
-  "restart": "Single SPACE press from outcome screen resets all state for clean new run"
+  "instruction": "FactoryX runtime owns authoritative semantic replay evidence. Keep this checkpoint unchanged and follow the current Work Order's exact-head closeout rule for the interaction plan, wrapper trace, and screenshots. Accepted runtime evidence is published durably and appended to the run verdict.",
+  "schema_version": 1,
+  "status": "runtime_owned"
 }
