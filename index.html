@@ -1,594 +1,703 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal Garden</title>
+<style>
+  :root {
+    --bg: #09090e;
+    --frame: #1e1e28;
+    --c1: #ff3c6a;
+    --c2: #28e8c1;
+    --c3: #e8a528;
+    --c4: #6a5eff;
+    --text: #f0f0f5;
+  }
+  body { margin:0; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Courier New',monospace; display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; }
+  #ui { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; z-index:10; pointer-events:none; }
+  #btn { pointer-events:all; background:rgba(255,255,255,0.05); border:1px solid var(--c2); color:var(--c2); padding:16px 32px; font-size:1.2rem; cursor:pointer; border-radius:4px; transition:0.2s; text-transform:uppercase; letter-spacing:2px; }
+  #btn:hover { background:var(--c2); color:var(--bg); }
+  #hud { position:absolute; top:20px; left:50%; transform:translateX(-50%); text-align:center; z-index:5; pointer-events:none; }
+  #status { font-size:1.1rem; color:#aaa; text-transform:uppercase; letter-spacing:3px; margin-bottom:8px; transition:0.3s; }
+  #prog { width:200px; height:3px; background:#333; border-radius:2px; margin:0 auto; overflow:hidden; }
+  #bar { width:0%; height:100%; background:var(--c2); transition:width 0.1s linear; }
+  #score-wrap { position:absolute; top:20px; right:20px; font-size:1.5rem; color:var(--c3); z-index:5; font-weight:bold; }
+  canvas { display:block; }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><button id="btn">Initialize Sequence</button></div>
+<div id="hud"><div id="status">Waiting for input</div><div id="prog"><div id="bar"></div></div></div>
+<div id="score-wrap"></div>
+<script>
+// ==========================================
+// SIGNAL GARDEN - Experimental Game
+// ==========================================
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
-  </div>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const btn = document.getElementById('btn');
+const statusEl = document.getElementById('status');
+const bar = document.getElementById('bar');
+const scoreEl = document.getElementById('score-wrap');
+const uiLayer = document.getElementById('ui');
 
-  <div class="profile">
+let W, H, cx, cy;
+let dpr = Math.min(window.devicePixelRatio, 2);
 
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx = W/2;
+  cy = H/2;
+}
+window.addEventListener('resize', resize);
+resize();
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
+// --- STATE ---
 
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
+const STATE = { TITLE: 0, PLAY: 1, FINISHED: 2 };
+let current = STATE.TITLE;
+let score = 0;
+let lastTime = 0;
 
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
+// --- AUDIO ENGINE ---
 
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
+function initAudio() {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const master = ac.createGain();
+  master.gain.value = 0.25;
+  master.connect(ac.destination);
+  
+  // Pad (Background Atmosphere)
+  const pad1 = ac.createOscillator(); pad1.type = 'sine'; pad1.frequency.value = 55;
+  const pad2 = ac.createOscillator(); pad2.type = 'sine'; pad2.frequency.value = 55.5;
+  const padG = ac.createGain(); padG.gain.value = 0.12;
+  
+  pad1.connect(padG); pad2.connect(padG); padG.connect(master);
+  pad1.start(); pad2.start();
+  
+  // Chord (Harmonic Layer)
+  const harm = ac.createGain(); harm.gain.value = 0;
+  harm.connect(master);
+  const harmNotes = [220, 277.18, 329.63, 440, 554.36]; // A minor pentatonic
+  const harmOscs = harmNotes.map(f => {
+    const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    const g = ac.createGain(); g.gain.value = 0.04;
+    o.connect(g); g.connect(harm);
+    o.start(); return o;
+  });
+  
+  // Kick / Thump
+  const kick = () => {
+    const o = ac.createOscillator(); o.type = 'sine';
+    const g = ac.createGain();
+    o.frequency.setValueAtTime(160, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(40, ac.currentTime + 0.2);
+    g.gain.setValueAtTime(0.8, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.25);
+    o.connect(g); g.connect(master);
+    o.start(); o.stop(ac.currentTime + 0.3);
+  };
+  
+  // SFX for Hits
+  const hit = (octave) => {
+    const o = ac.createOscillator(); o.type = 'triangle';
+    const g = ac.createGain();
+    const baseFreq = [110, 130.81, 164.81, 220][octave] || 220;
+    o.frequency.setValueAtTime(baseFreq * 2, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(baseFreq, ac.currentTime + 0.1);
+    g.gain.setValueAtTime(0.4, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.3);
+    o.connect(g); g.connect(master);
+    o.start(); o.stop(ac.currentTime + 0.3);
+    
+    // High tick
+    const o2 = ac.createOscillator(); o2.type = 'square';
+    const g2 = ac.createGain();
+    o2.frequency.setValueAtTime(baseFreq * 4, ac.currentTime);
+    g2.gain.setValueAtTime(0.05, ac.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
+    o2.connect(g2); g2.connect(master);
+    o2.start(); o2.stop(ac.currentTime + 0.1);
+  };
 
-  </div>
-
-  <div id="footer"></div>
-
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
-
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
-
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
-
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
-
-
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+  // Bloom Fanfare
+  const bloom = () => {
+    const f = ac.currentTime;
+    const notes = [440, 554.36, 659.25, 880];
+    let t2 = f;
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = freq;
+        const g = ac.createGain(); g.gain.setValueAtTime(0, t2);
+        g.gain.linearRampToValueAtTime(0.15, t2 + 0.2);
+        g.gain.exponentialRampToValueAtTime(0.001, t2 + 1.5);
+        o.connect(g); g.connect(master);
+        o.start(t2); o.stop(t2 + 1.6);
+        t2 += 0.1;
+      }, 0);
     });
-  </script>
+  };
+
+  // Noise/Texture
+  const bufSize = ac.sampleRate * 2.0;
+  const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+  const noiseSrc = ac.createBufferSource();
+  noiseSrc.buffer = buf; noiseSrc.loop = true;
+  const nFilter = ac.createBiquadFilter(); nFilter.type = 'lowpass';
+  const nGain = ac.createGain(); nGain.gain.value = 0.02;
+  noiseSrc.connect(nFilter); nFilter.connect(nGain); nGain.connect(master);
+  noiseSrc.start();
+
+  return {
+    setPad: (v) => padG.gain.setTargetAtTime(v, ac.currentTime, 0.1),
+    setHarm: (v) => harm.gain.setTargetAtTime(v, ac.currentTime, 0.5),
+    kick,
+    hit,
+    bloom,
+    setFilter: (f) => nFilter.frequency.setTargetAtTime(f, ac.currentTime, 0.1)
+  };
+}
+
+let audio = null;
+let audioStarted = false;
+
+function ensureAudio() {
+  if (!audioStarted) {
+    audio = initAudio();
+    audioStarted = true;
+  }
+}
+
+// --- PARTICLES ---
+
+const particles = [];
+
+class Particle {
+  constructor(x, y, color, speed, life) {
+    this.x = x; this.y = y;
+    this.color = color;
+    const angle = Math.random() * Math.PI * 2;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.life = life;
+    this.maxLife = life;
+    this.size = Math.random() * 3 + 1;
+  }
+  update(dt) {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= dt;
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+  }
+  draw(ctx) {
+    ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// --- PLANT DRAWING ---
+
+function drawPlant(ctx, growth, colorHex) {
+  const col = colorHex || '#fff';
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 15;
+
+  // Main Stem
+  const stemH = 100 + growth * 160;
+  const stemX = cx;
+  const stemBaseY = cy + 100;
+  
+  // Stem curve (bezier)
+  ctx.beginPath();
+  ctx.moveTo(stemX, stemBaseY);
+  ctx.bezierCurveTo(stemX + 10, stemBaseY - stemH/2, stemX - 10, stemBaseY - stemH*0.75, stemX, stemBaseY - stemH);
+  ctx.stroke();
+
+  // Branches
+  if (growth > 0.2) {
+    const branchH = stemH * 0.4;
+    // Left branch
+    const blX = stemX - 5, blY = stemBaseY - stemH * 0.4;
+    ctx.beginPath();
+    ctx.moveTo(blX, blY);
+    ctx.quadraticCurveTo(blX - 40, blY - 20, blX - 60, blY - 60);
+    ctx.stroke();
+    // Leaf
+    drawLeaf(ctx, blX - 60, blY - 60, -1, growth * 6);
+  }
+  
+  if (growth > 0.4) {
+    const branchH = stemH * 0.3;
+    // Right branch
+    const brX = stemX + 5, brY = stemBaseY - stemH * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(brX, brY);
+    ctx.quadraticCurveTo(brX + 30, brY - 30, brX + 70, brY - 70);
+    ctx.stroke();
+    // Leaf
+    drawLeaf(ctx, brX + 70, brY - 70, 1, growth * 5);
+  }
+
+  if (growth > 0.6) {
+    // High branch
+    const bhX = stemX, bhY = stemBaseY - stemH * 0.85;
+    ctx.beginPath();
+    ctx.moveTo(bhX, bhY);
+    ctx.quadraticCurveTo(bhX - 20, bhY - 40, bhX - 40, bhY - 80);
+    ctx.stroke();
+    drawLeaf(ctx, bhX - 40, bhY - 80, -1, growth * 4);
+    
+    ctx.beginPath();
+    ctx.moveTo(bhX, bhY);
+    ctx.quadraticCurveTo(bhX + 20, bhY - 40, bhX + 40, bhY - 90);
+    ctx.stroke();
+    drawLeaf(ctx, bhX + 40, bhY - 90, 1, growth * 4);
+  }
+
+  if (growth > 0.8) {
+    // Final bloom bud
+    const budY = stemBaseY - stemH;
+    drawBloom(ctx, stemX, budY, growth);
+  }
+
+  ctx.shadowBlur = 0;
+}
+
+function drawLeaf(ctx, x, y, dir, scale) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(dir * 0.5);
+  ctx.scale(dir * scale, scale);
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.bezierCurveTo(-10,-10, -10,-25, 0,-35);
+  ctx.bezierCurveTo(10,-25, 10,-10, 0,0);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBloom(ctx, x, y, growth) {
+  ctx.fillStyle = y; // Use the main plant color
+  ctx.save();
+  ctx.translate(x, y);
+  
+  // Petals
+  for (let i = 0; i < 5; i++) {
+    ctx.save();
+    ctx.rotate((Math.PI * 2 / 5) * i + Math.sin(Date.now() * 0.002) * 0.2);
+    ctx.beginPath();
+    ctx.ellipse(0, -25 * growth, 8 * growth, 20 * growth, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  
+  // Center
+  ctx.fillStyle = growInfo.accent;
+  ctx.beginPath();
+  ctx.arc(0, 0, 6 * growth, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+// --- LOOPS ---
+
+const LOOP_ANGLES = [240, 300, 360, 480]; // In degrees, relative to top, or cartesian: 
+// 240 deg from top (Left) -> Left
+// 300 deg -> Top Right
+// 360 deg -> Right
+// 480 deg -> Bottom Right (Bottom)
+// Let's map to screen coordinates relative to center (cx, cy)
+// 240 = 270 - 30. Basically, the dial spans from 7:30 to 4:30.
+// Let's define the 4 target points based on the brief and typical dial layout.
+
+// Target points (x, y)
+// Based on brief: 360,420 (Left), 600,300 (Top), 840,420 (Right), 600,560 (Bottom). 
+// Note: Brief coordinates are absolute.
+// Let's define local targets for drawing the dial.
+
+const TARGETS = [
+  {x: 360, y: 420, id: 0, accent: '#ff3c6a'}, // Left
+  {x: 600, y: 300, id: 1, accent: '#28e8c1'}, // Top
+  {x: 840, y: 420, id: 2, accent: '#e8a528'}, // Right
+  {x: 600, y: 560, id: 3, accent: '#6a5eff'}  // Bottom
+];
+
+// Use the first target's accent for the plant initially, or cycle? Brief says "Silhouette and musical layer".
+let growInfo = { accent: '#555' };
+const visitedIndices = new Set();
+const hitQueue = []; // Stores indices of clicks
+
+let activeLoopIndex = -1; // Index in TARGETS that is currently active
+let loopTimer = 0;
+const baseLoopTime = 2500; // ms
+let loopSpeedMult = 1.0;
+
+// --- GAME LOGIC ---
+
+function startGame() {
+  ensureAudio();
+  current = STATE.PLAY;
+  score = 0;
+  visitedIndices.clear();
+  hitQueue.length = 0;
+  loopSpeedMult = 1.0;
+  growInfo.accent = '#888';
+  
+  spawnLoop(0);
+  
+  uiLayer.style.display = 'none';
+  statusEl.innerText = 'Tune the Signal';
+  statusEl.style.color = '#fff';
+  scoreEl.innerText = '000';
+  bar.style.width = '0%';
+}
+
+function spawnLoop(index) {
+  activeLoopIndex = index;
+  loopTimer = baseLoopTime / loopSpeedMult;
+}
+
+// The "Window"
+let windowOpen = false;
+let windowTimer = 0;
+const windowDuration = 800; // 800ms window
+let windowPause = 0; // Time spent waiting outside window
+let windowActiveLoopRef = -1;
+
+// --- MAIN LOOP ---
+
+function loop(timestamp) {
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+
+  // Clear
+  ctx.fillStyle = 'rgba(9, 9, 14, 0.25)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Pulse Background Elements (The "Garden Floor")
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  const t = Date.now() * 0.001;
+  for(let i=0; i<4; i++) {
+    const angle = (Math.PI * 2 / 4) * i;
+    const r = 150 + Math.sin(angle + t) * 10;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Draw Dial
+  drawDial(timestamp);
+
+  // Draw Plant
+  const plantGrowth = Math.min(1, score * 0.125);
+  drawPlant(ctx, plantGrowth, growInfo.accent);
+
+  // Handle Play State
+  if (current === STATE.PLAY) {
+    const cycle = windowOpen ? windowDuration : (baseLoopTime / loopSpeedMult);
+    loopTimer -= dt;
+
+    if (windowOpen) {
+      // Inside window
+      windowPause += dt;
+    } else {
+      windowPause = 0;
+    }
+
+    if (loopTimer <= 0) {
+      windowOpen = false;
+      windowPause = 0;
+      activeLoopIndex = (activeLoopIndex + 1) % TARGETS.length;
+      spawnLoop(activeLoopIndex);
+    }
+
+    // Check input queue
+    while(hitQueue.length > 0) {
+      let click = hitQueue.shift();
+      const target = TARGETS[activeLoopIndex];
+      const dx = click.x - target.x;
+      const dy = click.y - target.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < 50) {
+        // HIT
+        if (!visitedIndices.has(activeLoopIndex)) {
+          score++;
+          visitedIndices.add(activeLoopIndex);
+          
+          // Audio
+          audio.hit(score % 4);
+          
+          // Visuals
+          growInfo.accent = target.accent;
+          
+          // Particles
+          for(let i=0; i<20; i++) {
+            particles.push(new Particle(target.x, target.y, target.accent, Math.random()*5+2, 1.5));
+          }
+
+          // Progress bar
+          bar.style.width = (score / TARGETS.length * 100) + '%';
+
+          if (score === TARGETS.length) {
+            triggerPayoff();
+          }
+        } else {
+          // Already visited this signal point this run - penalty or no-op?
+          // Let's do a short "wrong color" feedback
+          audio.kick();
+          statusEl.innerText = 'Signal Damped';
+          statusEl.style.color = '#f00';
+        }
+      } else {
+        // Clicked in active loop but wrong target
+        statusEl.innerText = 'Missed';
+        statusEl.style.color = '#555';
+      }
+    }
+
+    // Open window
+    if (windowPause > 1200) { // 1.2s delay before window opens
+      windowOpen = true;
+      windowTimer = loopTimer; // Inverted timer for display
+    }
+    
+    // Window visual
+    if (windowOpen) {
+      const target = TARGETS[activeLoopIndex];
+      ctx.strokeStyle = target.accent;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, 60, 0, Math.PI*2);
+      ctx.stroke();
+      
+      // Inner ring fading
+      ctx.strokeStyle = windowOpen ? 'rgba(255,255,255,0.5)' : 'transparent';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, 50 * (1 - (windowTimer / windowDuration)), 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+  } else if (current === STATE.FINISHED) {
+    drawPayoff(timestamp);
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update(dt/1000);
+    particles[i].draw(ctx);
+    if (particles[i].life <= 0) particles.splice(i, 1);
+  }
+
+  // Audio Ambience
+  if (audioStarted) {
+    // Modulate pad based on score
+    audio.setPad(score * 0.05);
+    audio.setHarm(score * 0.1);
+    
+    // Modulate filter based on progress
+    const filt = 200 + score * 400;
+    audio.setFilter(filt);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// --- PAYOFF ---
+
+function triggerPayoff() {
+  current = STATE.FINISHED;
+  audio.bloom(); // Fanfare
+  statusEl.innerText = 'Full Bloom';
+  statusEl.style.color = growInfo.accent;
+  bar.style.width = '100%';
+  
+  // Massive particle event
+  for(let i=0; i<100; i++) {
+    particles.push(new Particle(cx, cy, growInfo.accent, Math.random()*10+2, 2.5));
+  }
+}
+
+function drawPayoff(timestamp) {
+  // Pulsing glow behind plant
+  const scale = 1 + Math.sin(timestamp * 0.005) * 0.1;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.translate(-cx, -cy);
+  
+  // Draw final plant
+  drawPlant(ctx, 1, '#fff');
+  drawBloom(ctx, cx, cy - 260 - (160), '#fff'); // Force full bloom at top
+  
+  ctx.restore();
+}
+
+// --- DIAL DRAWING ---
+
+function drawDial(timestamp) {
+  const t = timestamp * 0.002;
+  
+  // Connecting lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(TARGETS[0].x, TARGETS[0].y);
+  for(let i=1; i<4; i++) ctx.lineTo(TARGETS[i].x, TARGETS[i].y);
+  ctx.closePath();
+  ctx.stroke();
+  
+  // Center hub
+  ctx.fillStyle = '#333';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 20, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#666';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Signal points
+  TARGETS.forEach((t, idx) => {
+    ctx.beginPath();
+    if (idx === activeLoopIndex && windowOpen) {
+      // Pulsing highlight
+      const pulse = Math.sin(timestamp * 0.01) * 5;
+      ctx.arc(t.x, t.y, 25 + pulse, 0, Math.PI*2);
+      ctx.fillStyle = t.accent;
+    } else if (visitedIndices.has(idx)) {
+      ctx.arc(t.x, t.y, 15, 0, Math.PI*2);
+      ctx.fillStyle = '#555';
+    } else {
+      ctx.arc(t.x, t.y, 12, 0, Math.PI*2);
+      ctx.fillStyle = '#222';
+    }
+    ctx.fill();
+    ctx.strokeStyle = idx === activeLoopIndex ? '#fff' : '#444';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Label
+    ctx.fillStyle = '#555';
+    ctx.font = '12px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('#' + (idx+1), t.x, t.y + 30);
+  });
+
+  // Connecting beam animation
+  if (current === STATE.PLAY) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    const angle = (Math.PI * 2 / 4) * activeLoopIndex + t;
+    ctx.rotate(angle);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(150, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// --- INPUT ---
+
+btn.addEventListener('click', () => {
+  startGame();
+});
+
+// Track clicks
+document.addEventListener('mousedown', (e) => {
+  if (current !== STATE.PLAY) return;
+  hitQueue.push({x: e.clientX, y: e.clientY});
+});
+
+// Touch support
+document.addEventListener('touchstart', (e) => {
+  if (current !== STATE.PLAY) return;
+  // e.preventDefault();
+  const t = e.touches[0];
+  hitQueue.push({x: t.clientX, y: t.clientY});
+}, {passive: true});
+
+// Restart on "game over" or clicking during FINISHED
+uiLayer.addEventListener('click', () => {
+  if (current === STATE.FINISHED) {
+    uiLayer.style.display = 'flex';
+    btn.innerText = 'Re-seed Garden';
+  }
+});
+
+// --- INIT ---
+
+// Show title state background
+function drawTitle(timestamp) {
+  ctx.fillStyle = '#09090e';
+  ctx.fillRect(0,0,W,H);
+  
+  // Background grid
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 1;
+  for(let x=0; x<W; x+=50) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0; y<H; y+=50) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  
+  // Floating particles
+  for(let i=0; i<20; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    const p = Math.sin(timestamp * 0.002 + i) * 0.5 + 0.5;
+    ctx.fillStyle = `rgba(40,232,193,${p*0.1})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI*2);
+    ctx.fill();
+  }
+  
+  // Draw static plant silhouette
+  drawPlant(ctx, 0.2, '#222');
+}
+
+lastTime = performance.now();
+requestAnimationFrame(function loopStart(t) {
+  if (current === STATE.TITLE) {
+    drawTitle(t);
+  }
+  // Call the main draw loop
+  loop(t);
+  // Actually, loop() is called recursively by requestAnimationFrame(loop). 
+  // But I need to start it.
+  // I'll just call loop once to bootstrap the RAF chain if not inside it.
+});
+
+// The loop function above is the RAF handler.
+// Just call it once to start.
+requestAnimationFrame(loop);
+
+</script>
 </body>
 </html>
