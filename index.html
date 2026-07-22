@@ -1,594 +1,824 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Signal Garden</title>
+    <style>
+        :root {
+            --bg: #0a0a12;
+            --accent: #4ff0c5; /* Cyan */
+            --accent2: #f04fd9; /* Magenta */
+            --accent3: #f0c54f; /* Gold */
+            --text: #e0e0ff;
+            --ui-font: 'Courier New', Courier, monospace;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--ui-font);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100vmin;
+            height: 100vmin;
+            max-width: 800px;
+            max-height: 800px;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .hud-text {
+            text-shadow: 0 0 10px rgba(79, 240, 197, 0.5);
+            letter-spacing: 2px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        #status-display {
+            text-align: center;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 18, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.5s;
+        }
+        #restart-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 18, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+        h1 { font-size: 3rem; margin-bottom: 0; color: var(--accent); }
+        h2 { font-size: 2rem; margin-bottom: 0; }
+        p { max-width: 400px; text-align: center; line-height: 1.5; margin-bottom: 30px; }
+        .btn {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            padding: 15px 40px;
+            font-family: var(--ui-font);
+            font-size: 1.2rem;
+            cursor: pointer;
+            pointer-events: auto;
+            border-radius: 30px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        .btn:hover {
+            background: var(--accent);
+            color: var(--bg);
+            box-shadow: 0 0 20px var(--accent);
+        }
+        .btn-restart {
+            border-color: var(--accent3);
+            color: var(--accent3);
+        }
+        .btn-restart:hover {
+            background: var(--accent3);
+            box-shadow: 0 0 20px var(--accent3);
+        }
+        #feedback-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 20px white;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
+<div id="game-container">
+    <canvas id="game-canvas"></canvas>
+    
+    <div id="ui-layer">
+        <div class="hud-text">Signal Garden // <span id="stage-label">Seed</span></div>
+        <div id="feedback-overlay"></div>
+        <div class="hud-text">Sync Level: <span id="sync-level">0</span>%</div>
     </div>
-  </div>
 
-  <div class="profile">
-
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
+    <div id="start-screen">
+        <h1>SIGNAL GARDEN</h1>
+        <p>The machine is dormant. Click the nodes when their signals flare to stimulate growth.</p>
+        <button class="btn" id="start-btn">Initialize Sequence</button>
     </div>
-    <div class="blog-row" id="blog-row"></div>
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
+    <div id="restart-screen">
+        <h2 style="color: var(--accent3)">GARDEN FLOWERS</h2>
+        <p id="end-reason">Signal Synchronized.</p>
+        <button class="btn btn-restart" id="restart-btn">New Growth Cycle</button>
     </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
+</div>
 
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
+<script>
+/**
+ * SIGNAL GARDEN
+ * 
+ * A 60-second one-screen browser game.
+ * Concept: Tuning a dial to wake an electronic plant.
+ * Audio: Procedural Web Audio synthesis.
+ */
 
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
+// --- CONFIGURATION ---
+const CONFIG = {
+    nodeCount: 6,
+    nodeRadius: 18,
+    dialRadius: 200,
+    colors: ['#4ff0c5', '#f04fd9', '#f0c54f', '#ff4f4f', '#4f9cf0', '#ffffff'],
+    notes: [130.81, 164.81, 196.00, 261.63, 329.63, 392.00], // C3, E3, G3, C4, E4, G4
+    durations: [2000, 1400, 1000, 800, 600, 400] // Getting faster
+};
 
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
+// --- STATE ---
+const state = {
+    running: false,
+    currentNode: 0,
+    score: 0,
+    timeLeft: 0,
+    lastTime: 0,
+    bloomProgress: 0,
+    bloomState: 'IDLE', // IDLE, TUNING, BLOOM, ENDED
+    nodes: [],
+    particles: [],
+    canvasWidth: 0,
+    canvasHeight: 0,
+    cx: 0,
+    cy: 0
+};
 
-  </div>
+// --- AUDIO SYSTEM ---
+const Audio = {
+    ctx: null,
+    masterGain: null,
+    droneOsc: null,
+    droneLFO: null,
+    droneGain: null,
+    
+    init() {
+        if (this.ctx) return;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AC();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.4;
+        this.masterGain.connect(this.ctx.destination);
+        this.startDrone();
+    },
 
-  <div id="footer"></div>
+    startDrone() {
+        // Deep background hum
+        this.droneGain = this.ctx.createGain();
+        this.droneGain.gain.value = 0;
+        this.droneGain.connect(this.masterGain);
+        
+        this.droneOsc = this.ctx.createOscillator();
+        this.droneOsc.type = 'sawtooth';
+        this.droneOsc.frequency.value = 55; // A1
+        
+        // LFO to make the drone pulsate
+        this.droneLFO = this.ctx.createOscillator();
+        this.droneLFO.type = 'sine';
+        this.droneLFO.frequency.value = 0.5; // Slow pulse
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = 10; // Depth
+        this.droneLFO.connect(lfoGain);
+        lfoGain.connect(this.droneOsc.frequency);
+        
+        // Filter to make it muffled and ambient
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 200;
+        
+        this.droneOsc.connect(filter);
+        filter.connect(this.droneGain);
+        
+        this.droneGain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 4);
+        this.droneOsc.start();
+        this.droneLFO.start();
+    },
 
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
-
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
-
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
-
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
-
-
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
+    stopDrone() {
+        if (this.droneGain) {
+            this.droneGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 2);
+            setTimeout(() => {
+                if(this.droneOsc) this.droneOsc.stop();
+                if(this.droneLFO) this.droneLFO.stop();
+            }, 2000);
         }
-      }
-      if (inList) html += '</ul>';
-      return html;
+    },
+
+    playTone(index) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.value = CONFIG.notes[index % CONFIG.notes.length];
+        
+        gain.gain.setValueAtTime(0, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.6, this.ctx.currentTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1.5);
+        
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        
+        osc.start();
+        osc.stop(this.ctx.currentTime + 1.5);
+    },
+
+    playSuccess() {
+        // A shimmering arpeggio
+        const now = this.ctx.currentTime;
+        [0, 0.1, 0.2, 0.3].forEach((delay, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            // Pentatonic spread
+            const freq = 440 * (1 + i * 0.25); 
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, now + delay);
+            gain.gain.linearRampToValueAtTime(0.3, now + delay + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 1);
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(now + delay);
+            osc.stop(now + delay + 1);
+        });
+    },
+
+    playFail() {
+        // Dissonant buzz
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 40 + Math.random() * 20;
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.5);
+    },
+
+    playBloom() {
+        // Grand crescendo
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const osc3 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc1.frequency.value = 55;
+        osc2.frequency.value = 110;
+        osc3.frequency.value = 220.2; // Slight detune for richness
+        
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.8, now + 2);
+        gain.gain.exponentialRampToValueAtTime(0.1, now + 6);
+        
+        [osc1, osc2, osc3].forEach(o => {
+            o.connect(gain);
+            o.start(now);
+            o.stop(now + 8);
+        });
+        gain.connect(this.masterGain);
     }
+};
 
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
+// --- GAME LOGIC ---
 
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
+function resize() {
+    const container = document.getElementById('game-container');
+    const rect = container.getBoundingClientRect();
+    state.canvasWidth = rect.width;
+    state.canvasHeight = rect.height;
+    state.cx = state.canvasWidth / 2;
+    state.cy = state.canvasHeight / 2;
+    state.canvas.width = state.canvasWidth;
+    state.canvas.height = state.canvasHeight;
+    
+    setupNodes();
+}
 
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
+function setupNodes() {
+    state.nodes = [];
+    const r = CONFIG.dialRadius * (STATE_SCALE());
+    for (let i = 0; i < CONFIG.nodeCount; i++) {
+        const angle = (Math.PI * 2 / CONFIG.nodeCount) * i - (Math.PI / 2);
+        state.nodes.push({
+            index: i,
+            angle: angle,
+            x: state.cx + Math.cos(angle) * r,
+            y: state.cy + Math.sin(angle) * r,
+            active: false,
+            hit: false,
+            missed: false,
+            pulse: 0
         });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
+    }
+}
 
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
+function STATE_SCALE() {
+    return Math.min(state.canvasWidth, state.canvasHeight) / 800;
+}
 
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
+function startGame() {
+    Audio.init();
+    state.running = true;
+    state.currentNode = 0;
+    state.score = 0;
+    state.bloomState = 'TUNING';
+    state.particles = [];
+    state.bloomProgress = 0;
+    
+    document.getElementById('start-screen').style.opacity = 0;
+    setTimeout(() => {
+        document.getElementById('start-screen').style.display = 'none';
+    }, 500);
+    document.getElementById('restart-screen').style.display = 'none';
+    document.getElementById('restart-screen').style.opacity = 0;
+    document.getElementById('stage-label').innerText = "Seed";
+    document.getElementById('sync-level').innerText = "0";
+    
+    nextNode();
+    requestAnimationFrame(gameLoop);
+}
 
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+function nextNode() {
+    if (state.currentNode >= CONFIG.nodeCount) {
+        triggerBloom();
+        return;
+    }
+    
+    // Reset nodes
+    state.nodes.forEach(n => {
+        n.active = false;
+        n.pulse = 0;
     });
-  </script>
+    
+    // Activate current node
+    const node = state.nodes[state.currentNode];
+    node.active = true;
+    
+    // Calculate timer
+    // Start generous, reduce as we advance
+    const baseTime = 2000;
+    const penalty = state.currentNode * 150; 
+    state.timeLeft = Math.max(600, baseTime - penalty);
+    state.nodeStartTime = performance.now();
+}
+
+function triggerBloom() {
+    state.bloomState = 'BLOOM';
+    state.bloomProgress = 0;
+    document.getElementById('stage-label').innerText = "Blooming...";
+    Audio.playBloom();
+}
+
+function gameLoop(timestamp) {
+    if (!state.running) return;
+    
+    const dt = timestamp - state.lastTime;
+    state.lastTime = timestamp;
+    
+    if (state.bloomState === 'TUNING') {
+        updateTuning(dt);
+    } else if (state.bloomState === 'BLOOM') {
+        updateBloom(dt);
+    }
+    
+    // Update particles
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= dt;
+        if (p.life <= 0) {
+            state.particles.splice(i, 1);
+        }
+    }
+    
+    draw();
+    
+    if (state.bloomState !== 'ENDED') {
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+function updateTuning(dt) {
+    // Check active node timing
+    const node = state.nodes[state.currentNode];
+    const elapsed = performance.now() - state.nodeStartTime;
+    
+    // Pulse animation
+    node.pulse = (Math.sin(elapsed * 0.01) + 1) * 0.5;
+    
+    if (elapsed > state.timeLeft) {
+        // Missed
+        node.missed = true;
+        Audio.playFail();
+        showFeedback("MISS", CONFIG.colors[4]);
+        handleFailure("Signal lost.");
+    } else {
+        // Active visual pulse (slightly faster as we progress)
+        const speed = 0.005 + (state.currentNode * 0.002);
+        node.pulse = (Math.sin(elapsed * speed) + 1) * 0.5;
+    }
+    
+    // Check UI Sync
+    document.getElementById('sync-level').innerText = Math.floor((state.currentNode / CONFIG.nodeCount) * 100);
+}
+
+function updateBloom(dt) {
+    state.bloomProgress += dt / 3000; // 3 second bloom
+    
+    if (state.bloomProgress >= 1) {
+        state.bloomState = 'ENDED';
+        endGame(true);
+    }
+}
+
+function handleFailure(reason) {
+    state.running = false;
+    Audio.stopDrone();
+    setTimeout(() => {
+        showEndScreen(reason, false);
+    }, 1000);
+}
+
+function endGame(success) {
+    state.running = false;
+    if (success) {
+        Audio.playSuccess();
+        showEndScreen("Sequence Complete.", true);
+    } else {
+        showEndScreen("Signal Lost.", false);
+    }
+}
+
+function showEndScreen(reason, success) {
+    const endScreen = document.getElementById('restart-screen');
+    const reasonEl = document.getElementById('end-reason');
+    reasonEl.innerText = reason;
+    reasonEl.style.color = success ? 'var(--accent3)' : '#ff4f4f';
+    
+    endScreen.style.display = 'flex';
+    // Trigger reflow
+    void endScreen.offsetWidth; 
+    endScreen.style.opacity = 1;
+}
+
+function showFeedback(text, color) {
+    const el = document.getElementById('feedback-overlay');
+    el.innerText = text;
+    el.style.color = color;
+    el.style.opacity = 1;
+    el.style.transform = 'translate(-50%, -50%) scale(1.2)';
+    
+    setTimeout(() => {
+        el.style.opacity = 0;
+        el.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 800);
+    
+    // Advance logic after miss
+    state.currentNode++;
+    setTimeout(nextNode, 500);
+}
+
+// --- DRAWING ---
+
+function draw() {
+    const ctx = document.getElementById('game-canvas').getContext('2d');
+    const scale = STATE_SCALE();
+    
+    // Clear
+    ctx.fillStyle = '#0a0a12';
+    ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
+    
+    ctx.save();
+    ctx.translate(state.cx, state.cy);
+    ctx.scale(scale, scale);
+    
+    if (state.bloomState === 'TUNING') {
+        drawTuningState(ctx);
+    } else if (state.bloomState === 'BLOOM') {
+        drawBloom(ctx);
+    } else if (state.bloomState === 'ENDED') {
+        drawFinalState(ctx);
+    }
+    
+    ctx.restore();
+    
+    drawParticles(ctx);
+}
+
+function drawTuningState(ctx) {
+    // Draw Dial Base
+    ctx.strokeStyle = '#333344';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, CONFIG.dialRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw Nodes
+    state.nodes.forEach(node => {
+        const baseColor = CONFIG.colors[node.index];
+        
+        // Node Glow
+        if (node.active) {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = baseColor;
+            ctx.fillStyle = baseColor;
+        } else if (node.missed) {
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#444';
+        } else if (node.hit) {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#fff';
+            ctx.fillStyle = '#fff';
+        } else {
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#222';
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, CONFIG.nodeRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            return; // Fill is done above or default
+        }
+        
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, CONFIG.nodeRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0; // Reset
+    });
+    
+    // Draw connections (Plant Sprout)
+    ctx.strokeStyle = '#4ff0c5';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Center hub
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw path from center to active/hit nodes
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    let started = false;
+    for(let i=0; i<=state.currentNode; i++) {
+        const n = state.nodes[i];
+        if (n.hit || (i === state.currentNode && n.active)) {
+            ctx.lineTo(n.x, n.y);
+            started = true;
+        }
+    }
+    if (started) ctx.stroke();
+    
+    // Draw active node timer ring
+    if (state.currentNode < CONFIG.nodeCount) {
+        const node = state.nodes[state.currentNode];
+        const elapsed = performance.now() - state.nodeStartTime;
+        const pct = Math.max(0, 1 - (elapsed / state.timeLeft));
+        
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, CONFIG.nodeRadius + 10, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * pct));
+        ctx.stroke();
+    }
+}
+
+function drawBloom(ctx) {
+    // Draw final plant structure
+    
+    // Fractal Branch Generator
+    function branch(ctx, x, y, angle, depth, maxDepth, width) {
+        if (depth > maxDepth) return;
+        
+        const len = 40 * (maxDepth - depth);
+        const endX = x + Math.cos(angle) * len;
+        const endY = y + Math.sin(angle) * len;
+        
+        ctx.strokeStyle = `rgba(79, 240, 197, ${1 - (depth/maxDepth)})`;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        
+        // Branches
+        const spread = 0.4 + (state.bloomProgress * 0.5); // Grows wider
+        branch(ctx, endX, endY, angle - spread, depth + 1, maxDepth, width * 0.7);
+        branch(ctx, endX, endY, angle + spread, depth + 1, maxDepth, width * 0.7);
+    }
+    
+    // Draw main trunk
+    const trunkLen = 80 + (state.bloomProgress * 60);
+    const endX = Math.cos(-Math.PI/2) * trunkLen;
+    const endY = Math.sin(-Math.PI/2) * trunkLen;
+    
+    ctx.strokeStyle = '#4ff0c5';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    
+    // Bloom progress effect
+    const depth = Math.floor(state.bloomProgress * 5);
+    if (depth > 0) {
+        branch(ctx, endX, endY, -Math.PI/2, 1, depth, 4);
+    }
+}
+
+function drawFinalState(ctx) {
+    // Static display of the full tree
+    ctx.strokeStyle = '#4ff0c5';
+    ctx.lineWidth = 8;
+    
+    const trunkLen = 140;
+    const endX = Math.cos(-Math.PI/2) * trunkLen;
+    const endY = Math.sin(-Math.PI/2) * trunkLen;
+    
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    
+    function branchFinal(ctx, x, y, angle, depth, maxDepth, width) {
+        if (depth > maxDepth) return;
+        
+        const len = 40 * (maxDepth - depth);
+        const endX = x + Math.cos(angle) * len;
+        const endY = y + Math.sin(angle) * len;
+        
+        ctx.strokeStyle = ['#4ff0c5', '#f04fd9', '#f0c54f'][depth % 3];
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = ctx.strokeStyle;
+        
+        const spread = 0.9;
+        branchFinal(ctx, endX, endY, angle - spread, depth + 1, maxDepth, width * 0.7);
+        branchFinal(ctx, endX, endY, angle + spread, depth + 1, maxDepth, width * 0.7);
+        ctx.shadowBlur = 0;
+    }
+    
+    branchFinal(ctx, endX, endY, -Math.PI/2, 1, 5, 4);
+    
+    // Particles
+    spawnParticles(ctx, 5);
+}
+
+// --- PARTICLES ---
+
+function spawnParticles(ctx, count) {
+    for(let i=0; i<count; i++) {
+        state.particles.push({
+            x: Math.random() * state.canvasWidth,
+            y: Math.random() * state.canvasHeight - state.canvasHeight/2, // Start slightly above screen relative to center
+            vx: (Math.random() - 0.5) * 2,
+            vy: Math.random() * 2 + 1,
+            size: Math.random() * 3 + 1,
+            life: 2000,
+            color: CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)]
+        });
+    }
+}
+
+function drawParticles(ctx) {
+    ctx.fillStyle = 'white';
+    state.particles.forEach(p => {
+        ctx.globalAlpha = (p.life / 2000);
+        ctx.fillStyle = p.color || '#fff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+}
+
+// --- INPUT ---
+
+function handleClick(e) {
+    if (!state.running || state.bloomState !== 'TUNING') return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left - state.cx;
+    const y = e.clientY - rect.top - state.cy;
+    
+    // Check collision with current node
+    const target = state.nodes[state.currentNode];
+    const dist = Math.sqrt((x - target.x)**2 + (y - target.y)**2);
+    
+    if (dist < CONFIG.nodeRadius + 10) {
+        // Success
+        target.hit = true;
+        state.currentNode++;
+        state.score += 100;
+        Audio.playTone(state.currentNode - 1);
+        
+        // Spawn particles at hit location
+        const screenX = state.cx + target.x * STATE_SCALE();
+        const screenY = state.cy + target.y * STATE_SCALE();
+        spawnParticlesAt(screenX, screenY, 10);
+        
+        nextNode();
+    }
+}
+
+function spawnParticlesAt(x, y, count) {
+    for(let i=0; i<count; i++) {
+        state.particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            size: Math.random() * 4 + 2,
+            life: 1000,
+            color: CONFIG.colors[Math.floor(Math.random() * CONFIG.colors.length)]
+        });
+    }
+}
+
+const canvas = document.getElementById('game-canvas');
+canvas.addEventListener('mousedown', handleClick);
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    handleClick({ clientX: touch.clientX, clientY: touch.clientY });
+}, {passive: false});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
+// --- INIT ---
+window.addEventListener('resize', resize);
+resize();
+draw(); // Initial draw
+
+</script>
 </body>
 </html>
