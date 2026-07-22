@@ -1,594 +1,985 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnetic Moth</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a1a;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: Georgia, serif;
+    cursor: none;
+  }
+  canvas {
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 0 60px rgba(100, 180, 255, 0.15);
+  }
+  #game-container { position: relative; }
+  #start-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    background: rgba(8, 10, 24, 0.92); z-index: 10;
+    transition: opacity 0.6s ease;
+  }
+  #start-screen h1 {
+    color: #c8e0ff; font-size: 42px; font-weight: normal;
+    text-shadow: 0 0 30px rgba(140, 190, 255, 0.5); margin-bottom: 16px;
+    letter-spacing: 4px;
+  }
+  #start-screen p {
+    color: rgba(180, 200, 230, 0.8); font-size: 16px; margin-bottom: 32px;
+    letter-spacing: 1px;
+  }
+  #start-btn {
+    padding: 14px 48px; background: rgba(120, 170, 255, 0.15);
+    border: 1px solid rgba(140, 190, 255, 0.4); color: #a8d0ff;
+    font-size: 18px; border-radius: 30px; cursor: pointer;
+    transition: all 0.3s ease; letter-spacing: 2px;
+    font-family: Georgia, serif;
+  }
+  #start-btn:hover {
+    background: rgba(120, 170, 255, 0.3);
+    box-shadow: 0 0 25px rgba(120, 170, 255, 0.3);
+  }
+  #end-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; flex-direction: column; justify-content: center; align-items: center;
+    background: rgba(8, 10, 24, 0.9); z-index: 10;
+    transition: opacity 0.8s ease;
+  }
+  #end-screen h2 {
+    color: #c8e0ff; font-size: 36px; margin-bottom: 12px;
+    text-shadow: 0 0 25px rgba(140, 190, 255, 0.5);
+  }
+  #end-screen p {
+    color: rgba(180, 200, 230, 0.75); font-size: 15px;
+    margin-bottom: 8px; text-align: center; line-height: 1.6;
+  }
+  #restart-btn {
+    margin-top: 28px; padding: 12px 40px;
+    background: rgba(120, 170, 255, 0.15);
+    border: 1px solid rgba(140, 190, 255, 0.4); color: #a8d0ff;
+    font-size: 16px; border-radius: 30px; cursor: pointer;
+    transition: all 0.3s ease; letter-spacing: 2px;
+    font-family: Georgia, serif;
+  }
+  #restart-btn:hover {
+    background: rgba(120, 170, 255, 0.3);
+    box-shadow: 0 0 25px rgba(120, 170, 255, 0.3);
+  }
+  #hud {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    color: rgba(170, 200, 240, 0.6); font-size: 13px; z-index: 5;
+    letter-spacing: 2px; pointer-events: none;
+  }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
-
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
+<body>
+<div id="game-container">
+  <canvas id="gameCanvas"></canvas>
+  <div id="hud">
+    <span id="pulse-display">● ○ ○</span>
   </div>
-
-  <div class="profile">
-
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
-
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
-
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
-
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
-
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
-
+  <div id="start-screen">
+    <h1>Magnetic Moth</h1>
+    <p>Guide the moth to the magnetic flowers.<br>Collect three pulses for a radiant bloom.</p>
+    <button id="start-btn">Begin</button>
   </div>
+  <div id="end-screen">
+    <h2 id="end-title"></h2>
+    <p id="end-message"></p>
+    <p id="end-stats"></p>
+    <button id="restart-btn">Restart</button>
+  </div>
+</div>
 
-  <div id="footer"></div>
+<script>
+(() => {
+  // Canvas setup
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = 1200, H = 800;
+  canvas.width = W;
+  canvas.height = H;
 
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
+  // Scale canvas to fit window while maintaining aspect ratio
+  function resizeCanvas() {
+    const scale = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.92;
+    canvas.style.width = (W * scale) + 'px';
+    canvas.style.height = (H * scale) + 'px';
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+  // Audio Context for sound synthesis
+  let audioCtx = null;
+  let masterGain = null;
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.4;
+    masterGain.connect(audioCtx.destination);
+  }
 
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
+  // Sound synthesis functions - no external files needed
+  function playTone(freq, duration, volume, type = 'sine') {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, audioCtx.currentTime + duration);
+    gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + duration);
+  }
 
+  function playPulseCollect() {
+    if (!audioCtx) return;
+    playTone(520, 0.3, 0.3, 'sine');
+    playTone(660, 0.25, 0.2, 'sine');
+    playTone(780, 0.2, 0.15, 'sine');
+  }
 
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+  function playPayoff() {
+    if (!audioCtx) return;
+    // Rich ascending chord
+    const notes = [440, 554, 659, 880];
+    notes.forEach((freq, i) => {
+      setTimeout(() => playTone(freq, 1.2, 0.15, 'sine'), i * 80);
+      setTimeout(() => playTone(freq * 1.5, 1.2, 0.08, 'triangle'), i * 80);
     });
-  </script>
+    // Low rumble
+    playTone(110, 1.5, 0.12, 'sine');
+  }
+
+  function playFail() {
+    if (!audioCtx) return;
+    playTone(200, 0.8, 0.2, 'sawtooth');
+    playTone(160, 0.6, 0.15, 'sawtooth');
+  }
+
+  function playHoverSound() {
+    if (!audioCtx || game.state === 'ended') return;
+    playTone(400 + Math.random() * 200, 0.15, 0.04, 'sine');
+  }
+
+  // Background ambience - ambient drone
+  let ambienceOsc = null;
+  function startAmbience() {
+    if (!audioCtx || ambienceOsc) return;
+    ambienceOsc = audioCtx.createOscillator();
+    const ambGain = audioCtx.createGain();
+    ambienceOsc.type = 'sine';
+    ambienceOsc.frequency.value = 80;
+    ambGain.gain.value = 0.04;
+    ambienceOsc.connect(ambGain);
+    ambGain.connect(masterGain);
+    ambienceOsc.start();
+    
+    // Second layer
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.value = 120;
+    gain2.gain.value = 0.02;
+    osc2.connect(gain2);
+    gain2.connect(masterGain);
+    osc2.start();
+    ambienceOsc._layers = [ambienceOsc, osc2];
+  }
+
+  let game = {
+    state: 'start', // start, playing, ended
+    moths: [],
+    flowers: [],
+    pulses: [],
+    particles: [],
+    pulseCollected: 0,
+    mouseX: W / 2,
+    mouseY: H / 2,
+    mouseDown: false,
+    time: 0,
+    score: 0,
+    attempts: 0,
+    lastHoverSound: 0,
+    difficulty: 1,
+    flowersEscalated: false,
+    startTransition: 0,
+    endTransition: 0,  // 0 = none, 1 = beginning fade, 2 = fully faded
+    payoffPhase: 0,  // 0 = none, 1 = bloom starts, 2 = bloom peaks, 3 = bloom fades
+    payoffTimer: 0,
+  };
+  const MOOTH_COUNT = 1;
+  const FLOWER_COUNT_START = 6;
+  const PULSES_NEEDED = 3;
+
+  // Initialize flowers
+  function initFlowers() {
+    game.flowers = [];
+    const cx = W / 2, cy = H / 2;
+    for (let i = 0; i < FLOWER_COUNT_START; i++) {
+      const angle = (2 * Math.PI * i) / FLOWER_COUNT_START + (Math.random() - 0.5) * 0.3;
+      const dist = 150 + Math.random() * 180;
+      game.flowers.push({
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        pulsePhase: Math.random() * Math.PI * 2,
+        pulseFreq: 1.5 + Math.random() * 0.5,
+        pulseAmp: 0.3 + Math.random() * 0.3,
+        color: `hsl(${190 + Math.random() * 60}, 70%, ${50 + Math.random() * 20}%)`,
+        collected: false,
+        collectedAnim: 0,
+        size: 18 + Math.random() * 8,
+        petalCount: 5 + Math.floor(Math.random() * 3),
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.005,
+        magneticPull: 0.3 + Math.random() * 0.4,
+        pulseActive: false,
+        pulseTimer: 5 + Math.random() * 10,
+      });
+    }
+    // Second wave of flowers (appear after time)
+    game.flowers.push({
+      x: 200 + Math.random() * (W - 400),
+      y: 100 + Math.random() * (H - 200),
+      pulsePhase: Math.random() * Math.PI * 2,
+      pulseFreq: 2 + Math.random() * 0.5,
+      pulseAmp: 0.5,
+      color: 'hsl(220, 80%, 55%)',
+      collected: false,
+      collectedAnim: 0,
+      size: 22,
+      petalCount: 6,
+      rotation: 0,
+      rotSpeed: 0.008,
+      magneticPull: 0.6,
+      pulseActive: false,
+      pulseTimer: 8,
+      isSecondWave: true,
+      spawnTime: 12,
+    });
+    game.flowers.push({
+      x: W - 280 + Math.random() * 100,
+      y: H - 300 + Math.random() * 150,
+      pulsePhase: Math.random() * Math.PI * 2,
+      pulseFreq: 2.2 + Math.random() * 0.3,
+      pulseAmp: 0.45,
+      color: 'hsl(200, 75%, 50%)',
+      collected: false,
+      collectedAnim: 0,
+      size: 20,
+      petalCount: 5,
+      rotation: 0,
+      rotSpeed: -0.007,
+      magneticPull: 0.55,
+      pulseActive: false,
+      pulseTimer: 9,
+      isSecondWave: true,
+      spawnTime: 14,
+    });
+    game.flowers.push({
+      x: W / 2 - 150,
+      y: H / 2 + 200,
+      pulsePhase: Math.random() * Math.PI * 2,
+      pulseFreq: 2.5,
+      pulseAmp: 0.5,
+      color: 'hsl(210, 85%, 55%)',
+      collected: false,
+      collectedAnim: 0,
+      size: 24,
+      petalCount: 7,
+      rotation: 0,
+      rotSpeed: -0.006,
+      magneticPull: 0.65,
+      pulseActive: false,
+      pulseTimer: 7,
+      isSecondWave: true,
+      spawnTime: 15,
+    });
+  }
+
+  // Initialize moth
+  function initMoth() {
+    game.moths = [];
+    for (let i = 0; i < MOOTH_COUNT; i++) {
+      game.moths.push({
+        x: W / 2,
+        y: H / 2,
+        vx: 0,
+        vy: 0,
+        wingAngle: 0,
+        wingSpeed: 0.15,
+        size: 14,
+        glowIntensity: 0.5,
+        trail: [],
+      });
+    }
+  }
+
+  initMoth();
+  initFlowers();
+
+  // Particle system
+  function emitParticles(x, y, count, color, speed = 3, life = 1) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = Math.random() * speed;
+      game.particles.push({
+        x, y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        life: life * (0.6 + Math.random() * 0.4),
+        maxLife: life,
+        color,
+        size: 2 + Math.random() * 3,
+      });
+    }
+  }
+
+  function emitPayoffParticles(x, y, count, color) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = 1 + Math.random() * 5;
+      game.particles.push({
+        x, y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        life: 2 + Math.random() * 1.5,
+        maxLife: 2 + Math.random() * 1.5,
+        color,
+        size: 2 + Math.random() * 5,
+        isPayoff: true,
+      });
+    }
+  }
+
+  // Stars background
+  const stars = [];
+  for (let i = 0; i < 200; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      size: 0.5 + Math.random() * 1.5,
+      twinkle: Math.random() * Math.PI * 2,
+      twinkleSpeed: 0.5 + Math.random() * 2,
+    });
+  }
+
+  function drawStars() {
+    stars.forEach(s => {
+      s.twinkle += s.twinkleSpeed * 0.016;
+      const alpha = 0.2 + Math.sin(s.twinkle) * 0.25;
+      ctx.fillStyle = `rgba(200, 220, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  // Draw magnet field circles
+  function drawMagneticField(x, y, radius, alpha, pulse) {
+    ctx.save();
+    for (let r = 50; r <= radius; r += 40) {
+      const fieldAlpha = alpha * (1 - r / radius) * 0.15;
+      ctx.strokeStyle = `rgba(120, 180, 255, ${fieldAlpha * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Draw a magnetic flower
+  function drawFlower(f, t) {
+    if (f.collected && f.collectedAnim > 1) return;
+    
+    const collectedAlpha = f.collected ? Math.max(0, 1 - f.collectedAnim) : 1;
+    const pulseValue = Math.sin(f.pulsePhase + t * f.pulseFreq) * f.pulseAmp;
+    const activePulse = f.pulseActive ? 1 : 0.3 + pulseValue * 0.3;
+    
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.rotate(f.rotation);
+    ctx.globalAlpha = collectedAlpha;
+
+    // Magnetic field visualization
+    if (f.pulseActive || f.pulseActive === false) {
+      const fieldAlpha = f.isSecondWave ? 0.3 : 0.2;
+      drawMagneticField(0, 0, 60 + pulseValue * 30, fieldAlpha, activePulse);
+    }
+
+    // Glow
+    const glowRadius = f.size * 2.5 + pulseValue * 15;
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, glowRadius);
+    const baseColor = f.color;
+    gradient.addColorStop(0, baseColor.replace(')', `, ${0.3 * activePulse})`).replace('hsl', 'hsla'));
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, glowRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Petals
+    const petalSize = f.size * (1 + pulseValue * 0.2);
+    for (let i = 0; i < f.petalCount; i++) {
+      const angle = (2 * Math.PI * i) / f.petalCount;
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.fillStyle = baseColor.replace(/\d+/, (60 + pulseValue * 20).toString());
+      ctx.beginPath();
+      ctx.ellipse(petalSize * 0.6, 0, petalSize * 0.6, petalSize * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Center glow
+    ctx.fillStyle = `rgba(255, 240, 200, ${0.6 + activePulse * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, f.size * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner detail rings
+    ctx.strokeStyle = `rgba(255, 230, 180, ${0.3 * activePulse})`;
+    ctx.lineWidth = 1;
+    for (let r = 1; r <= 2; r++) {
+      ctx.beginPath();
+      ctx.arc(0, 0, f.size * 0.15 * r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // Draw moth
+  function drawMoth(moth, t) {
+    ctx.save();
+    ctx.translate(moth.x, moth.y);
+    
+    // Calculate rotation from velocity
+    let angle = Math.atan2(moth.vy, moth.vx);
+    if (Math.abs(moth.vx) < 0.1 && Math.abs(moth.vy) < 0.1) {
+      angle = Math.sin(t * 2) * 0.3;
+    }
+    ctx.rotate(angle + Math.PI / 2);
+
+    const wingFlap = Math.sin(t * 15) * 0.4;
+    const s = moth.size;
+
+    // Trail / glow behind
+    ctx.save();
+    ctx.rotate(-angle - Math.PI / 2);
+    const trailGrad = ctx.createRadialGradient(0, s * 2, 0, 0, s * 2, s * 3);
+    trailGrad.addColorStop(0, 'rgba(150, 200, 255, 0.15)');
+    trailGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = trailGrad;
+    ctx.beginPath();
+    ctx.arc(0, s * 2, s * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Wings left
+    ctx.save();
+    ctx.scale(-1, 1);
+    drawMothWing(wingFlap, s, '#90c0ff', 'rgba(120, 170, 255,');
+    ctx.restore();
+
+    // Wings right
+    drawMothWing(wingFlap, s, '#90c0ff', 'rgba(120, 170, 255,');
+
+    // Body
+    ctx.fillStyle = '#e8f0ff';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s * 0.25, s * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head glow
+    ctx.fillStyle = 'rgba(200, 230, 255, 0.8)';
+    ctx.beginPath();
+    ctx.arc(0, -s * 0.35, s * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#334';
+    ctx.beginPath();
+    ctx.arc(-s * 0.08, -s * 0.4, s * 0.06, 0, Math.PI * 2);
+    ctx.arc(s * 0.08, -s * 0.4, s * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Antennae
+    ctx.strokeStyle = 'rgba(180, 210, 255, 0.6)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.05, -s * 0.5);
+    ctx.quadraticCurveTo(-s * 0.3, -s * 0.9, -s * 0.15, -s * 1.1);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(s * 0.05, -s * 0.5);
+    ctx.quadraticCurveTo(s * 0.3, -s * 0.9, s * 0.15, -s * 1.1);
+    ctx.stroke();
+
+    // Antenna tips
+    ctx.fillStyle = 'rgba(180, 210, 255, 0.8)';
+    ctx.beginPath();
+    ctx.arc(-s * 0.15, -s * 1.1, s * 0.06, 0, Math.PI * 2);
+    ctx.arc(s * 0.15, -s * 1.1, s * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glow around moth
+    const mothGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2.5);
+    mothGlow.addColorStop(0, 'rgba(150, 200, 255, 0.12)');
+    mothGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = mothGlow;
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawMothWing(flap, s, color, rgbaPrefix) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    // Upper wing
+    ctx.moveTo(0, -s * 0.1);
+    ctx.bezierCurveTo(
+      s * 0.4, -s * 0.8 * Math.cos(flap),
+      s * 1.2, -s * 0.5 * Math.cos(flap),
+      s * 0.8, s * 0.1
+    );
+    ctx.bezierCurveTo(
+      s * 0.5, s * 0.05,
+      s * 0.2, s * 0.05,
+      0, -s * 0.1
+    );
+    ctx.fill();
+
+    // Lower wing
+    ctx.fillStyle = `rgba(100, 160, 240, 0.7)`;
+    ctx.beginPath();
+    ctx.moveTo(0, s * 0.05);
+    ctx.bezierCurveTo(
+      s * 0.3, s * 0.5 * Math.cos(flap),
+      s * 0.8, s * 0.6 * Math.cos(flap),
+      s * 0.4, s * 0.2
+    );
+    ctx.bezierCurveTo(
+      s * 0.2, s * 0.1,
+      s * 0.1, s * 0.05,
+      0, s * 0.05
+    );
+    ctx.fill();
+
+    // Wing pattern dots
+    ctx.fillStyle = 'rgba(200, 230, 255, 0.4)';
+    ctx.beginPath();
+    ctx.arc(s * 0.5, -s * 0.25, s * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(s * 0.35, -s * 0.15, s * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw particles
+  function drawParticles() {
+    game.particles.forEach(p => {
+      const alpha = p.life / p.maxLife;
+      if (p.isPayoff) {
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+      } else {
+        ctx.globalAlpha = alpha;
+      }
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+    if (!game.particles.some(p => p.isPayoff)) {
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Drawing ambient background elements
+  function drawBackground(t) {
+    // Background gradient
+    const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.6);
+    bgGrad.addColorStop(0, '#12132a');
+    bgGrad.addColorStop(0.5, '#0c0d1f');
+    bgGrad.addColorStop(1, '#070814');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    drawStars();
+  }
+
+  // Draw pulse collection indicator
+  function drawPulseIndicator() {
+    const collected = game.pulseCollected;
+    const container = document.getElementById('pulse-display');
+    let html = '';
+    for (let i = 0; i < PULSES_NEEDED; i++) {
+      if (i < collected) {
+        html += '<span style="color:#80c0ff;text-shadow:0 0 8px rgba(120,190,255,0.8)">●</span> ';
+      } else {
+        html += '<span style="color:rgba(140,170,200,0.3)">○</span> ';
+      }
+    }
+    container.innerHTML = html;
+  }
+
+  // Update game state
+  function update(dt, t) {
+    if (game.state !== 'playing') return;
+
+    game.time = t;
+    const moth = game.moths[0];
+
+    // Moth movement toward mouse with easing and magnetic influence
+    const targetX = game.mouseX;
+    const targetY = game.mouseY;
+    const easeFactor = game.state === 'playing' ? 0.04 : 0.02;
+
+    let dx = targetX - moth.x;
+    let dy = targetY - moth.y;
+
+    // Add magnetic pull from flowers
+    game.flowers.forEach(f => {
+      if (f.collected) return;
+      const fDx = f.x - moth.x;
+      const fDy = f.y - moth.y;
+      const fDist = Math.sqrt(fDx * fDx + fDy * fDy);
+      if (fDist < 250 && fDist > 30) {
+        const pull = f.magneticPull * f.pulseActive * 0.03;
+        if (f.pulseActive) {
+          dx += fDx / fDist * pull * 150;
+          dy += fDy / fDist * pull * 150;
+        } else {
+          // Weak repulsion when not pulsing
+          dx -= fDx / fDist * pull * 30;
+          dy -= fDy / fDist * pull * 30;
+        }
+      }
+    });
+
+    moth.vx += dx * easeFactor;
+    moth.vy += dy * easeFactor;
+
+    // Damping
+    moth.vx *= 0.92;
+    moth.vy *= 0.92;
+
+    // Speed-based wing animation
+    const speed = Math.sqrt(moth.vx * moth.vx + moth.vy * moth.vy);
+    moth.wingAngle = Math.sin(t * (10 + speed * 0.5));
+
+    moth.x += moth.vx;
+    moth.y += moth.vy;
+
+    // Keep moth in bounds (soft bounce)
+    const margin = 30;
+    if (moth.x < margin) { moth.x = margin; moth.vx *= -0.5; }
+    if (moth.x > W - margin) { moth.x = W - margin; moth.vx *= -0.5; }
+    if (moth.y < margin) { moth.y = margin; moth.vy *= -0.5; }
+    if (moth.y > H - margin) { moth.y = H - margin; moth.vy *= -0.5; }
+
+    // Trail
+    moth.trail.push({ x: moth.x, y: moth.y, life: 0.5 });
+    if (moth.trail.length > 30) moth.trail.shift();
+    moth.trail.forEach(tr => tr.life -= dt * 0.8);
+    moth.trail = moth.trail.filter(tr => tr.life > 0);
+
+    // Flower pulsing and spawning
+    game.flowers.forEach(f => {
+      f.rotation += f.rotSpeed;
+      f.pulseTimer -= dt;
+
+      if (!f.collected && !f.pulseActive && f.pulseTimer <= 0 && !f.isSecondWave) {
+        f.pulseActive = true;
+        f.pulseTimer = 2 + Math.random() * 2;
+      }
+      if (!f.collected && f.isSecondWave && game.time > f.spawnTime && f.pulseTimer <= 0 && !f.pulseActive) {
+        f.pulseActive = true;
+        f.pulseTimer = 2.5 + Math.random() * 2.5;
+      }
+      if (f.pulseActive && f.pulseTimer <= 0) {
+        f.pulseActive = false;
+        f.pulseTimer = 3 + Math.random() * 6;
+      }
+
+      // Check collection
+      if (!f.collected) {
+        const cdx = moth.x - f.x;
+        const cdy = moth.y - f.y;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+        if (cdist < f.size + moth.size && f.pulseActive) {
+          f.collected = true;
+          game.pulseCollected++;
+          playPulseCollect();
+          emitPayoffParticles(f.x, f.y, 15, f.color);
+          
+          if (game.pulseCollected >= PULSES_NEEDED) {
+            game.payoffPhase = 1;
+            game.payoffTimer = 0;
+          }
+        }
+      }
+
+      if (f.collected) {
+        f.collectedAnim += dt * 1.5;
+      }
+    });
+
+    // Escalation - flowers start moving after some time
+    if (game.time > 10 && !game.flowersEscalated) {
+      game.flowersEscalated = true;
+      game.flowers.forEach(f => {
+        if (!f.collected) {
+          f.orbitRadius = 20 + Math.random() * 15;
+          f.orbitSpeed = 0.3 + Math.random() * 0.4;
+          f.orbitAngle = Math.random() * Math.PI * 2;
+          f.baseX = f.x;
+          f.baseY = f.y;
+        }
+      });
+    }
+
+    if (game.flowersEscalated) {
+      game.flowers.forEach(f => {
+        if (f.collected || !f.orbitSpeed) return;
+        f.orbitAngle += f.orbitSpeed * dt;
+        f.x = f.baseX + Math.cos(f.orbitAngle) * f.orbitRadius;
+        f.y = f.baseY + Math.sin(f.orbitAngle) * f.orbitRadius;
+      });
+    }
+
+    // Update particles
+    game.particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+      p.life -= dt;
+    });
+    game.particles = game.particles.filter(p => p.life > 0);
+
+    // Payoff animation
+    if (game.payoffPhase === 1) {
+      game.payoffTimer += dt;
+      if (game.payoffTimer > 0.5) {
+        game.payoffPhase = 2;
+        game.payoffTimer = 0;
+        // Massive particle burst
+        const cx = W / 2, cy = H / 2;
+        const colors = ['#80c0ff', '#ffc080', '#80ffc0', '#ff80c0', '#c080ff', '#ffff80'];
+        colors.forEach(color => {
+          emitPayoffParticles(cx + (Math.random() - 0.5) * 100, cy + (Math.random() - 0.5) * 100, 25, color);
+        });
+        playPayoff();
+      }
+    } else if (game.payoffPhase === 2) {
+      game.payoffTimer += dt;
+      if (game.payoffTimer > 3) {
+        game.payoffPhase = 3;
+        game.payoffTimer = 0;
+        game.state = 'ended';
+        game.endTransition = 0;
+        document.getElementById('end-title').textContent = 'Radiant Bloom';
+        document.getElementById('end-message').textContent = 'You guided the magnetic moth through the pulsing garden, collecting all three pulses to trigger a luminous bloom.';
+        document.getElementById('end-stats').textContent = `Flowers collected: ${game.pulseCollected}/${PULSES_NEEDED} · Play time: ${Math.round(game.time)}s`;
+        document.getElementById('end-screen').style.display = 'flex';
+        setTimeout(() => { document.getElementById('end-screen').style.opacity = '1'; }, 50);
+      }
+    }
+  }
+
+  // Draw trail
+  function drawTrail(moth) {
+    if (moth.trail.length < 2) return;
+    ctx.save();
+    for (let i = 0; i < moth.trail.length - 1; i++) {
+      const p = moth.trail[i];
+      const next = moth.trail[i + 1];
+      const alpha = p.life * 0.4;
+      ctx.strokeStyle = `rgba(130, 180, 240, ${alpha})`;
+      ctx.lineWidth = p.size * p.life;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(next.x, next.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Draw background ambient flow lines
+  function drawAmbientFlow(t) {
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = '#8090c0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      const startY = (H / 8) * i + Math.sin(t * 0.3 + i) * 50;
+      for (let x = 0; x < W; x += 20) {
+        const y = startY + Math.sin(x * 0.005 + t * 0.5 + i * 2) * 30 + Math.cos(x * 0.01 + t * 0.3) * 15;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Main game loop
+  let lastTime = 0;
+  function gameLoop(timestamp) {
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+    lastTime = timestamp;
+
+    drawBackground(timestamp * 0.001);
+    drawAmbientFlow(timestamp * 0.001);
+
+    // Draw flowers
+    game.flowers.forEach(f => drawFlower(f, timestamp * 0.001));
+
+    // Draw trail
+    game.moths.forEach(m => drawTrail(m));
+
+    // Draw moth
+    game.moths.forEach(m => drawMoth(m, timestamp * 0.001));
+
+    // Draw particles
+    drawParticles();
+
+    // Draw payoff effect
+    if (game.payoffPhase >= 1 && game.payoffPhase <= 2) {
+      const bloomAlpha = game.payoffPhase === 1 
+        ? (game.payoffTimer / 0.5) * 0.3 
+        : Math.sin(game.payoffTimer * 2) * 0.2 + 0.3;
+      const cx = W / 2, cy = H / 2;
+      const bloomRadius = 50 + game.payoffTimer * 60;
+      const bloomGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, bloomRadius);
+      bloomGrad.addColorStop(0, `rgba(255, 240, 200, ${bloomAlpha})`);
+      bloomGrad.addColorStop(0.3, `rgba(200, 220, 255, ${bloomAlpha * 0.6})`);
+      bloomGrad.addColorStop(0.7, `rgba(150, 180, 240, ${bloomAlpha * 0.2})`);
+      bloomGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = bloomGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, bloomRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    update(dt, timestamp * 0.001);
+    drawPulseIndicator();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Input handling
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    game.mouseX = (e.clientX - rect.left) * (W / rect.width);
+    game.mouseY = (e.clientY - rect.top) * (H / rect.height);
+    
+    // Hover sound
+    const now = Date.now();
+    if (now - game.lastHoverSound > 500 && game.state === 'playing') {
+      playHoverSound();
+      game.lastHoverSound = now;
+    }
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (game.state === 'playing') {
+      // Magnetic pulse - pushes moth and reveals flowers
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (W / rect.width);
+      const clickY = (e.clientY - rect.top) * (H / rect.height);
+      
+      game.moths.forEach(moth => {
+        const dx = clickX - moth.x;
+        const dy = clickY - moth.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          moth.vx += (dx / dist) * 40;
+          moth.vy += (dy / dist) * 40;
+        }
+      });
+
+      // Particle burst at click
+      emitParticles(clickX, clickY, 8, 'rgba(150,190,255,0.6)', 2, 0.5);
+      playTone(300 + Math.random() * 200, 0.2, 0.08, 'sine');
+    }
+  });
+
+  // Start button
+  document.getElementById('start-btn').addEventListener('click', () => {
+    initAudio();
+    startAmbience();
+    document.getElementById('start-screen').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('start-screen').style.display = 'none';
+      game.state = 'playing';
+    }, 600);
+  });
+
+  // Restart button
+  document.getElementById('restart-btn').addEventListener('click', () => {
+    game.pulseCollected = 0;
+    game.time = 0;
+    game.payoffPhase = 0;
+    game.payoffTimer = 0;
+    game.flowersEscalated = false;
+    game.particles = [];
+    game.mouseX = W / 2;
+    game.mouseY = H / 2;
+    
+    initMoth();
+    initFlowers();
+
+    document.getElementById('end-screen').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('end-screen').style.display = 'none';
+      game.state = 'playing';
+    }, 400);
+  });
+
+  // Keyboard support - press any key to restart when ended
+  document.addEventListener('keydown', (e) => {
+    if (game.state === 'ended' && (e.key === ' ' || e.key === 'Enter')) {
+      document.getElementById('restart-btn').click();
+    }
+    if (game.state === 'start' && (e.key === ' ' || e.key === 'Enter')) {
+      document.getElementById('start-btn').click();
+    }
+  });
+
+  // Also allow mouse click on canvas to start
+  canvas.addEventListener('click', (e) => {
+    if (game.state === 'start') {
+      document.getElementById('start-btn').click();
+    }
+  });
+
+  // Start game loop
+  requestAnimationFrame(gameLoop);
+
+})();
+</script>
 </body>
 </html>
