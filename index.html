@@ -1,594 +1,774 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Postcard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a14;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Georgia', serif;
+    user-select: none;
+  }
+  canvas {
+    display: block;
+    border-radius: 8px;
+    box-shadow: 0 0 60px rgba(100, 150, 255, 0.15);
+  }
+  #overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #overlay.active { pointer-events: auto; }
+  .panel {
+    background: rgba(10, 12, 30, 0.92);
+    border: 1px solid rgba(140, 180, 255, 0.3);
+    border-radius: 12px;
+    padding: 40px 50px;
+    text-align: center;
+    color: #c8d8f0;
+    max-width: 500px;
+    backdrop-filter: blur(10px);
+  }
+  .panel h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+    color: #e0e8ff;
+    letter-spacing: 2px;
+  }
+  .panel p {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    color: #99a8c4;
+  }
+  .panel .score-line {
+    font-size: 18px;
+    color: #b0ccff;
+    margin-bottom: 20px;
+  }
+  .btn {
+    background: linear-gradient(135deg, #3a6fd8, #6a4cd8);
+    border: none;
+    color: white;
+    padding: 12px 32px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Georgia', serif;
+    letter-spacing: 1px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(100, 130, 255, 0.4);
+  }
+  #evidence { position: absolute; bottom: 10px; right: 10px; font-size: 10px; color: rgba(255,255,255,0.15); }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
-
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
+<body>
+<canvas id="c"></canvas>
+<div id="overlay" class="active">
+  <div class="panel" id="panel">
+    <h1>Orbit Postcard</h1>
+    <p>Click anywhere in the sky to choose your satellite's slingshot trajectory.<br>Guide it through three luminous rings to send your postcard to the stars.</p>
+    <button class="btn" id="startBtn">Launch Satellite</button>
   </div>
+</div>
+<div id="evidence"></div>
 
-  <div class="profile">
+<script>
+// ===== Evidence API =====
+const evidenceState = { schema_version: 1, phase: 'initial', progress: 0, target: 3, completed: false, restart_count: 0 };
+window.__factoryxEvidence = () => ({...evidenceState});
 
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
+// ===== Canvas Setup =====
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const panel = document.getElementById('panel');
+const startBtn = document.getElementById('startBtn');
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
+let W, H;
+function resize() {
+  const s = Math.min(window.innerWidth, window.innerHeight);
+  W = canvas.width = Math.max(600, s);
+  H = canvas.height = Math.max(500, s);
+}
+resize();
+window.addEventListener('resize', resize);
 
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
+// ===== Audio Engine =====
+let audioCtx = null;
+let musicPlaying = false;
+let masterGain = null;
 
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.7;
+  masterGain.connect(audioCtx.destination);
+}
 
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
+// Procedural ambient drone
+let droneOsc, droneLFO, droneGain;
+function startAmbient() {
+  if (musicPlaying) return;
+  musicPlaying = true;
+  droneOsc = audioCtx.createOscillator();
+  droneOsc.type = 'sine';
+  droneOsc.frequency.value = 80;
+  droneGain = audioCtx.createGain();
+  droneGain.gain.value = 0.04;
+  droneLFO = audioCtx.createOscillator();
+  droneLFO.type = 'sine';
+  droneLFO.frequency.value = 0.15;
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 8;
+  droneLFO.connect(lfoGain);
+  lfoGain.connect(droneOsc.frequency);
+  droneOsc.connect(droneGain);
+  droneGain.connect(masterGain);
+  droneOsc.start();
+  droneLFO.start();
+}
 
-  </div>
+function stopAmbient() {
+  musicPlaying = false;
+  if (droneOsc) { droneOsc.stop(); droneOsc = null; }
+  if (droneLFO) { droneLFO.stop(); droneLFO = null; }
+}
 
-  <div id="footer"></div>
+function playTone(freq, duration, type, vol, delay = 0) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type || 'sine';
+  o.frequency.value = freq;
+  g.gain.value = vol || 0.15;
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+  o.connect(g);
+  g.connect(masterGain);
+  o.start(audioCtx.currentTime + delay);
+  o.stop(audioCtx.currentTime + delay + duration);
+}
 
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
+function playLaunch() {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(150, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.5);
+  g.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
+  o.connect(g);
+  g.connect(masterGain);
+  o.start();
+  o.stop(audioCtx.currentTime + 0.7);
+}
 
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+function playRingBell(freqShift) {
+  playTone(freqShift, 1.2, 'sine', 0.18);
+  playTone(freqShift * 1.5, 0.8, 'sine', 0.08);
+}
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
+function playChime(freq) {
+  playTone(freq, 0.4, 'sine', 0.12);
+}
 
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
+function playSuccessChord() {
+  playTone(440, 1.5, 'sine', 0.1);
+  playTone(554, 1.5, 'sine', 0.08);
+  playTone(659, 1.5, 'sine', 0.08);
+  playTone(880, 2.0, 'sine', 0.06);
+}
 
+// ===== Game State =====
+let state = 'waiting'; // waiting, aiming, launching, passing, completed, failed
+let satellite = { x: 0, y: 0, vx: 0, vy: 0, trail: [], radius: 6 };
+let aimPoint = { x: 0, y: 0 };
+let rings = [];
+let stars = [];
+let particles = [];
+let progress = 0;
+let ringIndex = 0;
+let trailParticles = [];
+let flashAlpha = 0;
+let postcardAngle = 0;
+let postcardAlpha = 0;
+let frameCount = 0;
+let restartCount = 0;
+let time = 0;
+let bgStars = [];
 
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+// ===== Generate Background Stars =====
+function generateStars() {
+  bgStars = [];
+  for (let i = 0; i < 200; i++) {
+    bgStars.push({
+      x: Math.random() * 2000,
+      y: Math.random() * 2000,
+      size: Math.random() * 2 + 0.5,
+      alpha: Math.random() * 0.8 + 0.2,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinkleOffset: Math.random() * Math.PI * 2
     });
-  </script>
+  }
+}
+generateStars();
+
+// ===== Generate Rings =====
+function generateRings() {
+  rings = [];
+  const colors = [
+    { ring: '#44d8ff', glow: 'rgba(68, 216, 255, 0.3)' },
+    { ring: '#c44dff', glow: 'rgba(196, 77, 255, 0.3)' },
+    { ring: '#ff6b44', glow: 'rgba(255, 107, 68, 0.3)' }
+  ];
+  for (let i = 0; i < 3; i++) {
+    rings.push({
+      x: W * 0.25 + (W * 0.55) * (i / 3),
+      y: H * 0.3 + Math.sin(i * 1.5) * H * 0.12,
+      radius: 50 + i * 5,
+      color: colors[i].ring,
+      glowColor: colors[i].glow,
+      glow: 0.3,
+      passed: false,
+      pulsePhase: 0
+    });
+  }
+}
+generateRings();
+
+// ===== Particles =====
+function spawnParticles(x, y, color, count, speed) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = Math.random() * speed + speed * 0.3;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: 1,
+      decay: Math.random() * 0.02 + 0.008,
+      color,
+      size: Math.random() * 3 + 1
+    });
+  }
+}
+
+// ===== Drawing =====
+function drawStars(time) {
+  bgStars.forEach(s => {
+    const twinkle = Math.sin(time * s.twinkleSpeed + s.twinkleOffset) * 0.3 + 0.7;
+    const alpha = s.alpha * twinkle;
+    ctx.fillStyle = `rgba(200, 220, 255, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(s.x % W, s.y % H, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawSatellite(x, y) {
+  // Glow
+  const grd = ctx.createRadialGradient(x, y, 0, x, y, 25);
+  grd.addColorStop(0, 'rgba(100, 200, 255, 0.6)');
+  grd.addColorStop(1, 'rgba(100, 200, 255, 0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(x, y, 25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#8ab8f0';
+  ctx.beginPath();
+  ctx.arc(x, y, satellite.radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Solar panel
+  ctx.strokeStyle = '#a0d0ff';
+  ctx.lineWidth = 2;
+  const angle = Math.atan2(satellite.vy, satellite.vx);
+  ctx.beginPath();
+  ctx.moveTo(x + Math.cos(angle) * 8, y + Math.sin(angle) * 8);
+  ctx.lineTo(x + Math.cos(angle) * 8 + Math.cos(angle + Math.PI/2) * 12,
+             y + Math.sin(angle) * 8 + Math.sin(angle + Math.PI/2) * 12);
+  ctx.lineTo(x + Math.cos(angle) * 8 + Math.cos(angle + Math.PI/2) * 12 + Math.cos(angle) * 8,
+             y + Math.sin(angle) * 8 + Math.sin(angle + Math.PI/2) * 12 + Math.sin(angle) * 8);
+  ctx.lineTo(x + Math.cos(angle) * 8 + Math.cos(angle) * 8,
+             y + Math.sin(angle) * 8 + Math.sin(angle) * 8);
+  ctx.stroke();
+
+  // Sun glow on solar panel
+  ctx.fillStyle = 'rgba(255, 240, 200, 0.4)';
+  ctx.fill();
+}
+
+function drawRing(ring, time) {
+  ring.pulsePhase += 0.03;
+  const pulse = Math.sin(ring.pulsePhase) * 0.15 + 0.85;
+  const r = ring.radius * pulse;
+
+  // Outer glow
+  const grd = ctx.createRadialGradient(ring.x, ring.y, r - 10, ring.x, ring.y, r + 30);
+  grd.addColorStop(0, ring.glow);
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(ring.x, ring.y, r + 30, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ring
+  ctx.strokeStyle = ring.color;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = ring.color;
+  ctx.shadowBlur = 20 * pulse;
+  ctx.beginPath();
+  ctx.arc(ring.x, ring.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Inner decorative ring
+  if (!ring.passed) {
+    ctx.strokeStyle = ring.color + '44';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, r - 8, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawTrails() {
+  if (satellite.trail.length < 2) return;
+  for (let i = 1; i < satellite.trail.length; i++) {
+    const t = i / satellite.trail.length;
+    ctx.strokeStyle = `rgba(100, 180, 255, ${t * 0.4})`;
+    ctx.lineWidth = t * 3;
+    ctx.beginPath();
+    ctx.moveTo(satellite.trail[i-1].x, satellite.trail[i-1].y);
+    ctx.lineTo(satellite.trail[i].x, satellite.trail[i].y);
+    ctx.stroke();
+  }
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawPostcard() {
+  if (postcardAlpha <= 0) return;
+
+  const cx = W / 2;
+  const cy = H / 2;
+  const pw = 260;
+  const ph = 180;
+
+  ctx.save();
+  ctx.globalAlpha = postcardAlpha;
+  ctx.translate(cx, cy);
+  ctx.rotate(postcardAngle);
+
+  // Postcard body
+  const pg = ctx.createLinearGradient(-pw/2, -ph/2, pw/2, ph/2);
+  pg.addColorStop(0, '#1a2040');
+  pg.addColorStop(1, '#2a1a40');
+  ctx.fillStyle = pg;
+  ctx.strokeStyle = 'rgba(180, 200, 255, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(-pw/2, -ph/2, pw, ph, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  // Postcard illustration (mini starfield scene)
+  const starCount = 40;
+  for (let i = 0; i < starCount; i++) {
+    const sx = -pw/2 + 20 + Math.sin(i * 3.7 + frameCount * 0.01) * (pw - 40);
+    const sy = -ph/2 + 15 + (i * 4.3 % (ph - 30));
+    const sz = Math.sin(i + frameCount * 0.02) * 0.5 + 1.2;
+    ctx.fillStyle = `rgba(200, 220, 255, ${0.3 + Math.sin(i * 2.1) * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sz, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Small ring
+  ctx.strokeStyle = '#44d8ff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(-20, -20, 18, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const ringG = ctx.createRadialGradient(-20, -20, 8, -20, -20, 25);
+  ringG.addColorStop(0, 'rgba(68, 216, 255, 0.3)');
+  ringG.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = ringG;
+  ctx.beginPath();
+  ctx.arc(-20, -20, 25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Satellite on postcard
+  drawMiniSatellite(pw/2 - 45, -20, 0.4);
+
+  // Postcard address lines
+  ctx.strokeStyle = 'rgba(140, 170, 220, 0.3)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(20, ph/2 - 20 + i * 12);
+    ctx.lineTo(pw/2 - 10, ph/2 - 20 + i * 12);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawMiniSatellite(x, y, s) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = '#8ab8f0';
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#a0d0ff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(5, 0);
+  ctx.lineTo(14, -5);
+  ctx.lineTo(14, 5);
+  ctx.lineTo(5, 0);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255, 240, 200, 0.4)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFlash() {
+  if (flashAlpha > 0) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// ===== Update =====
+function update() {
+  time += 0.016;
+  frameCount++;
+
+  // Update trail
+  if (state === 'launching' || state === 'passing') {
+    satellite.trail.push({ x: satellite.x, y: satellite.y });
+    if (satellite.trail.length > 40) satellite.trail.shift();
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Satellite movement
+  if (state === 'launching' || state === 'passing') {
+    satellite.x += satellite.vx;
+    satellite.y += satellite.vy;
+
+    // Trail particles
+    if (Math.random() < 0.3) {
+      trailParticles.push({
+        x: satellite.x,
+        y: satellite.y,
+        vx: satellite.vx * 0.1 + (Math.random() - 0.5) * 0.5,
+        vy: satellite.vy * 0.1 + (Math.random() - 0.5) * 0.5,
+        life: 0.6,
+        decay: 0.015,
+        size: Math.random() * 2 + 0.5
+      });
+    }
+
+    // Update trail particles
+    for (let i = trailParticles.length - 1; i >= 0; i--) {
+      const p = trailParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+      if (p.life <= 0) trailParticles.splice(i, 1);
+    }
+  }
+
+  // Ring collision detection
+  if ((state === 'launching' || state === 'passing') && ringIndex < 3) {
+    const ring = rings[ringIndex];
+    const dx = satellite.x - ring.x;
+    const dy = satellite.y - ring.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < ring.radius - 5) {
+      ring.passed = true;
+      progress = ringIndex + 1;
+      evidenceState.progress = progress;
+      evidenceState.phase = 'playing';
+      ringIndex++;
+
+      playRingBell(520 + ringIndex * 180);
+      spawnParticles(ring.x, ring.y, ring.color, 30, 4);
+      flashAlpha = 0.3;
+
+      if (ringIndex >= 3) {
+        state = 'completed';
+        evidenceState.completed = true;
+        evidenceState.phase = 'completed';
+        playSuccessChord();
+        setTimeout(() => {
+          postcardAlpha = 0;
+          postcardAngle = 0;
+          overlay.classList.add('active');
+          panel.innerHTML = `
+            <h1>✦ Postcard Sent ✦</h1>
+            <p>Your satellite has navigated all three luminous rings.<br>The stars received your message.</p>
+            <div class="score-line">${restartCount > 0 ? `Restart ${restartCount} time${restartCount>1?'s':''} · ` : ''}All rings cleared · 3/3</div>
+            <button class="btn" onclick="newGame()">Send Another</button>
+          `;
+        }, 1500);
+      }
+    }
+
+    // Missed ring (satellite went past without going through)
+    if (dist > ring.radius + 20 && dist > satellite.radius * 2 && state !== 'failed') {
+      state = 'failed';
+      evidenceState.progress = ringIndex;
+      evidenceState.phase = 'failed';
+      flashAlpha = 0.2;
+      playTone(200, 0.5, 'sawtooth', 0.1);
+
+      setTimeout(() => {
+        overlay.classList.add('active');
+        panel.innerHTML = `
+          <h1>Missed the Orbit</h1>
+          <p>Your satellite drifted past ring ${ringIndex + 1} without threading through it.<br>Try adjusting your aim.</p>
+          <div class="score-line">${restartCount > 0 ? `Restart ${restartCount} time${restartCount>1?'s':''} · ` : ''}${ringIndex}/3 rings cleared</div>
+          <button class="btn" onclick="newGame()">Try Again</button>
+        `;
+      }, 800);
+    }
+
+    // Out of bounds
+    if (satellite.x > W + 50 || satellite.x < -50 || satellite.y < -50 || satellite.y > H + 50) {
+      if (state !== 'failed' && state !== 'completed') {
+        state = 'failed';
+        evidenceState.progress = ringIndex;
+        evidenceState.phase = 'failed';
+        flashAlpha = 0.2;
+        playTone(180, 0.4, 'sawtooth', 0.08);
+
+        setTimeout(() => {
+          overlay.classList.add('active');
+          panel.innerHTML = `
+            <h1>Lost in the Void</h1>
+            <p>Your satellite drifted too far from the intended path.<br>Slight adjustments in aim will help.</p>
+            <div class="score-line">${restartCount > 0 ? `Restart ${restartCount} time${restartCount>1?'s':''} · ` : ''}${ringIndex}/3 rings cleared</div>
+            <button class="btn" onclick="newGame()">Try Again</button>
+          `;
+        }, 800);
+      }
+    }
+  }
+
+  // Flash fade
+  if (flashAlpha > 0) flashAlpha -= 0.01;
+
+  // Postcard animation
+  if (postcardAlpha > 0) {
+    postcardAlpha += 0.02;
+    postcardAngle = Math.sin(time * 0.5) * 0.05;
+    if (postcardAlpha > 1) postcardAlpha = 1;
+  }
+}
+
+// ===== Render =====
+function render() {
+  // Background gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#080818');
+  bg.addColorStop(0.5, '#0e0e24');
+  bg.addColorStop(1, '#120e1e');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawStars(time);
+  drawTrails();
+
+  // Draw trail particles
+  trailParticles.forEach(p => {
+    ctx.fillStyle = `rgba(100, 180, 255, ${p.life * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw rings
+  if (state === 'aiming' || state === 'launching' || state === 'passing' || state === 'completed') {
+    rings.forEach((r, i) => {
+      if (i >= ringIndex) {
+        drawRing(r, time);
+      }
+    });
+  }
+
+  // Draw satellite
+  if (state !== 'waiting') {
+    drawSatellite(satellite.x, satellite.y);
+  }
+
+  drawParticles();
+  drawFlash();
+  drawPostcard();
+
+  // UI: Aim indicator
+  if (state === 'aiming') {
+    ctx.strokeStyle = 'rgba(140, 180, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    const tipX = rings[0].x;
+    const tipY = rings[0].y;
+    const startX = satellite.x;
+    const startY = satellite.y;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    // Show aim direction hint (first ring)
+    const dx = tipX - startX;
+    const dy = tipY - startY;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    const nx = dx / d;
+    const ny = dy / d;
+    ctx.lineTo(startX + nx * 100, startY + ny * 100);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Aim target reticle
+    ctx.strokeStyle = 'rgba(200, 220, 255, 0.4)';
+    ctx.lineWidth = 1;
+    const retX = mousePos.x;
+    const retY = mousePos.y;
+    ctx.beginPath();
+    ctx.moveTo(retX - 10, retY);
+    ctx.lineTo(retX + 10, retY);
+    ctx.moveTo(retX, retY - 10);
+    ctx.lineTo(retX, retY + 10);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(retX, retY, 15, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+// ===== Main Loop =====
+function loop() {
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+
+// ===== Input =====
+let mousePos = { x: W / 2, y: H / 2 };
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mousePos.x = (e.clientX - rect.left) * (W / rect.width);
+  mousePos.y = (e.clientY - rect.top) * (H / rect.height);
+});
+
+canvas.addEventListener('click', (e) => {
+  if (state === 'aiming') {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) * (W / rect.width);
+    const clickY = (e.clientY - rect.top) * (H / rect.height);
+
+    // Calculate direction from satellite to click
+    const dx = clickX - satellite.x;
+    const dy = clickY - satellite.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist === 0) return;
+
+    const speed = 2.5;
+    satellite.vx = (dx / dist) * speed;
+    satellite.vy = (dy / dist) * speed;
+    state = 'launching';
+    evidenceState.phase = 'playing';
+    playLaunch();
+  }
+});
+
+// ===== Game Control =====
+function newGame() {
+  initAudio();
+  if (!musicPlaying) startAmbient();
+
+  overlay.classList.remove('active');
+  satellite = { x: W * 0.15, y: H * 0.8, vx: 0, vy: 0, trail: [], radius: 6 };
+  aimPoint = { x: W * 0.75, y: H * 0.3 };
+  ringIndex = 0;
+  progress = 0;
+  particles = [];
+  trailParticles = [];
+  flashAlpha = 0;
+  postcardAlpha = 0;
+  postcardAngle = 0;
+  state = 'aiming';
+
+  evidenceState.progress = 0;
+  evidenceState.completed = false;
+  evidenceState.phase = 'initial';
+
+  generateRings();
+
+  panel.innerHTML = `
+    <h1>Orbit Postcard</h1>
+    <p>Click in the sky to aim your satellite's trajectory.<br>Guide it through three luminous rings to send your postcard to the stars.</p>
+    <div class="score-line">0/3 rings</div>
+  `;
+}
+
+// Start button
+startBtn.addEventListener('click', () => {
+  initAudio();
+  if (!musicPlaying) startAmbient();
+  restartCount = 0;
+  evidenceState.restart_count = 0;
+  newGame();
+});
+
+// Expose newGame globally for button onclick
+window.newGame = newGame;
+
+// ===== Init =====
+loop();
+</script>
 </body>
 </html>
