@@ -1,594 +1,1244 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beat Ferry</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #e0e0ff;
+  }
+  canvas {
+    display: block;
+    cursor: pointer;
+    image-rendering: auto;
+  }
+  #ui-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #start-btn, #restart-btn {
+    pointer-events: auto;
+    padding: 16px 48px;
+    font-size: 24px;
+    font-weight: bold;
+    border: 2px solid #8a7aff;
+    border-radius: 12px;
+    background: rgba(30, 20, 80, 0.85);
+    color: #c8c0ff;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  #start-btn:hover, #restart-btn:hover {
+    background: rgba(60, 40, 140, 0.9);
+    color: #fff;
+    border-color: #b0a0ff;
+    transform: scale(1.05);
+  }
+  #hud {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  #hud .score {
+    font-size: 28px;
+    font-weight: bold;
+    text-shadow: 0 0 20px rgba(140, 120, 255, 0.6);
+    letter-spacing: 3px;
+  }
+  #hud .instruments {
+    font-size: 13px;
+    margin-top: 6px;
+    opacity: 0.7;
+    letter-spacing: 1px;
+  }
+  #progress-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6040ff, #ff60a0);
+    transition: width 0.3s ease-out;
+    border-radius: 0 2px 2px 0;
+  }
+  #hint-text {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 16px;
+    opacity: 0.6;
+    pointer-events: none;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
-
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
+<body>
+<canvas id="game"></canvas>
+<div id="ui-overlay">
+  <div id="hud" style="display:none;">
+    <div class="score" id="score-display">0 / 10</div>
+    <div class="instruments" id="inst-display"></div>
   </div>
+  <button id="start-btn">▶ Start Ferry</button>
+  <div id="hint-text"></div>
+  <div id="progress-bar" style="width:0%"></div>
+</div>
 
-  <div class="profile">
+<script>
+// ============================================================
+// BEAT FERRY - A Musical Ferry Game
+// ============================================================
 
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const uiOverlay = document.getElementById('ui-overlay');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+const hud = document.getElementById('hud');
+const scoreDisplay = document.getElementById('score-display');
+const instDisplay = document.getElementById('inst-display');
+const hintText = document.getElementById('hint-text');
+const progressBar = document.getElementById('progress-bar');
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
+// --- Constants ---
+const TARGET_PASSES = 10;
+const CANVAS_W = 1280;
+const CANVAS_H = 720;
+const FERRY_W = 60;
+const FERRY_H = 28;
+const PORTAL_RADIUS = 65;
+const START_X = 80;
+const END_X = 1160;
+const FERRY_WIDTH = 60;
 
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
+// --- Game State ---
+let state = {
+  phase: 'initial', // initial, playing, completed, failed
+  progress: 0,
+  target: TARGET_PASSES,
+  completed: false,
+  restartCount: 0,
+};
 
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
+// Ferry
+let ferry = {
+  x: START_X,
+  y: CANVAS_H / 2 - FERRY_H / 2,
+  targetY: CANVAS_H / 2 - FERRY_H / 2,
+  width: FERRY_W,
+  height: FERRY_H,
+  speed: 0,
+  moving: false,
+  bobAngle: 0,
+  trail: [],
+  passengers: []
+};
 
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
+// Portals (pools of light)
+let portals = [];
+let portalIndex = 0;
+let portalTimer = 0;
+let portalSpawnInterval = 180; // frames
 
-  </div>
+// Particles
+let particles = [];
 
-  <div id="footer"></div>
+// Musical voices
+const instruments = [
+  { name: 'Bass', color: '#6644ff', freq: 65.41, type: 'sawtooth' },
+  { name: 'Synth', color: '#ff44aa', freq: 261.63, type: 'square' },
+  { name: 'Drum', color: '#ffaa44', freq: 110, type: 'sine' },
+  { name: 'Chime', color: '#44ffcc', freq: 523.25, type: 'sine' },
+  { name: 'Pad', color: '#aa66ff', freq: 130.81, type: 'triangle' },
+  { name: 'Bell', color: '#ff6644', freq: 783.99, type: 'sine' },
+  { name: 'Pluck', color: '#44ccff', freq: 329.63, type: 'triangle' },
+  { name: 'Organ', color: '#ff4466', freq: 392.00, type: 'sawtooth' },
+  { name: 'Flute', color: '#66ffaa', freq: 440.00, type: 'sine' },
+  { name: 'Final', color: '#ffdd44', freq: 523.25, type: 'sine' },
+];
+let activeInstruments = [];
+let activeVoices = [];
 
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
+// Harbor scene state
+let harborScene = {
+  active: false,
+  progress: 0, // 0-1
+  stars: [],
+  waves: [],
+  lights: []
+};
 
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
+// Background stars
+let bgStars = [];
+for (let i = 0; i < 80; i++) {
+  bgStars.push({
+    x: Math.random() * CANVAS_W,
+    y: Math.random() * CANVAS_H,
+    r: Math.random() * 1.5 + 0.5,
+    twinkle: Math.random() * Math.PI * 2,
+    speed: Math.random() * 0.02 + 0.01
+  });
+}
+
+// Water ripples
+let waterRipples = [];
+
+// Pulsing glow for portals
+let pulseTime = 0;
+
+// --- Audio Engine ---
+let audioCtx = null;
+let masterGain = null;
+let ambientOsc = null;
+let ambientGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.35;
+  masterGain.connect(audioCtx.destination);
+
+  // Ambient underwater sound
+  ambientGain = audioCtx.createGain();
+  ambientGain.gain.value = 0.04;
+  ambientGain.connect(masterGain);
+
+  ambientOsc = audioCtx.createOscillator();
+  ambientOsc.type = 'sine';
+  ambientOsc.frequency.value = 40;
+  ambientOsc.connect(ambientGain);
+  ambientOsc.start();
+
+  // LFO for ambient
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 8;
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.value = 0.3;
+  lfo.connect(lfoGain);
+  lfoGain.connect(ambientOsc.frequency);
+  lfo.start();
+}
+
+function playInstrument(instrument, duration = 1.2, vol = 0.2) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+
+  // Main tone
+  const osc = audioCtx.createOscillator();
+  osc.type = instrument.type;
+  osc.frequency.value = instrument.freq;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(vol, now + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(now);
+  osc.stop(now + duration);
+
+  // Overtone
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = instrument.freq * 2;
+  const gain2 = audioCtx.createGain();
+  gain2.gain.setValueAtTime(0, now);
+  gain2.gain.linearRampToValueAtTime(vol * 0.2, now + 0.02);
+  gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.5);
+  osc2.connect(gain2);
+  gain2.connect(masterGain);
+  osc2.start(now);
+  osc2.stop(now + duration);
+
+  // Attack click for percussion instruments
+  if (instrument.name === 'Drum') {
+    const noise = audioCtx.createBufferSource();
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.03));
     }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+    noise.buffer = buf;
+    const nGain = audioCtx.createGain();
+    nGain.gain.setValueAtTime(0.3, now);
+    nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    noise.connect(nGain);
+    nGain.connect(masterGain);
+    noise.start(now);
+    noise.stop(now + 0.15);
+  }
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
+  activeVoices.push({ osc, osc2, gain, gain2 });
+}
 
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
+function playPassSound() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(300, now);
+  osc.frequency.linearRampToValueAtTime(600, now + 0.15);
+  osc.connect(masterGain);
+  osc.start(now);
+  osc.stop(now + 0.2);
+}
 
+function playMissSound() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(200, now);
+  osc.frequency.linearRampToValueAtTime(80, now + 0.4);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.15, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+  osc.connect(g);
+  g.connect(masterGain);
+  osc.start(now);
+  osc.stop(now + 0.4);
+}
 
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
+function playHarborCrescendo() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  // Play all active instruments layered
+  activeInstruments.forEach((inst, i) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = inst.type;
+    osc.frequency.value = inst.freq;
+    // Slight detune for richness
+    osc.detune.value = (Math.random() - 0.5) * 20;
+    const g = audioCtx.createGain();
+    const vol = 0.08 + i * 0.01;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol, now + 1.5);
+    g.gain.setValueAtTime(vol, now + 3);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 8);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 8);
+  });
 
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
+  // Bass drone
+  const bass = audioCtx.createOscillator();
+  bass.type = 'sine';
+  bass.frequency.value = 65.41;
+  const bg = audioCtx.createGain();
+  bg.gain.setValueAtTime(0, now);
+  bg.gain.linearRampToValueAtTime(0.3, now + 1);
+  bg.gain.setValueAtTime(0.3, now + 4);
+  bg.gain.exponentialRampToValueAtTime(0.001, now + 8);
+  bass.connect(bg);
+  bg.connect(masterGain);
+  bass.start(now);
+  bass.stop(now + 8);
 
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
+  // Sparkling high notes
+  for (let i = 0; i < 12; i++) {
+    const t = now + Math.random() * 4 + 0.5;
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = [523.25, 659.25, 783.99, 880, 1046.5, 1174.66][Math.floor(Math.random() * 6)];
+    osc.detune.value = (Math.random() - 0.5) * 10;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.06, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 1.5);
+  }
+}
 
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
+// --- Resize ---
+function resize() {
+  const ratio = CANVAS_W / CANVAS_H;
+  let w = window.innerWidth;
+  let h = window.innerHeight;
+  if (w / h > ratio) {
+    w = h * ratio;
+  } else {
+    h = w / ratio;
+  }
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+}
+window.addEventListener('resize', resize);
+resize();
 
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
+// --- Portal spawning ---
+function spawnPortal() {
+  const y = 120 + Math.random() * (CANVAS_H - 240);
+  const dir = portalIndex % 2 === 0 ? 1 : -1;
+  portals.push({
+    x: dir === 1 ? CANVAS_W + PORTAL_RADIUS : -PORTAL_RADIUS,
+    y: y,
+    radius: PORTAL_RADIUS,
+    vx: dir * (0.8 + portalIndex * 0.08), // speeds up slightly
+    pulsePhase: Math.random() * Math.PI * 2,
+    captured: false,
+    id: portalIndex
+  });
+  portalIndex++;
+  portalTimer = 0;
+  // Decrease spawn interval with progress
+  const progressFactor = 1 - (state.progress / TARGET_PASSES) * 0.5;
+  portalSpawnInterval = Math.floor(180 * progressFactor);
+}
 
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+// --- Particles ---
+function spawnParticles(x, y, color, count = 20) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 1;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: Math.random() * 0.02 + 0.015,
+      radius: Math.random() * 4 + 2,
+      color
     });
-  </script>
+  }
+}
+
+function spawnPassengerParticle(x, y, color) {
+  particles.push({
+    x, y,
+    vx: (Math.random() - 0.5) * 2,
+    vy: (Math.random() - 0.5) * 2,
+    life: 1,
+    decay: 0.012,
+    radius: 5,
+    color,
+    isPassenger: true
+  });
+}
+
+// --- Ferry movement ---
+function launchFerry(targetY) {
+  if (ferry.moving) return;
+  ferry.targetY = Math.max(40, Math.min(CANVAS_H - 40 - FERRY_H, targetY));
+  ferry.moving = true;
+  ferry.speed = 3.5 + (state.progress / TARGET_PASSES) * 1.5; // Speed increases
+}
+
+// --- Drawing helpers ---
+function drawPortal(p, time) {
+  const pulse = Math.sin(time * 2 + p.pulsePhase) * 0.3 + 0.7;
+  const r = p.radius * pulse;
+
+  // Outer glow
+  const grad = ctx.createRadialGradient(p.x, p.y + 30, 0, p.x, p.y + 30, r * 2.5);
+  const c = p.captured ? `rgba(100,255,200,0.1)` : `rgba(${p.id % 3 === 0 ? '100,180,255' : p.id % 3 === 1 ? '255,150,100' : '180,100,255'},0.15)`;
+  grad.addColorStop(0, c);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y + 30, r * 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main pool
+  const poolGrad = ctx.createRadialGradient(p.x, p.y + 30, 0, p.x, p.y + 30, r);
+  if (p.captured) {
+    poolGrad.addColorStop(0, 'rgba(100,255,220,0.9)');
+    poolGrad.addColorStop(0.5, 'rgba(60,200,180,0.5)');
+    poolGrad.addColorStop(1, 'rgba(40,150,140,0)');
+  } else {
+    poolGrad.addColorStop(0, `rgba(180,220,255,${0.6 * pulse})`);
+    poolGrad.addColorStop(0.5, `rgba(100,160,255,${0.3 * pulse})`);
+    poolGrad.addColorStop(1, 'rgba(60,100,200,0)');
+  }
+  ctx.fillStyle = poolGrad;
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y + 30, r * 1.3, r * 0.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner bright spot
+  ctx.fillStyle = p.captured ? `rgba(200,255,240,${0.7 * pulse})` : `rgba(240,255,255,${0.4 * pulse})`;
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y + 30, r * 0.4, r * 0.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wave rings on water surface
+  ctx.strokeStyle = `rgba(150,200,255,${0.3 * pulse})`;
+  ctx.lineWidth = 1;
+  for (let ring = 1; ring <= 3; ring++) {
+    const ringR = r * (0.3 + ring * 0.4) * (1 + Math.sin(time * 3 + ring) * 0.15);
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + 30, ringR, ringR * 0.3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawFerry(f, time) {
+  const bob = Math.sin(time * 3 + f.bobAngle) * 3;
+  const cx = f.x + f.width / 2;
+  const cy = f.y + f.height / 2 + bob;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Hull
+  ctx.fillStyle = '#5a4030';
+  ctx.beginPath();
+  ctx.moveTo(-f.width / 2, 2);
+  ctx.quadraticCurveTo(-f.width / 2 - 10, f.height / 2, -f.width / 2 + 5, f.height / 2 + 5);
+  ctx.lineTo(f.width / 2 - 5, f.height / 2 + 5);
+  ctx.quadraticCurveTo(f.width / 2 + 10, f.height / 2, f.width / 2, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Hull stripe
+  ctx.strokeStyle = '#8a6040';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Cabin
+  ctx.fillStyle = '#705848';
+  ctx.fillRect(-10, -f.height / 2 - 5, 20, f.height / 2 + 5);
+  ctx.fillStyle = '#90a8c0'; // window
+  ctx.fillRect(-7, -f.height / 2 + 2, 14, 8);
+  ctx.strokeStyle = '#a0b8d0';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(-7, -f.height / 2 + 2, 14, 8);
+
+  // Smokestack
+  ctx.fillStyle = '#404040';
+  ctx.fillRect(-5, -f.height / 2 - 18, 10, 13);
+  ctx.fillStyle = '#ff6040';
+  ctx.fillRect(-7, -f.height / 2 - 22, 14, 5);
+
+  // Smoke
+  const smokeAlpha = 0.15 + Math.sin(time * 4) * 0.05;
+  for (let i = 0; i < 3; i++) {
+    const sx = -5 + Math.sin(time * 2 + i * 2) * 8;
+    const sy = -f.height / 2 - 25 - i * 10 - Math.sin(time * 3 + i) * 3;
+    ctx.fillStyle = `rgba(200,200,220,${smokeAlpha * (1 - i * 0.3)})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 6 - i * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Passengers on deck
+  ctx.fillStyle = '#4a3020';
+  // Small circles on deck
+  const numPassengers = Math.min(f.passengers.length, 6);
+  for (let i = 0; i < numPassengers; i++) {
+    const px = -15 + i * 8;
+    const pBob = Math.sin(time * 4 + i) * 2;
+    // body
+    ctx.fillStyle = ['#ff6060', '#60aaff', '#60ff80', '#ffaa40', '#cc66ff', '#40cccc'][i % 6];
+    ctx.beginPath();
+    ctx.arc(px, -f.height / 2 - 2 + pBob, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // head
+    ctx.fillStyle = ffbbaa;
+    ctx.beginPath();
+    ctx.arc(px, -f.height / 2 - 7 + pBob, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawWater(time) {
+  // Deep water background
+  const waterGrad = ctx.createLinearGradient(0, 200, 0, CANVAS_H);
+  waterGrad.addColorStop(0, '#0a1028');
+  waterGrad.addColorStop(0.3, '#0d1838');
+  waterGrad.addColorStop(1, '#060c1e');
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, 180, CANVAS_W, CANVAS_H - 180);
+
+  // Horizon line
+  ctx.strokeStyle = 'rgba(80,100,180,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, 200);
+  for (let x = 0; x <= CANVAS_W; x += 20) {
+    ctx.lineTo(x, 200 + Math.sin(x * 0.01 + time * 0.5) * 3);
+  }
+  ctx.stroke();
+
+  // Wave lines
+  ctx.strokeStyle = 'rgba(60,100,160,0.15)';
+  ctx.lineWidth = 1;
+  for (let row = 0; row < 8; row++) {
+    const baseY = 240 + row * 50;
+    ctx.beginPath();
+    for (let x = 0; x <= CANVAS_W; x += 5) {
+      const y = baseY + Math.sin(x * 0.015 + time * (0.8 + row * 0.1)) * (8 + row * 2);
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Star reflections on water
+  for (const star of bgStars) {
+    if (star.y > 200) {
+      const refl = Math.sin(time * 2 + star.twinkle) * 0.3 + 0.3;
+      ctx.fillStyle = `rgba(200,210,240,${refl * 0.15})`;
+      ctx.beginPath();
+      ctx.ellipse(star.x, star.y + 60, star.r * 1.5, star.r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawSky(time) {
+  // Night sky gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, 200);
+  skyGrad.addColorStop(0, '#08081a');
+  skyGrad.addColorStop(1, '#0d1530');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, CANVAS_W, 200);
+
+  // Stars
+  for (const star of bgStars) {
+    const twinkle = Math.sin(time * star.speed * 10 + star.twinkle) * 0.4 + 0.6;
+    ctx.fillStyle = `rgba(210,220,255,${twinkle})`;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Moon
+  const moonX = CANVAS_W - 130;
+  const moonY = 80;
+  const moonGrad = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 35);
+  moonGrad.addColorStop(0, 'rgba(255,245,220,0.9)');
+  moonGrad.addColorStop(0.5, 'rgba(240,230,200,0.4)');
+  moonGrad.addColorStop(1, 'rgba(200,190,170,0)');
+  ctx.fillStyle = moonGrad;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, 35, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawParticles(ts) {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHarbor(time) {
+  const h = harborScene;
+  const p = h.progress;
+
+  // Sky darkens
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  skyGrad.addColorStop(0, `rgba(5,5,20,1)`);
+  skyGrad.addColorStop(1, `rgba(8,12,30,1)`);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Stars (more, brighter)
+  for (let i = 0; i < 120; i++) {
+    const twinkle = Math.sin(time * 1.5 + i * 0.7) * 0.5 + 0.5;
+    const sx = (i * 137.5) % CANVAS_W;
+    const sy = (i * 73.3) % (CANVAS_H * 0.6);
+    const sr = (i % 3) + 0.5;
+    ctx.fillStyle = `rgba(220,230,255,${twinkle * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Water gets calm
+  const waterY = CANVAS_H * 0.55;
+  const waterGrad = ctx.createLinearGradient(0, waterY, 0, CANVAS_H);
+  waterGrad.addColorStop(0, `rgba(15,20,40,${0.9})`);
+  waterGrad.addColorStop(1, `rgba(8,12,25,1)`);
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, waterY, CANVAS_W, CANVAS_H - waterY);
+
+  // Harbor outline
+  const harpGrad = ctx.createLinearGradient(0, waterY - 20, 0, waterY + 10);
+  harpGrad.addColorStop(0, '#2a2040');
+  harpGrad.addColorStop(1, '#1a1530');
+  ctx.fillStyle = harpGrad;
+
+  // Draw harbor as a large shape at center
+  const hx = CANVAS_W / 2;
+  const hy = waterY - 5;
+
+  // Dock
+  ctx.fillStyle = '#3a3050';
+  ctx.fillRect(hx - 150, hy, 300, 8);
+
+  // Buildings along harbor
+  const buildings = [
+    { x: -140, w: 40, h: 60, color: '#3a2860' },
+    { x: -90, w: 35, h: 45, color: '#2a3060' },
+    { x: -50, w: 50, h: 70, color: '#402850' },
+    { x: 20, w: 30, h: 50, color: '#302060' },
+    { x: 60, w: 45, h: 55, color: '#382858' },
+    { x: 115, w: 35, h: 40, color: '#283060' },
+    { x: 160, w: 50, h: 65, color: '#3a2850' },
+  ];
+
+  for (const bld of buildings) {
+    ctx.fillStyle = bld.color;
+    ctx.fillRect(hx + bld.x, hy - bld.h, bld.w, bld.h);
+    // Windows
+    ctx.fillStyle = `rgba(255,220,100,${0.3 + Math.sin(time * 2 + bld.x) * 0.15})`;
+    for (let wy = hy - bld.h + 8; wy < hy - 5; wy += 12) {
+      for (let wx = hx + bld.x + 5; wx < hx + bld.x + bld.w - 5; wx += 10) {
+        ctx.fillRect(wx, wy, 5, 6);
+      }
+    }
+  }
+
+  // The ferry docked
+  const dockX = hx;
+  const dockY = hy;
+  ctx.save();
+  ctx.translate(dockX - FERRY_W / 2, dockY - 2);
+
+  // Draw ferry at dock (larger, more ornate)
+  ctx.fillStyle = '#6a5040';
+  ctx.beginPath();
+  ctx.moveTo(-FERRY_W / 2, 2);
+  ctx.quadraticCurveTo(-FERRY_W / 2 - 14, FERRY_H / 2 + 2, -FERRY_W / 2 + 5, FERRY_H / 2 + 6);
+  ctx.lineTo(FERRY_W / 2 - 5, FERRY_H / 2 + 6);
+  ctx.quadraticCurveTo(FERRY_W / 2 + 14, FERRY_H / 2, FERRY_W / 2, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#aa8060';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Bigger cabin
+  ctx.fillStyle = '#8a7060';
+  ctx.fillRect(-12, -FERRY_H / 2 - 8, 24, FERRY_H / 2 + 8);
+  ctx.fillStyle = '#b0e0ff';
+  ctx.fillRect(-9, -FERRY_H / 2 - 2, 18, 12);
+
+  // Bigger smokestack with festive glow
+  ctx.fillStyle = '#505050';
+  ctx.fillRect(-5, -FERRY_H / 2 - 24, 10, 16);
+  ctx.fillStyle = '#ff8050';
+  ctx.fillRect(-7, -FERRY_H / 2 - 28, 14, 6);
+
+  // Festive string lights along the top
+  for (let i = 0; i < 8; i++) {
+    const lx = -FERRY_W / 2 + 5 + i * 14;
+    const ly = -FERRY_H / 2 - 8;
+    const colors = ['#ff6060', '#60ff60', '#6060ff', '#ffff60', '#ff60ff', '#60ffff', '#ffaa40', '#aa60ff'];
+    const blink = Math.sin(time * 3 + i * 0.8) * 0.4 + 0.6;
+    ctx.fillStyle = colors[i] + Math.floor(blink * 255).toString(16).padStart(2, '0');
+    ctx.beginPath();
+    ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // String wire
+    ctx.fillStyle = 'rgba(200,200,200,0.3)';
+    ctx.fillRect(lx - 1, ly - 12, 2, 14);
+  }
+
+  // Many tiny passengers on dock
+  for (let i = 0; i < 20; i++) {
+    const px = -120 + i * 13 + Math.sin(time + i) * 2;
+    const py = dockY - 2;
+    const bobP = Math.sin(time * 4 + i * 1.3) * 2;
+    const pc = ['#ff6060', '#60aaff', '#60ff80', '#ffaa40', '#cc66ff', '#40cccc', '#ff88aa'][i % 7];
+    ctx.fillStyle = pc;
+    ctx.beginPath();
+    ctx.arc(px, py - 16 + bobP, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ddccaa';
+    ctx.beginPath();
+    ctx.arc(px, py - 22 + bobP, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Musical notes floating up
+  const noteSymbols = ['♪', '♫', '♬', '♩'];
+  ctx.font = '20px serif';
+  for (let i = 0; i < 15; i++) {
+    const nx = hx - 80 + i * 12 + Math.sin(time * 1.5 + i * 0.5) * 15;
+    const ny = waterY - 40 - ((time * 30 + i * 40) % 150);
+    const nAlpha = 0.4 + Math.sin(time * 2 + i) * 0.2;
+    const nc = ['#ff6080', '#8060ff', '#60ffaa', '#ffaa40', '#ff88cc'][i % 5];
+    ctx.fillStyle = nc;
+    ctx.globalAlpha = Math.max(0, nAlpha);
+    ctx.fillText(noteSymbols[i % 4], nx, ny);
+  }
+  ctx.globalAlpha = 1;
+
+  // Confetti
+  for (let i = 0; i < 20; i++) {
+    const cx = (i * 67 + time * 20) % CANVAS_W;
+    const cy = ((i * 43 + time * 50) % CANVAS_H);
+    const cc = ['#ff6080', '#60ffaa', '#ffaa40', '#8060ff', '#40ccff'][i % 5];
+    ctx.fillStyle = cc;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(time * 3 + i);
+    ctx.fillRect(-3, -1, 6, 2);
+    ctx.restore();
+  }
+
+  // Title text
+  if (p > 0.5) {
+    const textAlpha = Math.min(1, (p - 0.5) * 3);
+    ctx.globalAlpha = textAlpha;
+    ctx.font = 'bold 36px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffe0aa';
+    ctx.shadowColor = '#ffaa44';
+    ctx.shadowBlur = 20;
+    ctx.fillText('✦ Harbor Symphony ✦', CANVAS_W / 2, 100);
+    ctx.shadowBlur = 0;
+    ctx.font = '16px "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = `rgba(200,210,240,${textAlpha * 0.7})`;
+    ctx.fillText(`${activeInstruments.length} instruments · ${ferry.passengers.length} passengers`, CANVAS_W / 2, 135);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawStartScreen(time) {
+  drawSky(time);
+  drawWater(time);
+
+  // Title
+  ctx.font = 'bold 52px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c0b0ff';
+  ctx.shadowColor = '#8060ff';
+  ctx.shadowBlur = 30;
+  ctx.fillText('BEAT FERRY', CANVAS_W / 2, 250);
+  ctx.shadowBlur = 0;
+
+  ctx.font = '20px "Segoe UI", Arial, sans-serif';
+  ctx.fillStyle = 'rgba(180,190,220,0.7)';
+  ctx.fillText('Launch the ferry across pulsing pools of light', CANVAS_W / 2, 290);
+  ctx.fillText('Timing is everything — land on the beat for musical magic', CANVAS_W / 2, 320);
+
+  // Mini ferry animation
+  const miniFerryX = CANVAS_W / 2 + Math.sin(time * 0.5) * 200;
+  ctx.save();
+  ctx.translate(miniFerryX, 400);
+  ctx.fillStyle = '#5a4030';
+  ctx.beginPath();
+  ctx.moveTo(-25, 2);
+  ctx.quadraticCurveTo(-35, 14, -25, 16);
+  ctx.lineTo(25, 16);
+  ctx.quadraticCurveTo(35, 14, 25, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#8a6040';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#705848';
+  ctx.fillRect(-6, -8, 12, 10);
+  ctx.fillStyle = '#90a8c0';
+  ctx.fillRect(-4, -7, 8, 5);
+  ctx.fillStyle = '#404040';
+  ctx.fillRect(-3, -16, 6, 8);
+  ctx.fillStyle = '#ff6040';
+  ctx.fillRect(-4, -20, 8, 4);
+  ctx.restore();
+
+  ctx.font = '16px "Segoe UI", Arial, sans-serif';
+  ctx.fillStyle = 'rgba(160,170,200,0.5)';
+  ctx.fillText('Click anywhere to set course · Click again to set a new heading', CANVAS_W / 2, 440);
+}
+
+// --- Beat detection ---
+let lastFrameTime = 0;
+let beatPhase = 0;
+const BPM = 120; // beats per minute
+const beatInterval = 60 / BPM; // 0.5s per beat
+let beatAccumulator = 0;
+let lastBeatTime = 0;
+
+function getBeatPosition(elapsed) {
+  return (elapsed % beatInterval) / beatInterval;
+}
+
+function isOnBeat(elapsed, tolerance = 0.15) {
+  const bp = getBeatPosition(elapsed);
+  return bp < tolerance || bp > 1 - tolerance;
+}
+
+// --- Game loop ---
+let gameStartTime = 0;
+let animTime = 0;
+
+function update(dt) {
+  animTime += dt;
+
+  if (state.phase === 'playing') {
+    // Update portal timers
+    portalTimer++;
+    if (portalTimer >= portalSpawnInterval && portals.length < 5) {
+      spawnPortal();
+    }
+
+    // Update portals
+    for (const p of portals) {
+      p.x += p.vx;
+      p.pulsePhase += dt * 2;
+    }
+
+    // Remove off-screen portals
+    portals = portals.filter(p => {
+      if (p.captured) return true; // Keep them briefly as visual feedback
+      if (p.x < -PORTAL_RADIUS * 3 || p.x > CANVAS_W + PORTAL_RADIUS * 3) return false;
+      return true;
+    });
+
+    // Update ferry
+    if (ferry.moving) {
+      const dx = ferry.targetY - ferry.y;
+      ferry.y += dx * 0.08;
+
+      // Check ferry bob
+      ferry.bobAngle += dt * 3;
+
+      // Trail
+      ferry.trail.push({ x: ferry.x, y: ferry.y + FERRY_H / 2, life: 1 });
+      if (ferry.trail.length > 30) ferry.trail.shift();
+    }
+
+    // Check portal collisions
+    const ferryCx = ferry.x + FERRY_W / 2;
+    const ferryCy = ferry.y + FERRY_H / 2;
+
+    for (const p of portals) {
+      if (p.captured) continue;
+      const dist = Math.hypot(ferryCx - p.x, ferryCy - p.y);
+
+      if (dist < p.radius + FERRY_W / 3) {
+        // Check if on beat
+        const onBeat = isOnBeat(animTime);
+
+        p.captured = true;
+        state.progress++;
+
+        if (onBeat) {
+          // Good landing - add instrument
+          if (activeInstruments.length < instruments.length) {
+            const inst = instruments[activeInstruments.length];
+            activeInstruments.push(inst);
+            playInstrument(inst, 2, 0.25);
+          }
+          playPassSound();
+
+          // Spawn passengers
+          const numPass = Math.floor(Math.random() * 3) + 1;
+          for (let i = 0; i < numPass; i++) {
+            ferry.passengers.push({
+              hue: Math.random() * 360,
+              bobPhase: Math.random() * Math.PI * 2
+            });
+            spawnPassengerParticle(p.x, p.y, '#60ffaa');
+          }
+
+          spawnParticles(p.x, p.y, 'rgba(100,255,220,1)', 30);
+        } else {
+          // Off-beat landing - still counts but with water splash
+          spawnParticles(p.x, p.y, 'rgba(150,200,255,0.6)', 15);
+        }
+
+        // Update UI
+        scoreDisplay.textContent = `${state.progress} / ${state.target}`;
+        progressBar.style.width = `${(state.progress / state.target) * 100}%`;
+
+        updateInstrumentDisplay();
+
+        // Check for completion
+        if (state.progress >= state.target) {
+          initiatePayoff();
+        }
+      }
+    }
+
+    // Update particles
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.05;
+      p.life -= p.decay;
+    }
+    particles = particles.filter(p => p.life > 0);
+
+    // Update ferry trail
+    for (const t of ferry.trail) {
+      t.life -= 0.03;
+    }
+    ferry.trail = ferry.trail.filter(t => t.life > 0);
+
+    // Ferry drifts back to center gradually if not moving
+    if (!ferry.moving) {
+      ferry.bobAngle += dt * 3;
+    }
+
+    // Ferry ambient glow
+    ferry.bobAngle += dt * 0.5;
+  } else if (state.phase === 'completed') {
+    harborScene.progress = Math.min(1, harborScene.progress + dt * 0.3);
+  }
+}
+
+function updateInstrumentDisplay() {
+  const names = activeInstruments.map(i => i.name);
+  instDisplay.textContent = names.join(' · ');
+  instDisplay.style.color = activeInstruments.length > 0 ?
+    activeInstruments.map(i => i.color).join(' , ') :
+    '';
+}
+
+function initiatePayoff() {
+  state.phase = 'completed';
+  state.completed = true;
+
+  // Trigger harbor crescendo
+  setTimeout(() => {
+    playHarborCrescendo();
+  }, 300);
+
+  // Final particles
+  for (let i = 0; i < 50; i++) {
+    spawnParticles(
+      CANVAS_W / 2 + (Math.random() - 0.5) * 200,
+      CANVAS_H / 2 + (Math.random() - 0.5) * 200,
+      ['#ff6080', '#60ffaa', '#ffaa40', '#8060ff', '#40ccff'][i % 5],
+      1
+    );
+  }
+
+  hintText.textContent = '✦ Harmony achieved — click to restart ✦';
+}
+
+function draw(ts) {
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+  if (state.phase === 'initial') {
+    drawStartScreen(ts / 1000);
+  } else if (state.phase === 'playing') {
+    drawSky(ts / 1000);
+    drawWater(ts / 1000);
+
+    // Draw particles behind
+    drawParticles(ts / 1000);
+
+    // Draw ferry trail
+    for (const t of ferry.trail) {
+      ctx.fillStyle = `rgba(80,120,200,${t.life * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 3 * t.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw portals
+    for (const p of portals) {
+      drawPortal(p, ts / 1000);
+    }
+
+    // Draw ferry
+    drawFerry(ferry, ts / 1000);
+
+    // Beat indicator
+    const bp = getBeatPosition(ts / 1000);
+    const beatPulse = 1 - bp;
+    ctx.fillStyle = `rgba(100,150,255,${beatPulse * 0.3})`;
+    ctx.fillRect(0, CANVAS_H - 4, CANVAS_W, 4);
+  } else if (state.phase === 'completed') {
+    drawHarbor(ts / 1000);
+    drawParticles(ts / 1000);
+
+    // Restart button
+    if (harborScene.progress > 0.8) {
+      const btnX = CANVAS_W / 2 - 80;
+      const btnY = CANVAS_H - 80;
+      const btnW = 160;
+      const btnH = 40;
+
+      ctx.fillStyle = 'rgba(30,20,80,0.7)';
+      ctx.strokeStyle = 'rgba(180,160,255,0.6)';
+      ctx.lineWidth = 2;
+      roundRect(ctx, btnX, btnY, btnW, btnH, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = '18px "Segoe UI", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#c0b0ff';
+      ctx.fillText('Restart Ferry', CANVAS_W / 2, btnY + 27);
+    }
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// --- Main loop ---
+let lastTime = 0;
+function gameLoop(timestamp) {
+  const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+
+  update(dt);
+  draw(timestamp);
+
+  requestAnimationFrame(gameLoop);
+}
+
+// --- Input ---
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = CANVAS_W / rect.width;
+  const scaleY = CANVAS_H / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  if (state.phase === 'initial') {
+    // Start the game
+    initAudio();
+    state.phase = 'playing';
+    gameStartTime = performance.now() / 1000;
+    hud.style.display = 'block';
+    startBtn.style.display = 'none';
+
+    // Set initial course
+    ferry.targetY = Math.max(80, Math.min(CANVAS_H - 80, my));
+    ferry.moving = true;
+    ferry.bobAngle = 0;
+  } else if (state.phase === 'playing') {
+    // Launch ferry to click position
+    launchFerry(my);
+  } else if (state.phase === 'completed') {
+    // Check restart button
+    if (harborScene.progress > 0.8) {
+      const btnX = CANVAS_W / 2 - 80;
+      const btnY = CANVAS_H - 80;
+      const btnW = 160;
+      const btnH = 40;
+      if (mx > btnX && mx < btnX + btnW && my > btnY && my < btnY + btnH) {
+        resetGame();
+      }
+    }
+  }
+});
+
+// Also handle key press to restart
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ' || e.key === 'Enter') {
+    if (state.phase === 'initial') {
+      initAudio();
+      state.phase = 'playing';
+      gameStartTime = performance.now() / 1000;
+      hud.style.display = 'block';
+      startBtn.style.display = 'none';
+      ferry.targetY = CANVAS_H / 2;
+      ferry.moving = true;
+      ferry.bobAngle = 0;
+    } else if (state.phase === 'completed' && harborScene.progress > 0.8) {
+      resetGame();
+    }
+  }
+});
+
+function resetGame() {
+  state.phase = 'initial';
+  state.progress = 0;
+  state.completed = false;
+  state.restartCount++;
+
+  portalIndex = 0;
+  portalTimer = 0;
+  portals = [];
+  particles = [];
+  activeInstruments = [];
+  activeVoices = [];
+  harborScene = { active: false, progress: 0, stars: [], waves: [], lights: [] };
+
+  ferry = {
+    x: START_X,
+    y: CANVAS_H / 2 - FERRY_H / 2,
+    targetY: CANVAS_H / 2 - FERRY_H / 2,
+    width: FERRY_W,
+    height: FERRY_H,
+    speed: 0,
+    moving: false,
+    bobAngle: 0,
+    trail: [],
+    passengers: []
+  };
+
+  hud.style.display = 'none';
+  startBtn.style.display = 'block';
+  hintText.textContent = '';
+  scoreDisplay.textContent = `0 / ${TARGET_PASSES}`;
+  progressBar.style.width = '0%';
+  instDisplay.textContent = '';
+
+  updateInstrumentDisplay();
+}
+
+// --- FactoryX Evidence API ---
+window.__factoryxEvidence = function() {
+  return {
+    schema_version: 1,
+    phase: state.phase,
+    progress: state.progress,
+    target: state.target,
+    completed: state.completed,
+    restart_count: state.restartCount
+  };
+};
+
+// --- Initialize ---
+startBtn.style.display = 'block';
+gameLoop(performance.now());
+
+</script>
 </body>
 </html>
