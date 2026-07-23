@@ -1,594 +1,989 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rain Dial</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1e2e; font-family: 'Segoe UI', system-ui, sans-serif; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #ui-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 10;
+  }
+  #begin-btn, #restart-btn {
+    pointer-events: all; cursor: pointer;
+    background: rgba(180,210,240,0.15); border: 2px solid rgba(180,210,240,0.4);
+    color: #c0daf0; padding: 16px 40px; font-size: 22px; border-radius: 30px;
+    letter-spacing: 1px; transition: all 0.3s; backdrop-filter: blur(6px);
+  }
+  #begin-btn:hover, #restart-btn:hover {
+    background: rgba(180,210,240,0.3); border-color: rgba(180,210,240,0.7);
+    transform: scale(1.05);
+  }
+  .hidden { display: none !important; }
+  #score-display {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    color: rgba(200,220,240,0.7); font-size: 16px; z-index: 5;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  #progress-bar-container {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 6px; background: rgba(255,255,255,0.08);
+    border-radius: 3px; z-index: 5; overflow: hidden;
+  }
+  #progress-bar {
+    height: 100%; width: 0%; border-radius: 3px;
+    background: linear-gradient(90deg, #6ab0e8, #a0d8f0);
+    transition: width 0.3s ease-out;
+  }
+  #payoff-text {
+    color: #c0e0ff; font-size: 28px; letter-spacing: 2px;
+    text-shadow: 0 0 30px rgba(160,216,240,0.6);
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  @keyframes glow {
+    from { text-shadow: 0 0 20px rgba(160,216,240,0.4); }
+    to { text-shadow: 0 0 40px rgba(160,216,240,0.9), 0 0 80px rgba(160,216,240,0.3); }
+  }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="score-display"></div>
+<div id="progress-bar-container"><div id="progress-bar"></div></div>
+<div id="ui-overlay">
+  <button id="begin-btn">▶ Start the Rain</button>
+  <div id="payoff-text" class="hidden"><span id="payoff-label"></span></div>
+  <button id="restart-btn" class="hidden">↻ Play Again</button>
+</div>
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
-  </div>
+<script>
+// === RAIN DIAL - Complete Self-Contained Game ===
+// This should feel like a cozy, tactile instrument where you guide rain through glass tubes to create a gentle, satisfying melody.
 
-  <div class="profile">
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('ui-overlay');
+const beginBtn = document.getElementById('begin-btn');
+const restartBtn = document.getElementById('restart-btn');
+const payoffText = document.getElementById('payoff-text');
+const payoffLabel = document.getElementById('payoff-label');
+const scoreDisplay = document.getElementById('score-display');
+const progressBar = document.getElementById('progress-bar-container')
+  ? document.getElementById('progress-bar') : null;
 
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
+// FactoryX Evidence API
+let evidenceState = {
+  schema_version: 1,
+  phase: 'initial',
+  progress: 0,
+  target: 0,
+  completed: false,
+  restart_count: 0
+};
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
+function exposeEvidence() {
+  return { ...evidenceState };
+}
+window.__factoryxEvidence = exposeEvidence;
 
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
+// Resize handling
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
+// Audio system
+let audioCtx = null;
+let masterGain = null;
+let rainAmbience = null;
 
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.5;
+  masterGain.connect(audioCtx.destination);
+}
 
-  </div>
+// Chime notes - pentatonic scale
+const CHIME_NOTES = [
+  { freq: 523.25, name: 'C5' },
+  { freq: 587.33, name: 'D5' },
+  { freq: 659.25, name: 'E5' },
+  { freq: 783.99, name: 'G5' },
+  { freq: 880.00, name: 'A5' },
+  { freq: 1046.50, name: 'C6' }
+];
 
-  <div id="footer"></div>
+function playChime(noteIndex, volume = 0.3) {
+  if (!audioCtx) return;
+  const note = CHIME_NOTES[noteIndex % CHIME_NOTES.length];
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  
+  osc.type = 'sine';
+  osc.frequency.value = note.freq;
+  
+  filter.type = 'lowpass';
+  filter.frequency.value = 3000;
+  filter.Q.value = 5;
+  
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.5);
+  
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(masterGain);
+  
+  osc.start();
+  osc.stop(audioCtx.currentTime + 2.5);
+  
+  // Add a harmonic
+  const osc2 = audioCtx.createOscillator();
+  const gain2 = audioCtx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.value = note.freq * 2;
+  gain2.gain.setValueAtTime(volume * 0.15, audioCtx.currentTime);
+  gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+  osc2.connect(gain2);
+  gain2.connect(masterGain);
+  osc2.start();
+  osc2.stop(audioCtx.currentTime + 1.5);
+}
 
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
+function playClickSound() {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.15);
+}
 
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+function playDripSound() {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.2);
+}
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
+function startRainAmbience() {
+  if (!audioCtx || rainAmbience) return;
+  
+  // White noise rain
+  const bufferSize = audioCtx.sampleRate * 2;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.3;
+  }
+  
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 800;
+  
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.06;
+  
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(masterGain);
+  source.start();
+  rainAmbience = { source, gain, filter };
+}
 
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
+function stopRainAmbience() {
+  if (rainAmbience) {
+    rainAmbience.source.stop();
+    rainAmbience = null;
+  }
+}
 
+// Game constants
+const DIAL_RADIUS = 80;
+const DIAL_CENTER_X_RATIO = 0.5;
+const DIAL_CENTER_Y_RATIO = 0.45;
+const CHIME_COUNT = 6;
+const PAYOFF_TARGET = 6;
+const PATH_ANGLE_OFFSET = -Math.PI / 2; // Start from top
 
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
+// Game state
+let gameState = {
+  phase: 'initial', // initial, playing, payingOff, done
+  dialAngle: 0,
+  targetDialAngle: 0,
+  progress: 0,
+  chimesActivated: [false, false, false, false, false, false],
+  chimeGlow: [0, 0, 0, 0, 0, 0],
+  drops: [],
+  lastDropTime: 0,
+  dropInterval: 2500,
+  startTime: 0,
+  particles: [],
+  payoffTimer: 0,
+  restartCount: 0,
+  // Pattern: the chimes in order they need to be hit (top-to-bottom order)
+  pattern: [],
+  patternStep: 0,
+  escalationLevel: 0,
+  backgroundStars: [],
+  lastTime: 0,
+};
 
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
+function initPattern() {
+  // Create a memorizable pattern - e.g., C, E, A, G, E, C
+  const patternIndices = [0, 2, 4, 3, 2, 0];
+  gameState.pattern = patternIndices;
+  gameState.patternStep = 0;
+  gameState.chimesActivated = [false, false, false, false, false, false];
+  gameState.chimeGlow = [0, 0, 0, 0, 0, 0];
+  gameState.progress = 0;
+  gameState.escalationLevel = 0;
+}
 
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+function initBackgroundStars() {
+  gameState.backgroundStars = [];
+  for (let i = 0; i < 80; i++) {
+    gameState.backgroundStars.push({
+      x: Math.random(),
+      y: Math.random(),
+      size: Math.random() * 2 + 0.5,
+      twinkleSpeed: Math.random() * 2 + 1,
+      twinkleOffset: Math.random() * Math.PI * 2
     });
-  </script>
+  }
+}
+
+function resetGame() {
+  gameState.phase = 'playing';
+  gameState.dialAngle = 0;
+  gameState.targetDialAngle = 0;
+  gameState.drops = [];
+  gameState.particles = [];
+  gameState.lastDropTime = 0;
+  gameState.dropInterval = 2800;
+  gameState.payoffTimer = 0;
+  gameState.lastTime = 0;
+  evidenceState.phase = 'playing';
+  evidenceState.completed = false;
+  
+  initPattern();
+  initBackgroundStars();
+  
+  evidenceState.progress = 0;
+  evidenceState.target = PAYOFF_TARGET;
+  
+  overlay.classList.add('hidden');
+  beginBtn.classList.add('hidden');
+  restartBtn.classList.add('hidden');
+  payoffText.classList.add('hidden');
+  
+  if (progressBar) {
+    progressBar.style.width = '0%';
+  }
+  scoreDisplay.textContent = '';
+}
+
+function startGame() {
+  initAudio();
+  resetGame();
+  state.lastDropTime = performance.now();
+  gameState.lastDropTime = performance.now();
+  startRainAmbience();
+}
+
+// Calculate chime positions around the dial
+function getChimePositions() {
+  const cx = canvas.width * DIAL_CENTER_X_RATIO;
+  const cy = canvas.height * DIAL_CENTER_Y_RATIO;
+  const radius = Math.min(canvas.width, canvas.height) * 0.32;
+  
+  const positions = [];
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    const angle = PATH_ANGLE_OFFSET + (i / CHIME_COUNT) * Math.PI * 2;
+    positions.push({
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius,
+      angle: angle
+    });
+  }
+  return positions;
+}
+
+// Dial positions (outer ring positions)
+function getDialPositions() {
+  const cx = canvas.width * DIAL_CENTER_X_RATIO;
+  const cy = canvas.height * DIAL_CENTER_Y_RATIO;
+  const radius = Math.min(canvas.width, canvas.height) * 0.38;
+  
+  const positions = [];
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    const angle = PATH_ANGLE_OFFSET + (i / CHIME_COUNT) * Math.PI * 2;
+    positions.push({
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius,
+      angle: angle
+    });
+  }
+  return positions;
+}
+
+function createDrop(targetChimeIndex, chimePos) {
+  const cx = canvas.width * DIAL_CENTER_X_RATIO;
+  const cy = canvas.height * DIAL_CENTER_Y_RATIO;
+  
+  gameState.drops.push({
+    x: cx,
+    y: cy - 10,
+    targetChimeIndex: targetChimeIndex,
+    chimePos: chimePos,
+    progress: 0,
+    speed: 0.003 + gameState.escalationLevel * 0.001,
+    trail: [],
+    alive: true
+  });
+}
+
+function addParticle(x, y, color, count = 8) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 3 + 1;
+    gameState.particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.02 + Math.random() * 0.02,
+      color: color,
+      size: Math.random() * 3 + 1
+    });
+  }
+}
+
+// Handle dial click
+canvas.addEventListener('click', (e) => {
+  if (gameState.phase !== 'playing') return;
+  
+  const mx = e.clientX;
+  const my = e.clientY;
+  const cx = canvas.width * DIAL_CENTER_X_RATIO;
+  const cy = canvas.height * DIAL_CENTER_Y_RATIO;
+  const radius = Math.min(canvas.width, canvas.height) * 0.38;
+  
+  // Check if click is near a dial position
+  const dialPositions = getDialPositions();
+  let closestIdx = -1;
+  let closestDist = Infinity;
+  
+  for (let i = 0; i < dialPositions.length; i++) {
+    const dx = mx - dialPositions[i].x;
+    const dy = my - dialPositions[i].y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 60 && dist < closestDist) {
+      closestDist = dist;
+      closestIdx = i;
+    }
+  }
+  
+  if (closestIdx >= 0) {
+    playClickSound();
+    // Set dial to route to this chime
+    gameState.targetDialAngle = dialPositions[closestIdx].angle;
+    
+    // Route drop to this chime
+    const chimePositions = getChimePositions();
+    createDrop(closestIdx, chimePositions[closestIdx]);
+    
+    // Add a meaningful decision trace if pattern matching
+    // (pattern matching is checked when drop arrives)
+  }
+});
+
+// Begin button
+beginBtn.addEventListener('click', () => {
+  startGame();
+});
+
+// Restart button
+restartBtn.addEventListener('click', () => {
+  gameState.restartCount++;
+  evidenceState.restart_count = gameState.restartCount;
+  stopRainAmbience();
+  
+  setTimeout(() => {
+    resetGame();
+  }, 1500);
+});
+
+// Pattern hint system - show hints when player is stuck
+let hintTimer = 0;
+const HINT_INTERVAL = 15000; // Show hint every 15 seconds
+
+function checkPatternMatch(dropIdx) {
+  if (gameState.patternStep >= gameState.pattern.length) return;
+  
+  if (dropIdx === gameState.pattern[gameState.patternStep]) {
+    // Correct!
+    gameState.patternStep++;
+    gameState.chimesActivated[dropIdx] = true;
+    gameState.chimeGlow[dropIdx] = 1.0;
+    gameState.progress++;
+    
+    evidenceState.progress = gameState.progress;
+    
+    // Update evidence
+    evidenceState.phase = 'playing';
+    
+    playChime(dropIdx, 0.4);
+    
+    // Particle burst
+    const chimePositions = getChimePositions();
+    const pos = chimePositions[dropIdx];
+    addParticle(pos.x, pos.y, 'rgba(160,216,240,0.8)', 15);
+    
+    // Increase pressure
+    if (gameState.progress > 2) {
+      gameState.escalationLevel = 1;
+      gameState.dropInterval = 2200;
+    }
+    if (gameState.progress > 4) {
+      gameState.escalationLevel = 2;
+      gameState.dropInterval = 1600;
+    }
+    
+    // Check for payoff
+    if (gameState.progress >= PAYOFF_TARGET) {
+      triggerPayoff();
+    }
+    
+    scoreDisplay.textContent = `${gameState.progress} / ${PAYOFF_TARGET}`;
+  } else {
+    // Wrong chime - drip sound, no glow
+    playDripSound();
+    // Reset pattern step (gentle - allow them to redo)
+    gameState.patternStep = 0;
+    
+    // Red hint display
+    hintTimer = 0;
+  }
+}
+
+function triggerPayoff() {
+  gameState.phase = 'payingOff';
+  evidenceState.phase = 'completed';
+  evidenceState.completed = true;
+  evidenceState.progress = PAYOFF_TARGET;
+  
+  // Play all chimes in sequence as a melody
+  let delay = 0;
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    const idx = i;
+    setTimeout(() => {
+      playChime(idx, 0.35);
+      const chimePositions = getChimePositions();
+      addParticle(chimePositions[idx].x, chimePositions[idx].y, 'rgba(200,230,255,0.9)', 12);
+    }, delay);
+    delay += 250;
+  }
+  
+  // Show payoff text
+  setTimeout(() => {
+    overlay.classList.remove('hidden');
+    payoffText.classList.remove('hidden');
+    // Use the pattern as the "song name"
+    const songName = '✨ Rain Song Complete ✨';
+    const subtext = 'You played it beautifully. Tap ✕ to play again.';
+    payoffLabel.innerHTML = `${songName}<br><span style="font-size:16px;opacity:0.6">${subtext}</span>`;
+    restartBtn.classList.remove('hidden');
+  }, delay + 500);
+}
+
+// Drawing functions
+function drawBackground(time) {
+  // Deep gradient background
+  const grad = ctx.createRadialGradient(
+    canvas.width * 0.5, canvas.height * 0.4, 0,
+    canvas.width * 0.5, canvas.height * 0.4, canvas.width * 0.8
+  );
+  grad.addColorStop(0, '#1e2840');
+  grad.addColorStop(1, '#0e1220');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Stars
+  for (const star of gameState.backgroundStars) {
+    const twinkle = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time * 0.001 * star.twinkleSpeed + star.twinkleOffset));
+    ctx.globalAlpha = twinkle * 0.6;
+    ctx.fillStyle = '#c0d8f0';
+    ctx.beginPath();
+    ctx.arc(star.x * canvas.width, star.y * canvas.height * 0.7 + canvas.height * 0.15, star.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawChimes(time) {
+  const chimePositions = getChimePositions();
+  
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    const pos = chimePositions[i];
+    const glow = gameState.chimeGlow[i];
+    
+    // Draw tube (glass)
+    ctx.save();
+    
+    // Tube glow
+    if (glow > 0) {
+      const glowGrad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 50 + glow * 30);
+      glowGrad.addColorStop(0, `rgba(160,216,240,${glow * 0.4})`);
+      glowGrad.addColorStop(1, 'rgba(160,216,240,0)');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 50 + glow * 30, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Glass tube
+    const tubeWidth = 20;
+    const tubeHeight = 60;
+    const rx = pos.x - tubeWidth / 2;
+    const ry = pos.y - tubeHeight / 2;
+    
+    // Tube body with glass effect
+    const tubeGrad = ctx.createLinearGradient(rx, ry, rx + tubeWidth, ry);
+    tubeGrad.addColorStop(0, 'rgba(140,180,210,0.15)');
+    tubeGrad.addColorStop(0.5, 'rgba(180,210,240,0.25)');
+    tubeGrad.addColorStop(1, 'rgba(140,180,210,0.15)');
+    
+    ctx.fillStyle = tubeGrad;
+    ctx.strokeStyle = `rgba(180,210,240,${0.3 + glow * 0.4})`;
+    ctx.lineWidth = 1.5;
+    
+    roundedRect(ctx, rx, ry, tubeWidth, tubeHeight, 10);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Collectible inside tube
+    if (!gameState.chimesActivated[i] || glow > 0) {
+      const collectY = pos.y + tubeHeight / 2 - 12;
+      const waterLevel = gameState.chimesActivated[i] ? 0.8 : 0.3;
+      
+      // Water in tube
+      const waterH = tubeHeight * waterLevel * (gameState.chimesActivated[i] ? glow : 0.3 + glow * 0.7);
+      if (waterH > 2) {
+        const waterGrad = ctx.createLinearGradient(rx, collectY, rx, collectY + waterH);
+        waterGrad.addColorStop(0, `rgba(100,180,240,${0.3 + glow * 0.3})`);
+        waterGrad.addColorStop(1, `rgba(50,130,200,${0.15 + glow * 0.15})`);
+        ctx.fillStyle = waterGrad;
+        
+        ctx.beginPath();
+        const innerRx = rx + 3;
+        const innerRy = collectY + tubeHeight - waterH + 3;
+        const innerW = tubeWidth - 6;
+        const innerH = waterH - 6;
+        if (innerH > 0) {
+          roundedRect(ctx, innerRx, innerRy, innerW, innerH, 7);
+          ctx.fill();
+        }
+      }
+      
+      // Water surface shimmer
+      if (waterH > 10) {
+        ctx.fillStyle = `rgba(200,230,255,${0.1 + Math.sin(time * 0.003 + i) * 0.05})`;
+        ctx.beginPath();
+        const surfY = collectY + tubeHeight - waterH + 5;
+        roundedRect(ctx, rx + 3, surfY, tubeWidth - 6, 4, 2);
+        ctx.fill();
+      }
+    }
+    
+    // Chime label (subtle)
+    ctx.fillStyle = `rgba(180,210,240,${0.3 + glow * 0.5})`;
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'center';
+    const noteName = ['C', 'D', 'E', 'G', 'A', 'C'][i];
+    ctx.fillText(noteName, pos.x, pos.y + tubeHeight / 2 + 18);
+    
+    ctx.restore();
+  }
+}
+
+function drawDial(time) {
+  const cx = canvas.width * DIAL_CENTER_X_RATIO;
+  const cy = canvas.height * DIAL_CENTER_Y_RATIO;
+  
+  // Outer ring background
+  const outerGrad = ctx.createRadialGradient(cx, cy, DIAL_RADIUS - 15, cx, cy, DIAL_RADIUS + 15);
+  outerGrad.addColorStop(0, 'rgba(60,80,110,0.3)');
+  outerGrad.addColorStop(0.5, 'rgba(80,110,140,0.15)');
+  outerGrad.addColorStop(1, 'rgba(60,80,110,0.2)');
+  ctx.fillStyle = outerGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, DIAL_RADIUS + 15, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Dial knob
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(gameState.dialAngle);
+  
+  // Knob body
+  const knobGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 18);
+  knobGrad.addColorStop(0, 'rgba(200,225,245,0.9)');
+  knobGrad.addColorStop(1, 'rgba(120,160,200,0.7)');
+  ctx.fillStyle = knobGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, 16, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.strokeStyle = 'rgba(200,225,245,0.8)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Indicator line pointing outward
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, DIAL_RADIUS - 5);
+  ctx.strokeStyle = 'rgba(200,225,245,0.7)';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  
+  // Small dot at end of indicator
+  ctx.fillStyle = 'rgba(200,225,245,0.9)';
+  ctx.beginPath();
+  ctx.arc(0, DIAL_RADIUS - 10, 4, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.restore();
+  
+  // Dial position markers
+  const dialPositions = getDialPositions();
+  for (let i = 0; i < dialPositions.length; i++) {
+    const pos = dialPositions[i];
+    const angleToMarker = Math.atan2(pos.y - cy, pos.x - cx);
+    const dx = pos.x - cx;
+    const dy = pos.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    // Marker dot
+    const markerX = cx + (dx / dist) * (DIAL_RADIUS + 2);
+    const markerY = cy + (dy / dist) * (DIAL_RADIUS + 2);
+    
+    ctx.beginPath();
+    ctx.arc(markerX, markerY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(140,170,200,0.4)';
+    ctx.fill();
+  }
+}
+
+function drawDrops(time) {
+  for (const drop of gameState.drops) {
+    if (!drop.alive) continue;
+    
+    // Calculate current position along the path
+    const t = drop.progress;
+    const cx = canvas.width * DIAL_CENTER_X_RATIO;
+    const cy = canvas.height * DIAL_CENTER_Y_RATIO;
+    
+    // Drop falls from dial center area through the tube to the chime
+    const startX = cx;
+    const startY = cy - 5;
+    const endX = drop.chimePos.x;
+    const endY = drop.chimePos.y;
+    
+    // Smooth curve path
+    const midX = (startX + endX) / 2 + (Math.sin(time * 0.002 + drop.targetChimeIndex) * 20);
+    const midY = (startY + endY) / 2 - 30;
+    
+    const x = bezierPoint(startX, midX, endX, t);
+    const y = bezierPoint(startY, midY, endY, t);
+    
+    drawRainDrop(x, y, drop.targetChimeIndex, t);
+  }
+}
+
+function bezierPoint(p0, p1, p2, t) {
+  const mt = 1 - t;
+  return mt * mt * p0 + 2 * mt * t * p1 + t * t * p2;
+}
+
+function drawRainDrop(x, y, chimeIdx, t) {
+  ctx.save();
+  
+  // Trail
+  ctx.globalAlpha = 0.3;
+  for (let i = 0; i < 5; i++) {
+    const trailT = Math.max(0, t - i * 0.03);
+    const trailX = x - Math.sin(t * 8 + i) * 1;
+    const trailY = y - 4 * i;
+    ctx.fillStyle = '#6ab0e8';
+    ctx.beginPath();
+    ctx.arc(trailX, trailY, 2 - i * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Main drop - teardrop shape
+  ctx.globalAlpha = 0.9;
+  const dropGrad = ctx.createRadialGradient(x - 1, y - 1, 0, x, y, 8);
+  dropGrad.addColorStop(0, 'rgba(200,230,255,1)');
+  dropGrad.addColorStop(0.5, '#6ab0e8');
+  dropGrad.addColorStop(1, '#3a80b8');
+  ctx.fillStyle = dropGrad;
+  
+  ctx.beginPath();
+  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.beginPath();
+  ctx.arc(x - 2, y - 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of gameState.particles) {
+    if (p.life <= 0) continue;
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function roundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// Update functions
+function updateDial(dt) {
+  // Smoothly rotate dial toward target
+  let diff = gameState.targetDialAngle - gameState.dialAngle;
+  // Normalize to [-PI, PI]
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  gameState.dialAngle += diff * 0.12;
+}
+
+function updateDrops(dt, time) {
+  for (let i = gameState.drops.length - 1; i >= 0; i--) {
+    const drop = gameState.drops[i];
+    if (!drop.alive) continue;
+    
+    drop.progress += drop.speed * dt * 0.06;
+    
+    if (drop.progress >= 1) {
+      // Drop arrived at target chime
+      drop.alive = false;
+      checkPatternMatch(drop.targetChimeIndex);
+      
+      // Remove after a moment
+      setTimeout(() => {
+        const idx = gameState.drops.indexOf(drop);
+        if (idx >= 0) gameState.drops.splice(idx, 1);
+      }, 100);
+    }
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = gameState.particles.length - 1; i >= 0; i--) {
+    const p = gameState.particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.02; // gravity
+    p.life -= p.decay;
+    if (p.life <= 0) {
+      gameState.particles.splice(i, 1);
+    }
+  }
+}
+
+function updateGlow(dt) {
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    if (gameState.chimeGlow[i] > 0) {
+      gameState.chimeGlow[i] = Math.max(0, gameState.chimeGlow[i] - 0.015 * dt * 0.06);
+    }
+  }
+}
+
+function checkPattern() {
+  // Called when a drop hits a chime
+  if (gameState.phase !== 'playing') return;
+  
+  // Drop arrival is handled in updateDrops via checkPatternMatch
+}
+
+function spawnDrop(time) {
+  if (gameState.phase !== 'playing') return;
+  
+  // Only spawn drops when player hasn't filled them all
+  if (gameState.progress >= PAYOFF_TARGET) return;
+  
+  // Choose which chime to spawn for (not just random - bias toward pattern)
+  if (gameState.patternStep < gameState.pattern.length) {
+    // Spawn for the next pattern chime
+    const targetChime = gameState.pattern[gameState.patternStep];
+    const chimePositions = getChimePositions();
+    createDrop(targetChime, chimePositions[targetChime]);
+  } else {
+    // Shouldn't happen but safety
+    const chimePositions = getChimePositions();
+    const idx = Math.floor(Math.random() * CHIME_COUNT);
+    createDrop(idx, chimePositions[idx]);
+  }
+}
+
+// Main game loop
+let lastFrameTime = 0;
+
+function gameLoop(timestamp) {
+  if (!lastFrameTime) lastFrameTime = timestamp;
+  const dt = Math.min(timestamp - lastFrameTime, 50); // Cap delta
+  lastFrameTime = timestamp;
+  
+  // Update
+  if (gameState.phase === 'playing' || gameState.phase === 'payingOff') {
+    updateDial(dt);
+    updateDrops(dt, timestamp);
+    updateParticles(dt);
+    updateGlow(dt);
+    
+    // Spawn drops during playing phase
+    if (gameState.phase === 'playing') {
+      hintTimer += dt;
+      if (timestamp - gameState.lastDropTime > gameState.dropInterval) {
+        spawnDrop(timestamp);
+        gameState.lastDropTime = timestamp;
+      }
+    }
+  }
+  
+  // Draw
+  drawBackground(timestamp);
+  
+  if (gameState.phase !== 'initial') {
+    drawChimes(timestamp);
+    drawDial(timestamp);
+    drawDrops(timestamp);
+    drawParticles();
+    
+    // Draw connecting lines from dial to tubes
+    drawConnections(timestamp);
+  }
+  
+  requestAnimationFrame(gameLoop);
+}
+
+function drawConnections(time) {
+  const cx = canvas.width * DIAL_CENTER_X_RATIO;
+  const cy = canvas.height * DIAL_CENTER_Y_RATIO;
+  const chimePositions = getChimePositions();
+  
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    const pos = chimePositions[i];
+    const angle = Math.atan2(pos.y - cy, pos.x - cx);
+    
+    // Draw faint path line from dial area to chime
+    const lineAlpha = 0.08 + Math.sin(time * 0.001 + i * 1.2) * 0.03;
+    ctx.strokeStyle = `rgba(140,180,220,${lineAlpha})`;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 8]);
+    
+    const startX = cx + Math.cos(angle) * 30;
+    const startY = cy + Math.sin(angle) * 30;
+    const midX = (startX + pos.x) / 2 + Math.sin(time * 0.002 + i) * 10;
+    const midY = (startY + pos.y) / 2 - 15;
+    
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(midX, midY, pos.x, pos.y - 25);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+  }
+}
+
+// Evidence update for progression display
+function updateEvidenceUI() {
+  if (progressBar && gameState.phase === 'playing') {
+    const pct = (gameState.progress / evidenceState.target) * 100;
+    progressBar.style.width = `${Math.min(pct, 100)}%`;
+  }
+}
+
+// Override game loop to include evidence UI updates
+const originalLoop = gameLoop;
+let uiUpdateTimer = 0;
+
+function enhancedGameLoop(timestamp) {
+  originalLoop(timestamp);
+  
+  uiUpdateTimer += timestamp - (lastFrameTime || timestamp);
+  if (uiUpdateTimer > 300) {
+    uiUpdateTimer = 0;
+    updateEvidenceUI();
+  }
+}
+
+// Handle evidence state changes
+function updateEvidence(override = {}) {
+  evidenceState = { ...evidenceState, ...override };
+  window.__factoryxEvidence = exposeEvidence;
+}
+
+// Start the game loop
+requestAnimationFrame(enhancedGameLoop);
+
+// Initial state
+evidenceState.target = PAYOFF_TARGET;
+
+// Handle window resize for dial/chime repositioning
+window.addEventListener('resize', () => {
+  resize();
+  updateEvidenceUI();
+});
+
+</script>
 </body>
 </html>
