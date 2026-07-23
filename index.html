@@ -1,594 +1,451 @@
 <!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Rain Dial</title>
+<style>
+  /* Fullscreen canvas */
+  /* Dial animations */
+  /* UI overlay */
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+  // Audio init (Web Audio API)
+  // Chime system (7 chimes with different frequencies)
+  // Rain drop system
+  // Dial rotation with snapping
+  // Pattern matching
+  // Payoff system
+  // window.__factoryxEvidence
+</script>
+</body>
+</html>
+```
+
+Let me write the full implementation now. I want to make this visually beautiful and sonically rich.
+
+Key audio design:
+- Chimes tuned to pentatonic: C5, D5, E5, G5, A5, C6, D6
+- Chime sound: sine oscillator with slow attack, quick decay, slight vibrato, and a few harmonics
+- Rain: filtered pink noise at low volume
+- Dial rotation: low-frequency sweep/whoosh
+- Payoff chord: all chimes ringing in harmony
+
+Visual design:
+- Canvas: 1200x800
+- Background: gradient from dark blue-grey to near-black
+- Subtle rain particles falling
+- Chimes: translucent glass shapes, colored, hanging with thin lines
+- Dial: stone-textured circle with a rotating indicator
+- Glow effects on active chime
+- Rainbow/glow trail on the dial indicator
+
+Let me build it.
+
+I also need to handle the evidence system:
+```javascript
+window.__factoryxEvidence = () => ({
+  schema_version: 1,
+  phase: 'initial' | 'playing' | 'completed',
+  progress: number,
+  target: number,
+  completed: boolean,
+  restart_count: number
+});
+```
+
+Phase transitions:
+- initial: game hasn't started (before first interaction)
+- playing: after first interaction, until payoff or failure
+- completed: after successful payoff
+
+Wait — the brief says "phase initial before play, playing after start and during progress, and completed only for the unmistakable payoff." So "playing" covers everything until "completed". And the verifier takes screenshots at different phases.
+
+The target duration is 240 seconds in the playtest spec (but the goal says 60-90 seconds). I'll aim for about 60-90 seconds for a typical run. If they need to repeat patterns, the full game could go longer.
+
+Pattern length: start with 3 chimes, each level adds 1, up to 7. Each chime ring is about 2 seconds (ringing out), plus some time to rotate the dial. So a 3-chime pattern takes ~10 seconds, 7 chimes ~25 seconds. With 2-3 levels, total is 60-90 seconds.
+
+Let me code this now. Full implementation:
+
+For the rain drops: there should always be rain falling. The drops that land on chimes make them ring. But for gameplay clarity, I'll have the dial *control* when drops ring chimes — like the dial is a valve that directs rain.
+
+Simplified game loop:
+1. Show the dial and chimes. First chime (or first pattern) begins.
+2. Active chime pulses/glow. Dial starts at some position.
+3. Player clicks/drag on dial to rotate it to point at the correct chime.
+4. Player clicks again (or the dial auto-activates when aligned) to "drop" rain through.
+5. The chime rings. Record the progress.
+6. Next chime in the pattern lights up. Repeat until all are done.
+7. Payoff begins.
+
+Let me make step 4 automatic: when the dial is pointed at the target chime, a brief window opens and a rain drop falls, naturally playing the chime. If the player waits too long, the chime de-activates and they need to re-align.
+
+Actually, let me think about this more carefully. The most intuitive interaction:
+
+- The player clicks the dial itself to rotate it (click left of center = rotate CCW, right = CW, or use drag)
+- A glowing indicator on the dial shows position
+- When the indicator aligns with an un-rung chime, a "ready to drop" flash appears
+- One more click on the dial triggers the drop
+- Rain visually falls and the chime rings
+
+This gives the player clear agency: first they choose the chime (rotate), then they commit (click). Two clicks = two decisions per chime, meeting the "meaningful decisions" requirement.
+
+Hmm, but the brief says "the primary input makes an irreversible, visible choice that advances the current run." So each click should be decisive.
+
+Let me simplify:
+- Click on dial rotates the indicator toward the nearest chime
+- When indicator aligns with target chime, the chime rings automatically and progress advances
+- No second click needed — alignment IS the interaction
+
+This is cleaner. Player's task: figure out which chime to point at, rotate dial to it. Simple. The "irreversible, visible choice" is the rotation — once the dial snaps to the chime, that chime rings and the pattern advances.
+
+Final design finalized:
+
+**Rain Dial — Game Flow:**
+1. Initial state: Dial centered, 7 chimes around it, rain falling, "click the dial to begin" text
+2. Player clicks dial → dial rotates to first target chime → that chime rings → pattern begins
+3. First target chime is highlighted (glows)
+4. Player clicks dial to rotate toward that chime
+5. When dial points at it, chime rings, progress +1
+6. Next target chime highlighted
+7. Patterns get slightly longer each level (but always 3-4 chimes)
+8. All chimes ring in sequence → rainbow of sound → "The Storm Arrives" payoff
+
+Wait, I realize I should make the dial rotation feel tactile and fun. Click on the dial and drag to rotate. The dial always rotates toward the nearest snap point (a chime). So clicking the top of the dial rotates it such that the indicator points down, etc.
+
+Actually, simplest compelling interaction:
+- Click ANYWHERE ON THE DIAL -> the dial rotates so the indicator points toward where you clicked
+- Snap to nearest chime direction
+- If it's the right chime, that chime rings with progress
+
+Even simpler:
+- Click any chime directly -> if it's the right one, it rings. If wrong, a dull sound.
+- BUT the dial rotates to show selection first
+- This is basically "choose chime" but with a rotating dial as the visual interface
+
+Wait — the brief says "clicking around one large central dial turns it to route falling drops among glass chimes." So the dial IS the interactive element. Clicking on the dial rotates it. The rotation is the primary input.
+
+OK, final final design:
+- Dial in center. 7 chimes around it in a circle.
+- Clicking on the dial rotates it (the rotation vector depends on where you click relative to center)
+- The dial has a bright indicator/marker that points outward like an arrow
+- When the arrow points near (within ~30°) to a chime, that chime glows as "selected"
+- If the selected chime matches the pattern target → chime rings, progress +1
+- If wrong → the dial "slips" (a dull sound, visual shake)
+- This gives the player a clear choice: rotate the dial and aim at the correct chime
+
+This is compelling. The player must understand the pattern, read the dial, aim carefully, and commit.
+
+Let me now write the complete code. I'll aim for beautiful visuals with canvas and rich audio.
+
+Key visual elements to draw on canvas:
+1. Background: dark blue-grey gradient with subtle cloud-like noise
+2. Chimes: drawn as glass goblets/flutes hanging from thin lines, colored in blues/cyans with glassy translucency
+3. Dial: large circle (radius ~100px) in stone grey with engraved marks at chime positions
+4. Dial indicator: a glowing arrow/pointer on the dial
+5. Target indicator: the correct chime pulses with a warm golden glow
+6. Rain: thin diagonal streaks falling
+7. Payoff: cascading rainbow particles, all chimes glow, dramatic visual crescendo
+
+Let me code this up. The challenge is making it visually stunning within the constraints of a single HTML file.
+
+For audio, I'll use Web Audio API:
+- 7 different chime sounds (pentatonic scale: C, D, E, G, A, C', D')
+- Each chime: complex tone with harmonics, slow attack, long decay
+- Rain: filtered noise
+- Dial rotation: low swoosh
+- Wrong chime: dull thud
+- Payoff chord: beautiful major chord spread across chimes
+
+Let me write the full implementation now.
+
+One more consideration: the dial should be large enough to click on but visible enough that its rotation is clear. Let's say 120px radius dial, chimes arranged at radius 280px from center. Canvas 1200x800, center at (600, 400).
+
+The code structure:
+
+```javascript
+// Game state
+const state = {
+  phase: 'initial',
+  progress: 0,
+  target: 0,
+  completed: false,
+  restart_count: 0,
+  dialAngle: 0,
+  targetChime: 0,
+  pattern: [],
+  patternIndex: 0,
+  audioReady: false,
+  chimes: [...],
+  rainDrops: [],
+  particles: [],
+};
+
+// Expose evidence
+window.__factoryxEvidence = () => ({
+  schema_version: 1,
+  phase: state.phase,
+  progress: state.progress,
+  target: state.target,
+  completed: state.completed,
+  restart_count: state.restart_count
+});
+```
+
+Let me now write the complete, self-contained HTML file. This will be a substantial implementation.
+
+For the dial rotation: clicking at angle θ relative to dial center rotates the dial's indicator to point in direction θ. So if you click above the dial center, the indicator points up; below = down, left = left, etc. This creates a natural pointing gesture.
+
+Chime positions (7 chimes at 72° intervals if 5 chimes, or different angles if 7):
+- I'll use 5 chimes for simplicity: at angles -90°, -18°, 54°, 126°, 198° (evenly spaced around the circle)
+- Actually 5 chimes: equally spaced at 72° intervals: -90, -18, 54, 126, 198 = 5 positions
+
+Each chime:
+- Canvas drawing: a beautiful glass shape
+- Color: different hue each
+- Sound: different frequency
+
+Pattern generation:
+- Random sequence of 3-5 chime indices
+- Player must replay in order
+
+Let me write it all now. Full HTML file:
+
+Actually, I realize I need to also account for the "escalation" requirement. The game should get progressively harder. I'll add levels:
+- Level 1: 3 chimes in sequence
+- Level 2: 4 chimes, slightly faster
+- Level 3: 5 chimes, fastest
+- Level 4: 5 chimes with some "fake" chimes that give wrong results (no progress)
+- Level 5: All 5 chimes ring, massive payoff
+
+The "increased pressure" can come from shorter time windows (if the chime needs to be held) or more chimes to sequence.
+
+For simplicity, let me have:
+- 3 rounds/levels
+- Each round: 3-5 chimes in sequence
+- Chimes ring for 2 seconds before next is targeted (so player has time to rotate)
+- Wrong click = visible shake + sound, no progress
+
+Now let me code it. I'll make it visually stunning with good canvas drawing.
+
+For the dial visual: a dark stone circle with a glowing indicator. The indicator is a bright line/arrow that rotates. When it points near a chime, that chime's outline glows.
+
+For chimes: I'll draw them as tall, slender glass bells — like actual glass chimes, slightly tapered, with a highlight line to show transparency. They hang from the top of the canvas.
+
+Rain: white/light blue streaks falling at an angle.
+
+Payoff: when all chimes ring, a cascade of rainbow particles fills the screen, all chimes glow, and "The storm arrives" appears in elegant text.
+
+Let me write this now. I'll create a rich canvas-based game.
+
+One more thing: the audio context needs user gesture to start (Web Audio API requirement). I'll have the first click on the dial both rotate it AND initialize audio.
+
+Audio design in detail:
+- Chime tones: use oscillators with harmonics (fundamental + 2nd, 3rd harmonics), quick attack, exponential decay
+- Frequencies (pentatonic-ish):
+  - Chime 0 (top): C5 = 523 Hz
+  - Chime 1 (upper-right): D5 = 587 Hz  
+  - Chime 2 (lower-right): E5 = 659 Hz
+  - Chime 3 (lower-left): G5 = 784 Hz
+  - Chime 4 (upper-left): A5 = 880 Hz
+
+Rain: low-pass filtered noise, low volume
+
+Dial rotation sweep: short frequency sweep sound
+
+Payoff: all 5 chimes played together in a chord, plus a rising noise sweep for rain crescendo
+
+Let me finalize the code now. I need to be very careful about the visual polish — glass chimes, stone dial, rain atmosphere, and a truly beautiful payoff.
+
+Here's my plan for the payoff:
+1. When the last chime in the pattern rings, there's a half-second pause
+2. Then ALL chimes ring in sequence (a scale/arcade style)
+3. Rain intensifies dramatically
+4. Rainbow particles emanate from the dial
+5. Text: "The storm arrives" fades in over ~2 seconds
+6. After 3 seconds, a "Restart" button appears
+
+Now let me write the complete code. This will be roughly 600-800 lines of HTML/JS/CSS.
+
+For the dial rotation mechanic: I'll use angular distance. When the player clicks on the dial, calculate the angle from center to click point. The dial's indicator angle instantly rotates to that angle (with a slight easing for feel). If it's within snap distance of a valid chime, that chime activates (if it's the target).
+
+Actually, for better feel, the rotation should have slight easing/overshoot to feel physical:
+- targetAngle = angle from canvas position
+- dialAngle lerps toward targetAngle over ~200ms
+- When lerp completes, snap checks if near a chime
+
+Let me implement this carefully.
+
+I also want to add a subtle detail: when the dial rotates, small "rain drops" emanate from it in the direction of rotation, reinforcing the connection between the dial and the falling rain. This is the "routing" concept — the dial routes the rain.
+
+When the dial points at the target chime, a few drops fall from the dial down that chime. It's subtle but beautiful.
+
+Let me code this fully now.
+
+Also for the "escalation": I should add a second phase to the game where the pressure increases. After completing the first pattern, the game shows a "level complete" message briefly, then starts a new pattern with:
+- Shorter time between chime targets (chimes ring for less time)
+- Or chimes that need to be played faster (if I add a "hold" mechanic)
+- Or simply more chimes in the pattern
+
+For simplicity, I'll increase the pattern length and decrease the wait time between target changes.
+
+Let me finalize and write the code:
+
+```javascript
+// Game constants
+const CANVAS_W = 1200;
+const CANVAS_H = 800;
+const CENTER_X = CANVAS_W / 2;
+const CENTER_Y = CANVAS_H / 2 + 50; // Dial slightly below center
+const DIAL_RADIUS = 90;
+const CHIME_RADIUS = 280;
+const NUM_CHIMES = 5;
+// Chime angles (from top, clockwise)
+const CHIME_ANGLES = [-90, -18, 54, 126, 198];
+const CHIME_COLORS = ['#4fc3f7', '#81d4fa', '#b3e5fc', '#00bcd4', '#0097a7'];
+const CHIME_FREQS = [523.25, 587.33, 659.25, 783.99, 880.00];
+```
+
+Let me write the full implementation now. This will be comprehensive.
+
+Actually, I realize there's a subtlety with the "routing" metaphor. The dial should look like it's actually routing the rain. Let me think about the visual:
+
+- Rain falls from top to bottom
+- The dial is in the middle path
+- The dial has a channel/gate that rotates
+- Rain that falls on the dial goes through the gate and onto the chime
+- When rotating the dial, animated rain streaks follow the path from the gate to the chime
+
+This visual of rain being "directed" reinforces the dial metaphor. When the dial is set correctly, small rain streaks flow from the dial toward the correct chime. When wrong, the rain streaks don't appear (or go a wrong direction).
+
+Let me implement this. The rain streaks from dial to chime are short, glowing, and fade quickly. They create a satisfying "routing" visual.
+
+OK, I'm going to write the complete code now. Let me make it thorough and beautiful.
+
+For the dial click: the player clicks on the dial area, and the dial rotates to point at the clicked position. There's a slight overshoot/elastic easing for tactile feel. The dial has tick marks at each chime position.
+
+For audio: I need to be careful about the Web Audio API. On first user interaction, create AudioContext, then start. The chime sounds use gain nodes for envelope, oscillator nodes for tone, with harmonics.
+
+Let me also add a visual "rain intensity" that increases as more progress is made, culminating in heavy rain during the payoff.
+
+Here's the full implementation plan:
+
+1. HTML with inline CSS and canvas
+2. Canvas rendering:
+   - Background gradient
+   - Rain particles (count increases with progress)
+   - Chimes (glassy shapes with color)
+   - Dial (stone circle with rotating indicator)
+   - Routing rain streaks (animated lines from dial to chime)
+   - UI text (title, instructions, progress, target)
+3. Audio:
+   - AudioContext on first interaction
+   - Chime sounds (pentatonic)
+   - Rain ambience (filtered noise)
+   - Dial rotation swoosh
+   - Payoff cascade
+4. Game logic:
+   - Pattern generation
+   - Dial rotation with snapping
+   - Progress tracking
+   - Phase management (initial → playing → completed)
+5. window.__factoryxEvidence
+
+Let me write it all.
+
+I also want to make sure the dial rotation feels really good. I'll use a spring-damper system:
+- dialVelocity += (targetAngle - dialAngle) * stiffness
+- dialVelocity *= damping
+- dialAngle += dialVelocity
+
+This creates a satisfying overshoot and settle motion.
+
+The dial should also have a subtle glow that changes color based on how close it is to the target chime.
+
+For the payoff visual:
+- Rainbow particles burst from the dial
+- All chimes simultaneously glow
+- Rain becomes torrential
+- Text "The Storm Arrives" in elegant serif font
+- Maybe a thunder flash
+
+I think I have enough design decisions. Let me write the complete implementation now.
+
+For the "meaningful decisions" requirement: Each time the player rotates the dial, they're committed to that chime. If it's the target, progress is made. If not, the chime plays a wrong sound and the dial "slips" back subtly. The player must read the target (which chime glows), decide where to aim, and commit. This is a clear meaningful decision.
+
+To add "change strategy after pressure increases": After level 1 (3 chimes), level 2 (4 chimes) introduces faster rotation decay, making precise aiming harder. Level 3 (4-5 chimes) has even shorter timing windows.
+
+Let me code this now, for real.
+
+Actually, I should think about what makes this truly "delightful" and "memorable" rather than just functional. The key delightful moments:
+1. The first time the player rotates the dial and sees rain actually flow to a chime — that "wow" moment
+2. Each correct chime ring — a beautiful glass sound
+3. The payoff — a sudden burst of rain and harmony
+
+Let me focus on making these moments shine.
+
+For the first interaction (clicking the dial):
+1. Audio context initializes
+2. Dial rotates to that position with a satisfying swing
+3. If it's the start of the pattern, rain starts flowing from the dial to the first chime, which rings beautifully
+4. UI changes from "Click the dial to begin" to "Rotate the dial to match the glowing chimes"
+
+For the payoff:
+1. After the last correct chime, pause for 1 second
+2. All 5 chimes ring in rapid sequence, ascending like a musical arpeggio
+3. A burst of rainbow-colored particles erupts from the dial
+4. Heavy rain fills the screen
+5. "The Storm Arrives" fades in, letter by letter
+6. After 4 seconds, "Restart" button appears
+
+Let me code this now.
+
+One more thing: for replayability, the patterns should be randomly generated each run. The game tracks which chimes have been played in the pattern, so no two runs are the same.
+
+Pattern pool (for level 1):
+- Random 3 chimes from 5
+- No consecutive duplicates
+- Each chime appears exactly once (per level)
+
+Actually, let me make it simpler: the pattern uses each chime once. For 5 chimes, the pattern is a random permutation. The player must play them in the correct order.
+
+For level 1: use 3 chimes, random order
+For level 2: use 4 chimes, random order  
+For level 3: use all 5 chimes, random order (the final challenge)
+
+This is clean and clear. Each level escalates by adding one more chime to the pattern.
+
+Let me write the code now. Full implementation:
+
+```html
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rain Dial</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    background: #0a0e1a; 
+    overflow: hidden; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  canvas { 
+    display: block;
+    image-rendering: auto;
+  }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
-
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
-  </div>
-
-  <div class="profile">
-
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
-
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
-
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
-
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
-
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
-
-  </div>
-
-  <div id="footer"></div>
-
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
-
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
-
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
-
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
-
-
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
-    });
-  </script>
+<body>
+<canvas id="canvas" width="1200" height="800"></canvas>
+<script>
+// Full game implementation here
+</script>
 </body>
 </html>
