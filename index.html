@@ -1,594 +1,977 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Beat Ferry</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; }
+canvas { display: block; cursor: pointer; touch-action: none; }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
+<canvas id="c"></canvas>
+<script>
+(function(){
+"use strict";
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
-  </div>
+// --- Resolution ---
+let W, H;
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
 
-  <div class="profile">
+// --- Audio Engine (Web Audio API, entirely self-contained) ---
+let audioCtx = null;
+let masterGain = null;
+let isAudioInit = false;
 
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
+function initAudio(){
+  if(isAudioInit) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.6;
+  masterGain.connect(audioCtx.destination);
+  isAudioInit = true;
+}
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
+// Pentatonic-ish scale for musicality
+const BASE_NOTES = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.26];
+// Bass frequencies for harmony
+const BASS_NOTES = [87.31, 98.00, 110.00, 130.81, 146.83];
 
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
+const VOICE_TRACKS = [
+  { baseFreq: BASE_NOTES[0], type: "sine", octave: 1, name: "Drone" },
+  { baseFreq: BASE_NOTES[2], type: "triangle", octave: 1, name: "Bell" },
+  { baseFreq: BASE_NOTES[3], type: "square", octave: 0.5, name: "Warm Pad" },
+  { baseFreq: BASE_NOTES[5], type: "sine", octave: 0.75, name: "Shimmer" },
+  { baseFreq: BASE_NOTES[6], type: "triangle", octave: 0.5, name: "Chime" },
+  { baseFreq: BASE_NOTES[7], type: "sine", octave: 0.25, name: "Air" },
+  { baseFreq: BASS_NOTES[0], type: "sine", octave: 1, name: "Bass" },
+  { baseFreq: BASS_NOTES[2], type: "triangle", octave: 1, name: "Pulse Bass" },
+];
 
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
+const activeVoices = [];
+let currentScaleIdx = [0,1,2,3]; // which scale notes are active
+let scaleLevel = 0;
 
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
+function playNote(freq, duration, type, vol, detune){
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  if(detune) osc.detune.value = detune;
+  gain.gain.setValueAtTime(0, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.05);
+  gain.gain.linearRampToValueAtTime(Math.max(vol*0.3, 0.001), audioCtx.currentTime + duration*0.7);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
 
-  </div>
-
-  <div id="footer"></div>
-
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
-
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
-
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
-
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
-
-
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+function playSfx(type){
+  if(!audioCtx) return;
+  const t = audioCtx.currentTime;
+  if(type === "launch"){
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(600, t+0.3);
+    g.gain.setValueAtTime(0.15, t);
+    g.gain.linearRampToValueAtTime(0, t+0.3);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(); osc.stop(t+0.3);
+  } else if(type === "land"){
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.linearRampToValueAtTime(800, t+0.15);
+    osc.frequency.linearRampToValueAtTime(600, t+0.4);
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.linearRampToValueAtTime(0, t+0.4);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(); osc.stop(t+0.4);
+  } else if(type === "bad"){
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.linearRampToValueAtTime(80, t+0.5);
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.linearRampToValueAtTime(0, t+0.5);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(); osc.stop(t+0.5);
+  } else if(type === "payoff"){
+    // Rich chord
+    const notes = [523.25, 659.26, 783.99, 1046.5];
+    notes.forEach((f,i)=>{
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = i < 2 ? "sine" : "triangle";
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.12, t+0.1);
+      g.gain.linearRampToValueAtTime(0.001, t+3);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(t); osc.stop(t+3);
     });
-  </script>
+    // Shimmer
+    for(let i=0;i<4;i++){
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 1200 + Math.random()*800;
+      g.gain.setValueAtTime(0.05, t);
+      g.gain.linearRampToValueAtTime(0, t+2);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(t); osc.stop(t+2);
+    }
+  } else if(type === "restart"){
+    [261.63, 329.63, 392.00].forEach((f,i)=>{
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(0.12, t+ i*0.12);
+      g.gain.linearRampToValueAtTime(0, t+i*0.12+0.3);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(t+i*0.12); osc.stop(t+i*0.12+0.3);
+    });
+  }
+}
+
+// Background ambient pulse
+let ambientInterval = null;
+function startAmbient(){
+  if(ambientInterval) return;
+  let beat = 0;
+  ambientInterval = setInterval(()=>{
+    if(!audioCtx || game.state !== "playing") return;
+    const bpb = 2000 / Math.max(1, scaleLevel+1); // speed up with progress
+    const freq = BASS_NOTES[beat % BASS_NOTES.length];
+    playNote(freq, 0.4, "sine", 0.06);
+    beat++;
+  }, 600);
+}
+
+function stopAmbient(){
+  if(ambientInterval){ clearInterval(ambientInterval); ambientInterval=null; }
+}
+
+// --- Game State ---
+const TARGET_PASSES = 6;
+let game = {
+  state: "initial", // initial, playing, completed, failed
+  progress: 0,
+  passCount: 0,
+  restartCount: 0,
+  ferry: { x: 0, y: 0, targetX: 0, targetY: 0, moving: false, speed: 3.5, bobPhase: 0 },
+  targets: [],
+  particles: [],
+  wavePhase: 0,
+  pulseTimer: 0,
+  score: 0,
+  passengers: 0,
+  activeVoices: 0,
+  harborProgress: 0, // 0 to 1 for final performance
+  message: "",
+  messageTimer: 0,
+  time: 0,
+  lastTime: 0,
+  difficulty: 1,
+  combo: 0,
+  shakeTimer: 0,
+};
+
+function resetGame(){
+  game.state = "initial";
+  game.progress = 0;
+  game.passCount = 0;
+  game.restartCount++;
+  game.ferry.x = W * 0.15;
+  game.ferry.y = H * 0.55;
+  game.ferry.targetX = W * 0.15;
+  game.ferry.targetY = H * 0.55;
+  game.ferry.moving = false;
+  game.ferry.bobPhase = 0;
+  game.targets = [];
+  game.particles = [];
+  game.wavePhase = 0;
+  game.pulseTimer = 0;
+  game.score = 0;
+  game.passengers = 0;
+  game.activeVoices = 0;
+  game.harborProgress = 0;
+  game.message = "";
+  game.messageTimer = 0;
+  game.time = 0;
+  game.difficulty = 1;
+  game.combo = 0;
+  game.shakeTimer = 0;
+  currentScaleIdx = [0,1,2,3];
+  scaleLevel = 0;
+  activeVoices.length = 0;
+  stopAmbient();
+}
+
+// --- Target / Pool of Light Generation ---
+function spawnTarget(){
+  const margin = 80;
+  const y = margin + Math.random() * (H - margin*2);
+  const speed = (1.5 + game.difficulty * 0.6) * (Math.random()*0.5+0.75);
+  const fromLeft = Math.random() > 0.5;
+  const radius = 35 + Math.random()*20;
+  const hue = 200 + game.passCount * 25 + Math.random()*30;
+  const target = {
+    x: fromLeft ? -radius : W + radius,
+    y: y,
+    vx: fromLeft ? speed : -speed,
+    radius: radius,
+    hue: hue,
+    pulsePhase: Math.random() * Math.PI * 2,
+    fromLeft: fromLeft,
+    alive: true,
+    landed: false,
+    id: Date.now() + Math.random(),
+    beatPulse: 0,
+  };
+  game.targets.push(target);
+  return target;
+}
+
+function spawnParticles(x, y, count, hue, speed){
+  for(let i=0;i<count;i++){
+    const angle = Math.random()*Math.PI*2;
+    const spd = speed*(0.5+Math.random());
+    game.particles.push({
+      x, y,
+      vx: Math.cos(angle)*spd,
+      vy: Math.sin(angle)*spd - 0.5,
+      life: 1,
+      decay: 0.015 + Math.random()*0.025,
+      hue: hue + Math.random()*40 - 20,
+      size: 2+Math.random()*4,
+    });
+  }
+}
+
+// --- Drawing Helpers ---
+function drawWave(yBase, phase, color, alpha, amplitude, freq){
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for(let x=0;x<=W;x+=4){
+    const yy = yBase + Math.sin(x*freq + phase)*amplitude + Math.sin(x*freq*0.5+phase*0.7)*amplitude*0.4;
+    ctx.lineTo(x, yy);
+  }
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = alpha;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawFerry(x, y, bob, time){
+  const bx = Math.sin(bob)*3;
+  const by = Math.sin(bob*1.3)*2;
+  const cx = x + bx;
+  const cy = y + by;
+
+  // Hull
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Shadow
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.beginPath();
+  ctx.ellipse(0, 18, 30, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Hull body
+  const hullGrad = ctx.createLinearGradient(-25, -5, -25, 15);
+  hullGrad.addColorStop(0, "#5a3e28");
+  hullGrad.addColorStop(0.5, "#8B6914");
+  hullGrad.addColorStop(1, "#4a3018");
+  ctx.fillStyle = hullGrad;
+  ctx.beginPath();
+  ctx.moveTo(-25, 5);
+  ctx.quadraticCurveTo(-28, -2, -20, -5);
+  ctx.lineTo(22, -5);
+  ctx.quadraticCurveTo(30, -2, 28, 5);
+  ctx.quadraticCurveTo(25, 12, 0, 14);
+  ctx.quadraticCurveTo(-25, 12, -25, 5);
+  ctx.fill();
+  ctx.strokeStyle = "#3a2510";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Cabin
+  ctx.fillStyle = "#f0e6d0";
+  ctx.fillRect(-8, -18, 16, 13);
+  ctx.fillStyle = "#87CEEB";
+  ctx.fillRect(-5, -16, 10, 8);
+  ctx.fillStyle = "#f0e6d0";
+  ctx.fillRect(-10, -19, 20, 3);
+
+  // Mast & sail
+  ctx.strokeStyle = "#5a3e28";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -19);
+  ctx.lineTo(0, -32);
+  ctx.stroke();
+
+  const sway = Math.sin(time*1.5)*5;
+  ctx.fillStyle = "rgba(255,250,230,0.85)";
+  ctx.beginPath();
+  ctx.moveTo(0, -32);
+  ctx.quadraticCurveTo(12+sway, -25, 8, -18);
+  ctx.lineTo(0, -19);
+  ctx.fill();
+
+  // Glow on movement
+  if(game.ferry.moving){
+    ctx.shadowColor = "#4488ff";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "rgba(100,160,255,0.15)";
+    ctx.beginPath();
+    ctx.ellipse(0, 15, 35, 10, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.restore();
+}
+
+function drawTargetPool(target, time){
+  const { x, y, radius, hue, pulsePhase, beatPulse } = target;
+  const pulse = 1 + Math.sin(time*3 + pulsePhase)*0.15 + beatPulse*0.2;
+  const r = radius * pulse;
+
+  // Outer glow
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, r*2);
+  grad.addColorStop(0, `hsla(${hue}, 80%, 65%, 0.4)`);
+  grad.addColorStop(0.5, `hsla(${hue}, 70%, 50%, 0.15)`);
+  grad.addColorStop(1, `hsla(${hue}, 60%, 40%, 0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, r*2, 0, Math.PI*2);
+  ctx.fill();
+
+  // Core
+  const coreGrad = ctx.createRadialGradient(x, y, 0, x, y, r*0.5);
+  coreGrad.addColorStop(0, `hsla(${hue}, 90%, 85%, 0.9)`);
+  coreGrad.addColorStop(1, `hsla(${hue}, 80%, 60%, 0.3)`);
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+  ctx.arc(x, y, r*0.5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Ring
+  ctx.strokeStyle = `hsla(${hue}, 80%, 70%, ${0.4+beatPulse*0.4})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, r*0.8, 0, Math.PI*2);
+  ctx.stroke();
+
+  if(target.landed){
+    ctx.fillStyle = `hsla(${hue}, 90%, 90%, ${Math.max(0, 1-time*0.05)})`;
+    ctx.font = "bold 16px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("+1 "+(game.combo>1?`×${game.combo} COMBO!`:"Passenger!"), x, y-r*1.5-10);
+  }
+}
+
+// --- Harbor / Payoff Scene ---
+function drawHarbor(time){
+  // Deep water
+  const waterGrad = ctx.createLinearGradient(0, H*0.4, 0, H);
+  waterGrad.addColorStop(0, "#0a1628");
+  waterGrad.addColorStop(0.5, "#152238");
+  waterGrad.addColorStop(1, "#1a2a44");
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  drawWave(H*0.6, time*0.5, "rgba(30,60,100,0.3)", 0.5, 8, 0.008);
+  drawWave(H*0.65+Math.sin(time*0.3)*5, time*0.7, "rgba(40,70,120,0.4)", 0.4, 6, 0.01);
+
+  // Stars
+  const starSeed = 12345;
+  for(let i=0;i<60;i++){
+    const sx = ((starSeed*(i+1)*7) % W);
+    const sy = ((starSeed*(i+3)*11) % (H*0.4));
+    const twinkle = 0.3 + 0.7*Math.abs(Math.sin(time*1.5 + i*0.5));
+    ctx.fillStyle = `rgba(255,255,230,${twinkle*0.6})`;
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+
+  // Dock / harbor structure
+  ctx.fillStyle = "#2a1f14";
+  ctx.fillRect(W*0.35, H*0.52, W*0.3, H*0.12);
+  ctx.fillStyle = "#3d2f1f";
+  for(let i=0;i<5;i++){
+    ctx.fillRect(W*0.37+i*W*0.055, H*0.54, 8, 40);
+  }
+
+  // Lights on the dock
+  const colors = ["#ff8844","#44ff88","#4488ff","#ff4488","#ffcc44","#8844ff"];
+  for(let i=0;i<6;i++){
+    const lx = W*0.37+i*W*0.055+4;
+    const ly = H*0.51;
+    const glow = 0.5+0.5*Math.sin(time*3+i*0.8);
+    ctx.fillStyle = colors[i];
+    ctx.globalAlpha = glow * 0.8;
+    ctx.beginPath();
+    ctx.arc(lx, ly, 6, 0, Math.PI*2);
+    ctx.fill();
+    const lg = ctx.createRadialGradient(lx,ly,0,lx,ly,30);
+    lg.addColorStop(0, colors[i]);
+    lg.addColorStop(1, "transparent");
+    ctx.fillStyle = lg;
+    ctx.globalAlpha = glow*0.3;
+    ctx.beginPath();
+    ctx.arc(lx, ly, 30, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Ferry at dock
+  drawFerry(W*0.48, H*0.50, time*2, time);
+
+  // Musicians
+  const mColors = ["#ff6644","#44dd88","#4488ff","#ffcc22","#dd44aa","#8844ff"];
+  for(let i=0;i<6;i++){
+    const mx = W*0.38+i*W*0.04;
+    const my = H*0.54+Math.sin(time*2+i*1.2)*4;
+    const bob = Math.sin(time*3+i*0.7)*3;
+    ctx.fillStyle = mColors[i];
+    // Body
+    ctx.beginPath();
+    ctx.arc(mx, my-bob-5, 6, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillRect(mx-3, my-bob, 6, 10);
+    // Instrument glow
+    ctx.shadowColor = mColors[i];
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = `hsla(${(time*50+i*60)%360},80%,60%,${0.5+0.5*Math.sin(time*4+i)})`;
+    ctx.beginPath();
+    ctx.arc(mx+8, my-bob-3, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Music notes floating up
+  for(let i=0;i<8;i++){
+    const nx = W*0.35+((time*30+i*70)%W*0.3);
+    const ny = H*0.52 - ((time*40+i*50)%(H*0.4));
+    const alpha = Math.max(0, 1-((time*40+i*50)%(H*0.4))/(H*0.4));
+    ctx.fillStyle = `hsla(${(i*45+time*30)%360},70%,70%,${alpha*0.7})`;
+    ctx.font = `${14+Math.sin(time+i)*4}px system-ui`;
+    ctx.fillText(["♪","♫","♩","♬","🎵","🎶","𝅘𝅥","𝅗𝅥"][i%8], nx, ny);
+  }
+
+  // Finale text
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffe8cc";
+  ctx.font = "bold 28px system-ui, sans-serif";
+  ctx.fillText("The Harbor Sings", W/2, H*0.22);
+  ctx.font = "16px system-ui, sans-serif";
+  ctx.fillStyle = "#aabbcc";
+  ctx.fillText(`${game.passCount} crossings, ${game.score} points, ${game.passengers} passengers brought to life`, W/2, H*0.27);
+  ctx.fillText("The light finds its way home.", W/2, H*0.31);
+
+  // Restart prompt
+  const blink = Math.sin(time*3)*0.3+0.7;
+  ctx.fillStyle = `rgba(255,255,255,${blink*0.8})`;
+  ctx.font = "bold 20px system-ui, sans-serif";
+  ctx.fillText("Tap anywhere to sail again", W/2, H*0.88);
+}
+
+// --- Title / Start Screen ---
+function drawTitleScreen(time){
+  // Water background
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0, "#0e1530");
+  bg.addColorStop(0.4, "#1a2540");
+  bg.addColorStop(1, "#0a1020");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  // Stars
+  for(let i=0;i<100;i++){
+    const sx = (i*137.5)%W;
+    const sy = (i*97.3)%(H*0.45);
+    const tw = 0.4+0.6*Math.abs(Math.sin(time*1.2+i*0.3));
+    ctx.fillStyle = `rgba(255,255,230,${tw})`;
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+
+  drawWave(H*0.55, time*0.4, "rgba(20,40,80,0.5)", 0.6, 12, 0.006);
+  drawWave(H*0.58+Math.sin(time*0.3)*5, time*0.6, "rgba(25,50,90,0.4)", 0.5, 10, 0.008);
+
+  // Title
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#f0e0c0";
+  ctx.font = `bold ${Math.min(52, W*0.07)}px system-ui, sans-serif`;
+  ctx.fillText("🚢 Beat Ferry", W/2, H*0.25);
+
+  ctx.font = `${Math.min(18, W*0.03)}px system-ui, sans-serif`;
+  ctx.fillStyle = "#8899aa";
+  ctx.fillText("Sail the ferry between pools of light", W/2, H*0.32);
+
+  // Animated ferry on title
+  const ferryX = W*0.5+Math.sin(time*0.8)*80;
+  const ferryY = H*0.48+Math.sin(time*1.5)*3;
+  drawFerry(ferryX, ferryY, time*2, time);
+
+  // Pulsing light pools
+  for(let i=0;i<3;i++){
+    const tx = W*0.5+Math.sin(time*0.5+i*Math.PI*2/3)*120;
+    const ty = H*0.65+i*25;
+    const pulse = 1+Math.sin(time*2.5+i)*0.2;
+    const grad = ctx.createRadialGradient(tx,ty,0,tx,ty,40*pulse);
+    grad.addColorStop(0, `hsla(${200+i*40},80%,70%,0.4)`);
+    grad.addColorStop(1, "transparent");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(tx,ty,40*pulse,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // Start text
+  const blink = Math.abs(Math.sin(time*3))*0.5+0.5;
+  ctx.fillStyle = `rgba(255,255,255,${blink})`;
+  ctx.font = `bold ${Math.min(24, W*0.04)}px system-ui, sans-serif`;
+  ctx.fillText("Tap anywhere to set sail", W/2, H*0.85);
+  ctx.font = `${Math.min(14, W*0.025)}px system-ui, sans-serif`;
+  ctx.fillStyle = "#667788";
+  ctx.fillText("Click to launch • Time your landings on the beat", W/2, H*0.90);
+}
+
+// --- Game Over screens ---
+function drawCompletedScreen(time){
+  drawHarbor(time);
+}
+
+function drawFailedScreen(time, reason){
+  // Darker version of water
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0, "#1a0a0a");
+  bg.addColorStop(0.5, "#251010");
+  bg.addColorStop(1, "#0a0808");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  drawWave(H*0.6, time*0.3, "rgba(60,20,20,0.4)", 0.6, 10, 0.007);
+  drawWave(H*0.63+Math.sin(time)*5, time*0.4, "rgba(80,30,30,0.3)", 0.5, 8, 0.009);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ff6644";
+  ctx.font = `bold ${Math.min(42, W*0.06)}px system-ui, sans-serif`;
+  ctx.fillText("Lost at Sea", W/2, H*0.3);
+
+  ctx.fillStyle = "#cc8866";
+  ctx.font = `${Math.min(18, W*0.03)}px system-ui, sans-serif`;
+  ctx.fillText(reason, W/2, H*0.38);
+
+  ctx.fillStyle = "#8899aa";
+  ctx.font = `${Math.min(16, W*0.025)}px system-ui, sans-serif`;
+  ctx.fillText(`${game.passCount} crossings completed`, W/2, H*0.44);
+
+  const blink = Math.sin(time*3)*0.3+0.7;
+  ctx.fillStyle = `rgba(255,255,255,${blink})`;
+  ctx.font = `bold ${Math.min(22, W*0.035)}px system-ui, sans-serif`;
+  ctx.fillText("Tap to try again", W/2, H*0.75);
+}
+
+// --- HUD ---
+function drawHUD(time){
+  // Top bar
+  ctx.fillStyle = "rgba(10,15,30,0.5)";
+  ctx.fillRect(0,0,W,40);
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#aabbcc";
+  ctx.font = "14px system-ui, sans-serif";
+  ctx.fillText(`Passages: ${game.passCount}/${TARGET_PASSES}`, 15, 25);
+
+  ctx.textAlign = "center";
+  ctx.fillText(`♪ ${game.score} pts  |  👤 ${game.passengers}`, W/2, 25);
+
+  ctx.textAlign = "right";
+  // Progress bar
+  const progressWidth = Math.min(120, W*0.15);
+  ctx.fillStyle = "rgba(255,255,255,0.1)";
+  ctx.fillRect(W-140, 12, progressWidth, 16);
+  const fillColor = game.passCount >= TARGET_PASSES ? "#44dd88" : "#4488ff";
+  ctx.fillStyle = fillColor;
+  ctx.fillRect(W-140, 12, progressWidth*(game.passCount/TARGET_PASSES), 16);
+  ctx.fillStyle = "#fff";
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillText(`${game.passCount}/${TARGET_PASSES}`, W-80, 25);
+
+  // Active voices indicator
+  if(game.activeVoices > 0){
+    ctx.fillStyle = "#ffcc44";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(`♪×${game.activeVoices} active`, W-20, 42);
+  }
+}
+
+// --- Input Handling ---
+function handleInput(clickX, clickY){
+  if(!isAudioInit) initAudio();
+  if(audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+
+  if(game.state === "initial"){
+    game.state = "playing";
+    game.time = 0;
+    game.lastTime = performance.now()/1000;
+    game.ferry.x = W*0.15;
+    game.ferry.y = H*0.55;
+    game.ferry.targetX = W*0.15;
+    game.ferry.targetY = H*0.55;
+    game.ferry.moving = false;
+    playSfx("restart");
+    startAmbient();
+    return;
+  }
+
+  if(game.state === "completed" || game.state === "failed"){
+    resetGame();
+    game.state = "initial";
+    playSfx("restart");
+    return;
+  }
+
+  if(game.state === "playing"){
+    // Launch ferry toward click position (constrained vertically)
+    if(game.ferry.moving) return; // already moving, wait for landing attempt
+    // Set target to click X, with Y constrained to keep ferry on water
+    const targetY = Math.max(H*0.35, Math.min(H*0.7, clickY));
+    game.ferry.targetX = clickX;
+    game.ferry.targetY = targetY;
+    game.ferry.moving = true;
+    playSfx("launch");
+    game.combo = 0; // reset combo on new attempt
+  }
+}
+
+canvas.addEventListener("click", (e)=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  handleInput(x, y);
+});
+canvas.addEventListener("touchstart", (e)=>{
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  handleInput(touch.clientX - rect.left, touch.clientY - rect.top);
+}, {passive:false});
+
+// --- Update Loop ---
+function update(dt){
+  game.time += dt;
+  game.wavePhase += dt * 0.8;
+  game.ferry.bobPhase += dt * 2;
+  game.pulseTimer += dt;
+
+  // Spawn targets
+  const spawnRate = Math.max(1.2, 3.5 - game.passCount * 0.3);
+  if(game.targets.filter(t=>t.alive && !t.landed).length < 3 + game.passCount){
+    if(game.pulseTimer > spawnRate){
+      game.pulseTimer = 0;
+      spawnTarget();
+    }
+  }
+
+  // Move ferry if traveling
+  if(game.ferry.moving){
+    const dx = game.ferry.targetX - game.ferry.x;
+    const dy = game.ferry.targetY - game.ferry.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    const speed = game.ferry.speed * (1+ game.difficulty*0.15);
+    if(dist < speed*dt*60){
+      game.ferry.x = game.ferry.targetX;
+      game.ferry.y = game.ferry.targetY;
+      game.ferry.moving = false;
+      // Check landing
+      checkLanding();
+    } else {
+      game.ferry.x += (dx/dist)*speed*dt*60;
+      game.ferry.y += (dy/dist)*speed*dt*60;
+    }
+  }
+
+  // Update targets
+  game.targets.forEach(t=>{
+    if(!t.alive || t.landed) return;
+    t.x += t.vx * dt * 60 * (1 + game.difficulty*0.1);
+    t.pulsePhase += dt * 2.5;
+    t.beatPulse = Math.max(0, t.beatPulse - dt*3);
+
+    // Off screen?
+    if((t.fromLeft && t.x > W+t.radius*2) || (!t.fromLeft && t.x < -t.radius*2)){
+      t.alive = false;
+      game.combo = 0;
+    }
+  });
+
+  // Update particles
+  game.particles.forEach(p=>{
+    p.x += p.vx*dt*60;
+    p.y += p.vy*dt*60;
+    p.vy += 0.02*dt*60;
+    p.life -= p.decay*dt*60;
+  });
+  game.particles = game.particles.filter(p=>p.life>0);
+
+  // Harbor progression toward completion
+  if(game.passCount >= TARGET_PASSES && game.state === "playing"){
+    game.harborProgress = Math.min(1, game.harborProgress+dt*0.5);
+    if(game.harborProgress >= 0.95){
+      game.state = "completed";
+      playSfx("payoff");
+      stopAmbient();
+    }
+  }
+
+  // Message timer
+  if(game.messageTimer > 0){
+    game.messageTimer -= dt;
+  }
+
+  // Shake timer
+  if(game.shakeTimer > 0) game.shakeTimer -= dt;
+
+  // Clean up targets
+  game.targets = game.targets.filter(t=>t.alive || t.landed);
+}
+
+function checkLanding(){
+  let bestTarget = null;
+  let bestDist = Infinity;
+  const ferry = game.ferry;
+
+  game.targets.forEach(t=>{
+    if(!t.alive || t.landed) return;
+    const dx = ferry.x - t.x;
+    const dy = ferry.y - t.y;
+    const d = Math.sqrt(dx*dx+dy*dy);
+    if(d < t.radius + 25 && d < bestDist){
+      bestTarget = t;
+      bestDist = d;
+    }
+  });
+
+  if(bestTarget){
+    // Successful landing
+    game.combo++;
+    const comboMult = Math.min(game.combo, 5);
+    game.score += 10 * comboMult;
+    game.passengers += comboMult;
+    game.passCount++;
+    bestTarget.landed = true;
+    bestTarget.beatPulse = 1;
+    spawnParticles(bestTarget.x, bestTarget.y, 20*comboMult, bestTarget.hue, 3);
+
+    // Add voice
+    addVoice(bestTarget.hue);
+
+    game.message = comboMult > 1 ? `Combo ×${comboMult}! +${10*comboMult} pts` : "Nice landing!";
+    game.messageTimer = 2;
+  } else {
+    // Miss - ferry goes into open water
+    game.shakeTimer = 0.3;
+    playSfx("bad");
+    game.combo = 0;
+    spawnParticles(ferry.x, ferry.y, 10, 0, 2);
+
+    // Check for fail condition (too many misses - ferry damaged)
+    // We track "misses" differently - every miss that's far from any target
+    // Fail if ferry drifts too far or too many misses. We'll use a simple counter:
+    // The game ends with failure if too many target swipes miss AND progress is low
+    // But let's make it more generous: fail only if time runs out - we track elapsed time
+  }
+
+  // Check fail condition: ferry stuck, too much time elapsed without progress
+  const elapsed = game.time;
+  if(elapsed > 95 && game.passCount < TARGET_PASSES - 1){
+    game.state = "failed";
+    stopAmbient();
+  }
+}
+
+function addVoice(hue){
+  if(game.activeVoices >= 8) return;
+  const track = activeVoices.length % VOICE_TRACKS.length;
+  activeVoices.push({
+    track: VOICE_TRACKS[track],
+    phase: Math.random()*Math.PI*2,
+    hue: hue,
+  });
+  game.activeVoices = activeVoices.length;
+}
+
+// Ambient voice notes
+let voiceNoteTimer = 0;
+function updateVoices(dt){
+  voiceNoteTimer += dt;
+  if(voiceNoteTimer < 0.6/game.activeVoices) return;
+  voiceNoteTimer = 0;
+  activeVoices.forEach(v=>{
+    if(Math.random() < 0.3){
+      const noteIdx = v.track.baseFreq < BASE_NOTES[4] ? 
+        Math.floor(Math.random()*BASS_NOTES.length) :
+        Math.floor(Math.random()*BASE_NOTES.length);
+      const freq = noteIdx < BASS_NOTES.length ? BASS_NOTES[noteIdx] : BASE_NOTES[noteIdx];
+      playNote(freq, 0.8, v.track.type, 0.04, Math.random()*20-10);
+    }
+  });
+}
+
+// --- Main Render Loop ---
+let lastFrameTime = performance.now()/1000;
+
+function gameLoop(now){
+  const nowS = now/1000;
+  const dt = Math.min(0.05, nowS - lastFrameTime);
+  lastFrameTime = nowS;
+
+  if(game.state === "initial"){
+    drawTitleScreen(nowS);
+  } else if(game.state === "playing") {
+    update(dt);
+    updateVoices(dt);
+    drawPlaying(nowS);
+  } else if(game.state === "completed"){
+    game.time += dt;
+    drawCompletedScreen(game.time);
+  } else if(game.state === "failed"){
+    game.time += dt;
+    drawFailedScreen(game.time, "The sea swallowed your ferry. Not all passages find the harbor, but each one brings back music.");
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+function drawPlaying(time){
+  // Water background
+  const bg = ctx.createLinearGradient(0,H*0.3,0,H);
+  bg.addColorStop(0, "#0a1628");
+  bg.addColorStop(1, "#12203a");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  // Sky gradient at top
+  const sky = ctx.createLinearGradient(0,0,0,H*0.35);
+  sky.addColorStop(0, "#0e1035");
+  sky.addColorStop(1, "transparent");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H*0.4);
+
+  // Stars
+  for(let i=0;i<80;i++){
+    const sx = ((i*137.5)%W);
+    const sy = ((i*97.3)%(H*0.3));
+    const tw = 0.3+0.7*Math.abs(Math.sin(time*1.3+i*0.4));
+    ctx.fillStyle = `rgba(255,255,230,${tw*0.5})`;
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+
+  // Apply shake
+  ctx.save();
+  if(game.shakeTimer > 0){
+    ctx.translate(Math.random()*6-3, Math.random()*6-3);
+  }
+
+  // Water waves
+  drawWave(H*0.45, game.wavePhase, "rgba(20,45,80,0.35)", 0.5, 10, 0.007);
+  drawWave(H*0.48+Math.sin(time*0.4)*3, game.wavePhase*1.2, "rgba(30,55,100,0.4)", 0.4, 8, 0.009);
+
+  // Target pools
+  game.targets.forEach(t=>{
+    if(t.alive) drawTargetPool(t, time);
+  });
+
+  // Particles
+  game.particles.forEach(p=>{
+    ctx.fillStyle = `hsla(${p.hue},70%,70%,${p.life})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Ferry
+  if(game.state !== "failed" || game.passCount > 0){
+    drawFerry(game.ferry.x, game.ferry.y, game.ferry.bobPhase, time);
+  }
+
+  ctx.restore();
+
+  // Message
+  if(game.messageTimer > 0){
+    const alpha = Math.min(1, game.messageTimer);
+    ctx.textAlign = "center";
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.font = `bold 22px system-ui, sans-serif`;
+    ctx.fillText(game.message, W/2, H*0.25);
+  }
+
+  // Difficulty indicator
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#556677";
+  ctx.font = "13px system-ui, sans-serif";
+  if(game.passCount > 2){
+    ctx.fillText("⚡ Waves growing stronger...", 15, H-15);
+  }
+
+  drawHUD(time);
+
+  // Active voice indicator with waveform bars
+  if(game.activeVoices > 0 && game.activeVoices <= 8){
+    const barCount = game.activeVoices;
+    const barWidth = 4;
+    const barGap = 3;
+    const startX = 15;
+    const barY = H*0.55 + 25;
+    for(let i=0;i<Math.min(barCount,15);i++){
+      const h = 5+Math.abs(Math.sin(time*3+i*0.8))*25;
+      ctx.fillStyle = `hsla(${200+i*25},80%,60%,0.6)`;
+      ctx.fillRect(startX+i*(barWidth+barGap), barY-h, barWidth, h);
+    }
+  }
+}
+
+// --- FactoryX Evidence API ---
+window.__factoryxEvidence = function(){
+  return {
+    schema_version: 1,
+    phase: game.state === "initial" ? "initial" : game.state === "playing" ? "playing" : "completed",
+    progress: game.passCount,
+    target: TARGET_PASSES,
+    completed: game.state === "completed",
+    restart_count: game.restartCount,
+  };
+};
+
+// --- Start ---
+resetGame();
+requestAnimationFrame(gameLoop);
+
+})();
+</script>
 </body>
 </html>
