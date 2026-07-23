@@ -1,594 +1,1146 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnetic Moth</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #050810;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #c8d8e8;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+    cursor: none;
+  }
+  #ui-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #title-screen {
+    text-align: center;
+    transition: opacity 0.8s ease;
+  }
+  #title-screen h1 {
+    font-size: 3.5em;
+    color: #e8f4ff;
+    text-shadow: 0 0 30px #4a9eff, 0 0 60px #2a6ecc;
+    margin-bottom: 0.3em;
+    letter-spacing: 0.05em;
+  }
+  #title-screen p {
+    font-size: 1.2em;
+    opacity: 0.7;
+    margin-bottom: 2em;
+  }
+  #click-start {
+    pointer-events: auto;
+    background: rgba(74, 158, 255, 0.15);
+    border: 1px solid rgba(74, 158, 255, 0.4);
+    color: #e8f4ff;
+    padding: 16px 48px;
+    font-size: 1.1em;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.08em;
+  }
+  #click-start:hover {
+    background: rgba(74, 158, 255, 0.3);
+    box-shadow: 0 0 30px rgba(74, 158, 255, 0.3);
+  }
+  #hud {
+    position: fixed;
+    top: 20px;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 30px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 10;
+  }
+  #hud.visible { opacity: 1; }
+  .hud-item {
+    font-size: 0.95em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8899aa;
+  }
+  .hud-value {
+    color: #e8f4ff;
+    font-weight: 600;
+    display: inline-block;
+    min-width: 20px;
+    text-align: center;
+  }
+  #flower-dots {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .flower-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(74, 158, 255, 0.4);
+    background: transparent;
+    transition: all 0.4s ease;
+  }
+  .flower-dot.collected {
+    background: #4aff8a;
+    border-color: #4aff8a;
+    box-shadow: 0 0 12px rgba(74, 255, 138, 0.6);
+  }
+  #restart-btn {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: auto;
+    background: rgba(74, 158, 255, 0.1);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    color: #8899aa;
+    padding: 10px 32px;
+    font-size: 0.85em;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.5s ease, background 0.3s ease, color 0.3s ease;
+    z-index: 10;
+  }
+  #restart-btn.visible { opacity: 1; }
+  #restart-btn:hover {
+    background: rgba(74, 158, 255, 0.25);
+    color: #e8f4ff;
+  }
+  #end-screen {
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease;
+  }
+  #end-screen.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #end-screen h2 {
+    font-size: 2.5em;
+    margin-bottom: 0.3em;
+    letter-spacing: 0.05em;
+  }
+  #end-screen .subtitle {
+    font-size: 1.1em;
+    opacity: 0.6;
+    margin-bottom: 1.5em;
+  }
+  #end-screen.success h2 {
+    color: #4aff8a;
+    text-shadow: 0 0 30px rgba(74,255,138,0.5);
+  }
+  #end-screen.failure h2 {
+    color: #ff6a4a;
+    text-shadow: 0 0 30px rgba(255,106,74,0.5);
+  }
+  #time-display {
+    position: fixed;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9em;
+    letter-spacing: 0.15em;
+    color: #667788;
+    pointer-events: none;
+    z-index: 11;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  #time-display.visible { opacity: 1; }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
+<canvas id="game-canvas"></canvas>
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
+<div id="hud">
+  <div class="hud-item" id="time-display">0:00</div>
+  <div class="hud-item">
+    <span>Flowers</span>
+    <span id="flower-dots" style="display:inline-flex; margin-left:10px; vertical-align:middle;">
+      <div class="flower-dot" id="fd-0"></div>
+      <div class="flower-dot" id="fd-1"></div>
+      <div class="flower-dot" id="fd-2"></div>
+    </span>
   </div>
+  <div class="hud-item" id="score-display">Pulse: 0</div>
+</div>
 
-  <div class="profile">
-
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
-
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
-
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
-
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
-
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
-
+<div id="ui-overlay">
+  <div id="title-screen">
+    <h1>Magnetic Moth</h1>
+    <p>Guide the moth to the magnetic flowers</p>
+    <button id="click-start">Begin</button>
   </div>
+  <div id="end-screen">
+    <h2 id="end-title"></h2>
+    <p class="subtitle" id="end-subtitle"></p>
+    <button id="click-restart" style="pointer-events:auto; background:rgba(74,158,255,0.15); border:1px solid rgba(74,158,255,0.4); color:#e8f4ff; padding:12px 36px; font-size:1em; border-radius:25px; cursor:pointer; transition:all 0.3s ease;">Replay</button>
+  </div>
+</div>
 
-  <div id="footer"></div>
+<button id="restart-btn">Restart</button>
 
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
+<script>
+// ============ EVIDENCE STATE ============
+const evidence = {
+  schema_version: 1,
+  phase: 'initial',
+  progress: 0,
+  target: 3,
+  completed: false,
+  restart_count: 0
+};
 
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
+window.__factoryxEvidence = () => ({
+  schema_version: evidence.schema_version,
+  phase: evidence.phase,
+  progress: evidence.progress,
+  target: evidence.target,
+  completed: evidence.completed,
+  restart_count: evidence.restart_count
+});
+
+// ============ CANVAS SETUP ============
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ============ AUDIO ENGINE ============
+let audioCtx = null;
+let masterGain = null;
+let ambientNodes = [];
+let mothOsc = null;
+let mothFilter = null;
+let mothGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.35;
+  masterGain.connect(audioCtx.destination);
+
+  // Ambient drone
+  const droneFreqs = [55, 82.5, 110, 165];
+  droneFreqs.forEach((f, i) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = i < 2 ? 'sine' : 'triangle';
+    osc.frequency.value = f;
+    const g = audioCtx.createGain();
+    g.gain.value = 0.04;
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start();
+    ambientNodes.push({ osc, gain: g });
+  });
+
+  // Moth hum
+  mothOsc = audioCtx.createOscillator();
+  mothOsc.type = 'sine';
+  mothOsc.frequency.value = 440;
+  mothFilter = audioCtx.createBiquadFilter();
+  mothFilter.type = 'lowpass';
+  mothFilter.frequency.value = 600;
+  mothFilter.Q.value = 2;
+  mothGain = audioCtx.createGain();
+  mothGain.gain.value = 0;
+  mothOsc.connect(mothFilter);
+  mothFilter.connect(mothGain);
+  mothGain.connect(masterGain);
+  mothOsc.start();
+}
+
+function setMothVolume(v) {
+  if (mothGain) {
+    mothGain.gain.setTargetAtTime(Math.max(0, Math.min(1, v)), audioCtx.currentTime, 0.05);
+  }
+}
+
+function setMothPitch(freq) {
+  if (mothOsc) {
+    mothOsc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.1);
+  }
+  if (mothFilter) {
+    mothFilter.frequency.setTargetAtTime(freq * 2.5, audioCtx.currentTime, 0.1);
+  }
+}
+
+function playPulseSound(x, y) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  // Bright chime
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  const baseFreq = 880 + Math.random() * 440;
+  osc.frequency.setValueAtTime(baseFreq, t);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, t + 0.15);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, t + 0.6);
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.25, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+
+  const pan = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+  if (pan) {
+    pan.pan.value = (x / W - 0.5) * 1.2;
+    osc.connect(g);
+    g.connect(pan);
+    pan.connect(masterGain);
+  } else {
+    osc.connect(g);
+    g.connect(masterGain);
+  }
+
+  osc.start(t);
+  osc.stop(t + 0.8);
+
+  // Harmonic overtone
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(baseFreq * 1.5, t);
+  osc2.frequency.exponentialRampToValueAtTime(baseFreq * 0.8, t + 0.5);
+  const g2 = audioCtx.createGain();
+  g2.gain.setValueAtTime(0.12, t);
+  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  osc2.connect(g2);
+  g2.connect(masterGain);
+  osc2.start(t);
+  osc2.stop(t + 0.5);
+}
+
+function playPayoffChord() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const chordFreqs = [261.6, 329.6, 392, 523.3, 659.3];
+  chordFreqs.forEach((f, i) => {
+    const osc = audioCtx.createOscillator();
+    osc.type = i < 2 ? 'sine' : 'triangle';
+    osc.frequency.value = f;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.15);
+    g.gain.linearRampToValueAtTime(0.08, t + 0.5);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 3);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 3);
+  });
+
+  // Shimmer sweep
+  const sweep = audioCtx.createOscillator();
+  sweep.type = 'sine';
+  sweep.frequency.setValueAtTime(800, t);
+  sweep.frequency.exponentialRampToValueAtTime(2400, t + 1.5);
+  sweep.frequency.exponentialRampToValueAtTime(400, t + 3);
+  const sg = audioCtx.createGain();
+  sg.gain.setValueAtTime(0, t);
+  sg.gain.linearRampToValueAtTime(0.08, t + 0.3);
+  sg.gain.exponentialRampToValueAtTime(0.001, t + 3);
+  sweep.connect(sg);
+  sg.connect(masterGain);
+  sweep.start(t);
+  sweep.stop(t + 3);
+}
+
+function playFailureRumble() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(80, t);
+  osc.frequency.linearRampToValueAtTime(40, t + 1.5);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.linearRampToValueAtTime(0, t + 1.5);
+  osc.connect(g);
+  g.connect(masterGain);
+  osc.start(t);
+  osc.stop(t + 1.5);
+}
+
+// ============ GAME STATE ============
+let gameState = 'initial'; // initial, playing, payoff, failed, complete
+let mouseX = W / 2, mouseY = H / 2;
+let mothX = W / 2, mothY = H / 2;
+let mothAngle = 0;
+let collectedCount = 0;
+let startTime = 0;
+let elapsedMs = 0;
+let timeLeft = 90000; // 90 seconds
+let flowers = [];
+let particles = [];
+let wind = { x: 0, y: 0 };
+let windTarget = { x: 0, y: 0 };
+let windTimer = 0;
+let mothTrail = [];
+let pulseWaves = [];
+let flowerGlowTime = 0;
+let mothGlowIntensity = 1;
+let payoffStartTime = 0;
+let payoffParticles = [];
+let hoverTimer = 0;
+
+// ============ FLOWERS ============
+function createFlower(x, y) {
+  return {
+    x, y,
+    radius: 22,
+    pulsePhase: Math.random() * Math.PI * 2,
+    pulseFreq: 1.5 + Math.random() * 1.5,
+    collected: false,
+    hue: 200 + Math.random() * 60, // blue to teal
+    petalCount: 5 + Math.floor(Math.random() * 3),
+    rotation: Math.random() * Math.PI * 2,
+    collectedAnim: 0, // for collected animation
+    spawnAnim: 1.0, // fade in animation (1 = in)
+  };
+}
+
+function spawnFlowers() {
+  flowers = [];
+  const cols = 3 + Math.floor(Math.random() * 2);
+  const rows = 2 + Math.floor(Math.random() * 2);
+  const margin = 80;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = margin + (W - margin * 2) * (c + 0.5) / Math.max(1, cols - 1);
+      const y = margin + (H - margin * 2) * (r + 0.5) / Math.max(1, rows - 1);
+      // Avoid exact center initially
+      flowers.push(createFlower(x + (Math.random() - 0.5) * 60, y + (Math.random() - 0.5) * 60));
     }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+  }
+}
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
-
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
-
-
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+// ============ PARTICLES ============
+function spawnParticles(x, y, count, hue, speed, life) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = speed * (0.3 + Math.random() * 0.7);
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: life || 1.5,
+      maxLife: life || 1.5,
+      hue: hue || (200 + Math.random() * 80),
+      size: 1.5 + Math.random() * 3,
     });
-  </script>
+  }
+}
+
+// ============ BACKGROUND STARS ============
+const stars = [];
+for (let i = 0; i < 120; i++) {
+  stars.push({
+    x: Math.random(), y: Math.random(),
+    size: 0.5 + Math.random() * 1.5,
+    twinkleSpeed: 0.5 + Math.random() * 2,
+    twinklePhase: Math.random() * Math.PI * 2,
+    brightness: 0.2 + Math.random() * 0.5,
+  });
+}
+
+// ============ BACKGROUND FLIES (minor hazards) ============
+const tinyFlies = [];
+for (let i = 0; i < 5; i++) {
+  spawnTinyFly();
+}
+
+function spawnTinyFly() {
+  const edge = Math.floor(Math.random() * 4);
+  let x, y, vx, vy;
+  switch(edge) {
+    case 0: x = Math.random() * W; y = -10; vx = (Math.random()-0.5)*2; vy = 0.5+Math.random(); break;
+    case 1: x = W+10; y = Math.random()*H; vx = -(0.5+Math.random()); vy = (Math.random()-0.5)*2; break;
+    case 2: x = Math.random()*W; y = H+10; vx = (Math.random()-0.5)*2; vy = -(0.5+Math.random()); break;
+    case 3: x = -10; y = Math.random()*H; vx = (0.5+Math.random()); vy = (Math.random()-0.5)*2; break;
+  }
+  tinyFlies.push({
+    x, y, vx, vy,
+    life: 8 + Math.random() * 12,
+    maxLife: 8 + Math.random() * 12,
+    size: 2 + Math.random() * 2,
+    wobblePhase: Math.random() * Math.PI * 2,
+    wobbleSpeed: 2 + Math.random() * 3,
+  });
+}
+
+// ============ DRAWING ============
+function drawBackground(time) {
+  // Deep gradient
+  const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.7);
+  grad.addColorStop(0, '#0a1628');
+  grad.addColorStop(0.5, '#070e1a');
+  grad.addColorStop(1, '#030610');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  stars.forEach(s => {
+    const twinkle = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time * s.twinkleSpeed + s.twinklePhase));
+    ctx.globalAlpha = s.brightness * twinkle;
+    ctx.fillStyle = '#c8d8ff';
+    ctx.beginPath();
+    ctx.arc(s.x * W, s.y * H, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Subtle vignette
+  const vig = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.3, W/2, H/2, Math.max(W,H)*0.75);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawFlower(f, time) {
+  if (f.collected && f.collectedAnim > 1) return;
+
+  const alpha = f.collected ? Math.max(0, 1 - f.collectedAnim) : Math.min(1, f.spawnAnim);
+  const pulse = Math.sin(time * f.pulseFreq + f.pulsePhase) * 0.3 + 0.7;
+  const r = f.radius * pulse;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(f.x, f.y);
+  ctx.rotate(f.rotation + time * 0.1);
+
+  // Outer glow
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 3);
+  glow.addColorStop(0, `hsla(${f.hue}, 80%, 70%, ${0.25 * pulse})`);
+  glow.addColorStop(0.5, `hsla(${f.hue}, 80%, 50%, ${0.08 * pulse})`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Petals
+  for (let i = 0; i < f.petalCount; i++) {
+    const angle = (i / f.petalCount) * Math.PI * 2;
+    ctx.save();
+    ctx.rotate(angle);
+
+    const petalGrad = ctx.createRadialGradient(0, 0, 0, 0, r * 0.5, r * 0.7);
+    petalGrad.addColorStop(0, `hsla(${f.hue}, 90%, 85%, ${0.9 * pulse})`);
+    petalGrad.addColorStop(0.6, `hsla(${f.hue + 10}, 85%, 65%, ${0.5 * pulse})`);
+    petalGrad.addColorStop(1, `hsla(${f.hue + 20}, 80%, 40%, 0)`);
+
+    ctx.fillStyle = petalGrad;
+    ctx.beginPath();
+    ctx.ellipse(r * 0.4, 0, r * 0.45, r * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // Center core
+  const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.35);
+  coreGrad.addColorStop(0, `hsla(${f.hue}, 100%, 95%, ${pulse})`);
+  coreGrad.addColorStop(1, `hsla(${f.hue}, 80%, 60%, ${0.3 * pulse})`);
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawMoth(time) {
+  const speed = Math.sqrt((mouseX - mothX) ** 2 + (mouseY - mothY) ** 2);
+  const targetVol = Math.min(1, speed / 200);
+  setMothVolume(targetVol * 0.3);
+  setMothPitch(300 + speed * 0.5);
+
+  ctx.save();
+  ctx.translate(mothX, mothY);
+  ctx.rotate(mothAngle);
+
+  // Moth glow aura
+  const auraPulse = Math.sin(time * 3) * 0.15 + 0.85;
+  const auraGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40 * auraPulse);
+  auraGrad.addColorStop(0, `rgba(180, 220, 255, ${0.3 * auraPulse * mothGlowIntensity})`);
+  auraGrad.addColorStop(0.5, `rgba(100, 160, 255, ${0.1 * auraPulse * mothGlowIntensity})`);
+  auraGrad.addColorStop(1, 'rgba(0, 50, 150, 0)');
+  ctx.fillStyle = auraGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, 40 * auraPulse, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = `rgba(200, 220, 255, ${0.9 * mothGlowIntensity})`;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 6, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * mothGlowIntensity})`;
+  ctx.beginPath();
+  ctx.arc(-3, -4, 2, 0, Math.PI * 2);
+  ctx.arc(3, -4, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Antennae
+  ctx.strokeStyle = `rgba(180, 210, 255, ${0.7 * mothGlowIntensity})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-2, -9);
+  ctx.quadraticCurveTo(-8, -20, -12, -24 + Math.sin(time * 5) * 2);
+  ctx.moveTo(2, -9);
+  ctx.quadraticCurveTo(8, -20, 12, -24 + Math.cos(time * 5) * 2);
+  ctx.stroke();
+
+  // Wings - animated flutter
+  const wingFlap = Math.sin(time * 12) * 0.3;
+  const wingFlap2 = Math.sin(time * 8 + 1) * 0.2;
+
+  ctx.save();
+  ctx.rotate(wingFlap);
+
+  // Left wing
+  const lwGrad = ctx.createRadialGradient(-8, 0, 0, -18, 0, 25);
+  lwGrad.addColorStop(0, `rgba(120, 180, 255, ${0.6 * mothGlowIntensity})`);
+  lwGrad.addColorStop(0.5, `rgba(80, 140, 220, ${0.35 * mothGlowIntensity})`);
+  lwGrad.addColorStop(1, `rgba(40, 100, 180, ${0.1 * mothGlowIntensity})`);
+  ctx.fillStyle = lwGrad;
+  ctx.beginPath();
+  ctx.moveTo(-4, -2);
+  ctx.quadraticCurveTo(-30, -22, -35, -8);
+  ctx.quadraticCurveTo(-38, 5, -22, 12);
+  ctx.quadraticCurveTo(-8, 8, -4, 2);
+  ctx.fill();
+
+  // Right wing
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.rotate(wingFlap2);
+  ctx.fillStyle = lwGrad;
+  ctx.beginPath();
+  ctx.moveTo(-4, -2);
+  ctx.quadraticCurveTo(-30, -22, -35, -8);
+  ctx.quadraticCurveTo(-38, 5, -22, 12);
+  ctx.quadraticCurveTo(-8, 8, -4, 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function drawTrail() {
+  if (mothTrail.length < 2) return;
+  for (let i = 1; i < mothTrail.length; i++) {
+    const t = i / mothTrail.length;
+    const alpha = t * 0.25;
+    const size = t * 3;
+    ctx.fillStyle = `rgba(150, 200, 255, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(mothTrail[i].x, mothTrail[i].y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    const t = p.life / p.maxLife;
+    ctx.globalAlpha = t * 0.8;
+    ctx.fillStyle = `hsl(${p.hue}, 80%, 75%)`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * t, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawPulseWaves() {
+  pulseWaves.forEach(w => {
+    const t = w.life / w.maxLife;
+    ctx.globalAlpha = (1 - t) * 0.4;
+    ctx.strokeStyle = `hsl(${w.hue}, 80%, 70%)`;
+    ctx.lineWidth = 2 * (1 - t);
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawPayoff() {
+  if (gameState !== 'payoff') return;
+  const elapsed = (Date.now() - payoffStartTime) / 1000;
+
+  // Massive bloom effect
+  const bloomSize = Math.min(elapsed * 500, W * 1.5);
+  const bloomGrad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, bloomSize);
+  bloomGrad.addColorStop(0, `rgba(255,255,240,${0.3 * Math.min(elapsed * 2, 1)})`);
+  bloomGrad.addColorStop(0.3, `rgba(180,255,200,${0.15 * Math.min(elapsed * 2, 1)})`);
+  bloomGrad.addColorStop(0.7, `rgba(100,200,255,${0.05 * Math.min(elapsed * 1.5, 1)})`);
+  bloomGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = bloomGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Rising particles from center
+  payoffParticles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = `hsl(${p.hue}, 80%, ${60 + p.brightness * 30}%)`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // Central flower bloom
+  const bloomPhase = Math.min(elapsed / 2, 1);
+  const bSize = bloomPhase * 80;
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(elapsed * 0.3);
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    ctx.save();
+    ctx.rotate(angle);
+    const pGrad = ctx.createRadialGradient(bSize * 0.3, 0, 0, bSize * 0.3, 0, bSize * 0.4);
+    pGrad.addColorStop(0, `hsla(${180 + i * 5}, 90%, 85%, ${0.8 * bloomPhase})`);
+    pGrad.addColorStop(1, `hsla(${200 + i * 10}, 80%, 50%, 0)`);
+    ctx.fillStyle = pGrad;
+    ctx.beginPath();
+    ctx.ellipse(bSize * 0.3, 0, bSize * 0.35, bSize * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // Center
+  const cGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, bSize * 0.4);
+  cGrad.addColorStop(0, `hsla(60, 100%, 95%, ${bloomPhase})`);
+  cGrad.addColorStop(1, `hsla(200, 90%, 60%, 0)`);
+  ctx.fillStyle = cGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, bSize * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ============ UPDATE ============
+function update(timestamp) {
+  const now = Date.now();
+
+  if (gameState === 'playing') {
+    elapsedMs = now - startTime;
+    timeLeft = 90000 - elapsedMs;
+
+    // Wind - changes every ~15 seconds
+    windTimer += 1/60;
+    if (windTimer > 15) {
+      windTimer = 0;
+      windTarget.x = (Math.random() - 0.5) * 40;
+      windTarget.y = (Math.random() - 0.5) * 40;
+    }
+    wind.x += (windTarget.x - wind.x) * 0.02;
+    wind.y += (windTarget.y - wind.y) * 0.02;
+
+    // Moth movement - attracted to mouse with magnetic pull
+    const dx = mouseX - mothX;
+    const dy = mouseY - mothY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Magnetic attraction - gets stronger as flowers get closer
+    const magneticForce = Math.min(0.12, dist * 0.0008 + 0.01) * Math.min(dist * 0.03, 1);
+
+    mothX += dx * magneticForce + wind.x * 0.015;
+    mothY += dy * magneticForce + wind.y * 0.015;
+
+    // Trail
+    mothTrail.push({ x: mothX, y: mothY });
+    if (mothTrail.length > 35) mothTrail.shift();
+
+    // Angle - smooth rotation
+    if (dist > 5) {
+      const targetAngle = Math.atan2(dy, dx);
+      let angleDiff = targetAngle - mothAngle;
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      mothAngle += angleDiff * 0.08;
+    }
+
+    // Moth glow pulsates
+    mothGlowIntensity = 0.7 + Math.sin(timestamp * 0.003) * 0.3;
+
+    // Check flower collection
+    flowers.forEach(f => {
+      if (f.collected) return;
+      const fdx = mothX - f.x;
+      const fdy = mothY - f.y;
+      const fDist = Math.sqrt(fdx * fdx + fdy * fdy);
+
+      if (fDist < f.radius + 5) {
+        f.collected = true;
+        f.collectedAnim = 0;
+        collectedCount++;
+        evidence.progress = collectedCount;
+
+        // Visual feedback
+        spawnParticles(f.x, f.y, 25, f.hue, 3, 1.2);
+        pulseWaves.push({ x: f.x, y: f.y, radius: f.radius, maxRadius: f.radius * 4, life: 1, maxLife: 1, hue: f.hue });
+
+        // Audio
+        playPulseSound(f.x, f.y);
+
+        // Update flower dots
+        document.getElementById('fd-' + (collectedCount - 1)).classList.add('collected');
+
+        // Check payoff
+        if (collectedCount >= 3) {
+          triggerPayoff();
+        }
+      }
+    });
+
+    // Check timeout failure
+    if (timeLeft <= 0) {
+      triggerFailure();
+    }
+
+    // Evidence
+    evidence.phase = 'playing';
+  }
+
+  // Collecting animations
+  flowers.forEach(f => {
+    if (f.collected && f.collectedAnim < 1) {
+      f.collectedAnim += 0.05;
+      f.radius = 22 * (1 + f.collectedAnim * 2);
+      f.pulsePhase += 0.1;
+    }
+    if (f.spawnAnim < 1) {
+      f.spawnAnim += 0.03;
+    }
+  });
+
+  // Pulse wave animation
+  pulseWaves.forEach(w => {
+    w.life -= 0.025;
+    w.radius += (w.maxRadius - w.radius) * 0.08;
+  });
+  pulseWaves = pulseWaves.filter(w => w.life > 0);
+
+  // Particle animation
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.97;
+    p.vy *= 0.97;
+    p.life -= 0.018;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  // Payoff particles
+  if (gameState === 'payoff') {
+    const elapsed = (Date.now() - payoffStartTime) / 1000;
+    if (payoffParticles.length < 60 && elapsed < 4) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = 30 + Math.random() * 150;
+      payoffParticles.push({
+        x: W/2, y: H/2,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        life: 0.6 + Math.random() * 0.8,
+        hue: 180 + Math.random() * 100,
+        size: 1 + Math.random() * 4,
+        brightness: 0.3 + Math.random() * 0.7,
+      });
+    }
+    payoffParticles.forEach(p => {
+      p.x += p.vx * 0.016;
+      p.y += p.vy * 0.016;
+      p.life -= 0.012;
+    });
+    payoffParticles = payoffParticles.filter(p => p.life > 0);
+  }
+
+  // Tiny flies
+  tinyFlies.forEach(fly => {
+    fly.x += fly.vx + Math.sin(fly.wobblePhase) * 0.5;
+    fly.y += fly.vy + Math.cos(fly.wobblePhase * 0.7) * 0.3;
+    fly.wobblePhase += fly.wobbleSpeed * 0.016;
+    fly.life -= 0.016;
+
+    // Small hazard: if moth overlaps
+    const fdx = mothX - fly.x;
+    const fdy = mothY - fly.y;
+    const fDist = Math.sqrt(fdx * fdx + fdy * fdy);
+    if (fDist < fly.size + 8 && gameState === 'playing') {
+      // Slight repulsion
+      mothX -= fdx * 0.3;
+      mothY -= fdy * 0.3;
+      // Flash red
+      mothGlowIntensity = 0.3;
+    }
+  });
+  tinyFlies.forEach(fly => {
+    if (fly.life <= 0 || fly.x < -50 || fly.x > W + 50 || fly.y < -50 || fly.y > H + 50) {
+      spawnTinyFly();
+    }
+  });
+}
+
+// ============ PAYOFF / FAILURE ============
+function triggerPayoff() {
+  gameState = 'payoff';
+  payoffStartTime = Date.now();
+  payoffParticles = [];
+  evidence.phase = 'completed';
+  evidence.completed = true;
+
+  playPayoffChord();
+
+  // Show end screen after delay
+  setTimeout(() => {
+    const endScreen = document.getElementById('end-screen');
+    endScreen.className = 'visible success';
+    document.getElementById('end-title').textContent = 'Complete';
+    document.getElementById('end-subtitle').textContent = 'The garden blooms. The moth has found its way.';
+    document.getElementById('restart-btn').classList.add('visible');
+    document.getElementById('hud').classList.remove('visible');
+    document.getElementById('time-display').classList.remove('visible');
+  }, 2500);
+}
+
+function triggerFailure() {
+  gameState = 'failed';
+  evidence.phase = 'failed';
+
+  playFailureRumble();
+
+  setTimeout(() => {
+    const endScreen = document.getElementById('end-screen');
+    endScreen.className = 'visible failure';
+    document.getElementById('end-title').textContent = 'Fled';
+    document.getElementById('end-subtitle').textContent = `Collected ${collectedCount} of 3 pulses before time ran out.`;
+    document.getElementById('restart-btn').classList.add('visible');
+    document.getElementById('hud').classList.remove('visible');
+    document.getElementById('time-display').classList.remove('visible');
+  }, 1000);
+}
+
+// ============ DRAW ============
+function draw(timestamp) {
+  drawBackground(timestamp);
+
+  if (gameState === 'playing' || gameState === 'payoff' || gameState === 'failed') {
+    drawParticles();
+    drawPulseWaves();
+    drawTrail();
+
+    flowers.forEach(f => drawFlower(f, timestamp));
+
+    if (gameState !== 'failed') {
+      drawMoth(timestamp);
+    }
+
+    // Draw remaining tiny flies
+    tinyFlies.forEach(fly => {
+      const alpha = Math.min(1, fly.life / 3) * 0.4;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffaa44';
+      ctx.beginPath();
+      ctx.arc(fly.x, fly.y, fly.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    if (gameState === 'payoff') drawPayoff();
+
+    // Time display
+    document.getElementById('time-display').textContent = Math.ceil(timeLeft / 1000) + 's';
+  }
+
+  // Moth glow on failed
+  if (gameState === 'failed') {
+    ctx.globalAlpha = 0.3 + Math.sin(timestamp * 0.005) * 0.15;
+    ctx.fillStyle = '#ff4422';
+    ctx.beginPath();
+    ctx.arc(mothX, mothY, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ============ MAIN LOOP ============
+function gameLoop(timestamp) {
+  update(timestamp);
+  draw(timestamp);
+  requestAnimationFrame(gameLoop);
+}
+
+// ============ INIT ============
+function startGame() {
+  initAudio();
+  document.getElementById('title-screen').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('title-screen').style.display = 'none';
+  }, 800);
+
+  document.getElementById('hud').classList.add('visible');
+  document.getElementById('time-display').classList.add('visible');
+
+  // Reset
+  mothX = W / 2;
+  mothY = H / 2;
+  mothAngle = 0;
+  mouseX = W / 2;
+  mouseY = H / 2;
+  collectedCount = 0;
+  particles = [];
+  pulseWaves = [];
+  payoffParticles = [];
+  mothTrail = [];
+  wind = { x: 0, y: 0 };
+  windTarget = { x: 0, y: 0 };
+  windTimer = 0;
+
+  // Reset flower dots
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('fd-' + i).classList.remove('collected');
+  }
+
+  scoreDisplay();
+  spawnFlowers();
+  gameState = 'playing';
+  startTime = Date.now();
+  evidence = {
+    schema_version: 1,
+    phase: 'playing',
+    progress: 0,
+    target: 3,
+    completed: false,
+    restart_count: evidence.restart_count,
+  };
+}
+
+function scoreDisplay() {
+  document.getElementById('score-display').querySelector('.hud-value')
+    ? null
+    : null;
+  // We'll directly set it
+  const sd = document.getElementById('score-display');
+  sd.innerHTML = `Pulse: <span class="hud-value">${collectedCount}/3</span>`;
+}
+
+function restartGame() {
+  // Hide end screen
+  const endScreen = document.getElementById('end-screen');
+  endScreen.className = '';
+  endScreen.style.opacity = '0';
+  document.getElementById('restart-btn').classList.remove('visible');
+
+  evidence.restart_count++;
+  startGame();
+}
+
+function startPayoffGame() {
+  const endScreen = document.getElementById('end-screen');
+  endScreen.className = '';
+  endScreen.style.opacity = '0';
+  document.getElementById('restart-btn').classList.remove('visible');
+
+  evidence.restart_count++;
+
+  gameState = 'playoff';
+  payoffStartTime = Date.now();
+  payoffParticles = [];
+  evidence = {
+    schema_version: 1,
+    phase: 'completed',
+    progress: 3,
+    target: 3,
+    completed: true,
+    restart_count: evidence.restart_count,
+  };
+
+  // Reset flower dots
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('fd-' + i).classList.remove('collected');
+  }
+
+  spawnFlowers();
+  setTimeout(() => {
+    gameState = 'payoff';
+    playPayoffChord();
+    setTimeout(() => {
+      endScreen.className = 'visible success';
+      document.getElementById('end-title').textContent = 'Complete';
+      document.getElementById('end-subtitle').textContent = 'The garden blooms. The moth has found its way.';
+      document.getElementById('restart-btn').classList.add('visible');
+      document.getElementById('hud').classList.remove('visible');
+      document.getElementById('time-display').classList.remove('visible');
+    }, 3000);
+  }, 500);
+}
+
+// ============ EVENT LISTENERS ============
+document.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+document.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX;
+  mouseY = e.touches[0].clientY;
+}, { passive: false });
+
+document.addEventListener('touchstart', (e) => {
+  mouseX = e.touches[0].clientX;
+  mouseY = e.touches[0].clientY;
+});
+
+document.getElementById('click-start').addEventListener('click', () => {
+  startGame();
+});
+
+document.getElementById('click-restart').addEventListener('click', () => {
+  restartGame();
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  restartGame();
+});
+
+requestAnimationFrame(gameLoop);
+</script>
 </body>
 </html>
