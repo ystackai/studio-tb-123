@@ -1,594 +1,758 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orbit Postcard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a1a;
+    overflow: hidden;
+    font-family: 'Georgia', serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+    cursor: crosshair;
+  }
+  #restart-btn {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 32px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.7);
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s;
+    z-index: 10;
+    display: none;
+  }
+  #restart-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.95);
+  }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
+<canvas id="game"></canvas>
+<button id="restart-btn">↺ Restart</button>
+<script>
+(function() {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const restartBtn = document.getElementById('restart-btn');
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
-  </div>
+  let W, H;
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
 
-  <div class="profile">
-
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
-
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
-
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
-
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
-
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
-
-  </div>
-
-  <div id="footer"></div>
-
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
-
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
+  // Audio context
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
+  function playTone(freq, dur, vol, type, detune) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    if (detune) osc.detune.value = detune;
+    gain.gain.setValueAtTime(vol || 0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + dur);
+  }
 
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
+  function playRingPass(index) {
+    const baseFreqs = [262, 330, 392]; // C4, E4, G4
+    const freqs = [392, 523, 659]; // C5, C6, E6 - rising
+    playTone(freqs[index] || 523, 1.2, 0.2, 'sine', -5);
+    playTone(freqs[index] * 1.5, 0.8, 0.1, 'triangle', 3);
+    // Sparkle
+    setTimeout(() => playTone(freqs[index] * 2, 0.3, 0.05, 'sine', 0), 100);
+  }
 
+  function playLaunch() {
+    playTone(180, 0.5, 0.2, 'sawtooth', 0);
+    setTimeout(() => playTone(280, 0.4, 0.15, 'sawtooth', 0), 100);
+    setTimeout(() => playTone(350, 0.3, 0.1, 'sawtooth', 0), 200);
+  }
 
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+  function playPayoff() {
+    const notes = [262, 330, 392, 523, 659, 784];
+    notes.forEach((f, i) => {
+      setTimeout(() => {
+        playTone(f, 1.5, 0.12, 'sine', 0);
+        playTone(f * 2, 1.2, 0.06, 'triangle', 0);
+      }, i * 150);
     });
-  </script>
+  }
+
+  function playFail() {
+    playTone(180, 0.8, 0.15, 'sawtooth', 0);
+    setTimeout(() => playTone(120, 1.0, 0.12, 'sawtooth', 0), 200);
+  }
+
+  function playClick() {
+    playTone(800, 0.08, 0.08, 'sine', 0);
+  }
+
+  // Game state
+  let state = {
+    phase: 'initial', // initial, aiming, playing, ring_pass, payoff, failed, restart_soon
+    satellite: { x: 0, y: 0, vx: 0, vy: 0 },
+    aimStart: null,
+    aimEnd: null,
+    rings: [],
+    ringIndex: 0,
+    progress: 0,
+    target: 3,
+    completed: false,
+    restartCount: 0,
+    launchTime: 0,
+    trail: [],
+    particles: [],
+    stars: [],
+    ringAnimations: [],
+    postcardElements: [],
+    elapsed: 0,
+    won: false,
+    aimLineAlpha: 0,
+    bgHue: 240,
+    satelliteGlow: 0,
+  };
+
+  // Generate stars
+  function generateStars() {
+    state.stars = [];
+    for (let i = 0; i < 200; i++) {
+      state.stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        size: Math.random() * 2 + 0.5,
+        alpha: Math.random() * 0.8 + 0.2,
+        twinkleSpeed: Math.random() * 0.02 + 0.005,
+        twinklePhase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+  generateStars();
+
+  // Initialize rings
+  function initRings() {
+    const cx = W / 2;
+    const cy = H / 2;
+    const ringRadii = [Math.min(W, H) * 0.15, Math.min(W, H) * 0.28, Math.min(W, H) * 0.42];
+    const ringColors = ['#44ffcc', '#ff88aa', '#ffcc44'];
+    const ringNames = ['Mercury', 'Venus', 'Kepler'];
+
+    state.rings = ringRadii.map((r, i) => ({
+      radius: r,
+      color: ringColors[i],
+      name: ringNames[i],
+      passed: false,
+      alpha: 1,
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: 0.003 + i * 0.002,
+      dashOffset: 0,
+      scale: 0,
+    }));
+
+    state.satellite = { x: cx, y: H - 120, vx: 0, vy: 0 };
+    state.ringIndex = 0;
+    state.progress = 0;
+    state.completed = false;
+    state.won = false;
+    state.trail = [];
+    state.particles = [];
+    state.ringAnimations = [];
+    state.postcardElements = [];
+    state.elapsed = 0;
+  }
+
+  initRings();
+
+  // Handle clicking to aim
+  canvas.addEventListener('click', function(e) {
+    ensureAudio();
+    playClick();
+
+    if (state.phase === 'initial' || state.phase === 'failed' || state.phase === 'payoff') {
+      if (state.phase === 'failed' || state.phase === 'payoff') {
+        // Restart
+        state.restartCount++;
+        state.phase = 'aiming';
+        state.satellite = { x: W / 2, y: H - 120, vx: 0, vy: 0 };
+        state.trail = [];
+        state.ringIndex = 0;
+        state.progress = 0;
+        state.completed = false;
+        state.won = false;
+        state.elapsed = 0;
+        initRings();
+        state.phase = 'aiming';
+        restartBtn.style.display = 'none';
+        return;
+      }
+    }
+
+    if (state.phase === 'aiming') {
+      state.aimStart = { x: state.satellite.x, y: state.satellite.y };
+      state.aimEnd = { x: e.clientX, y: e.clientY };
+      state.phase = 'aiming_drag';
+      return;
+    }
+
+    if (state.phase === 'aiming_drag') {
+      state.aimEnd = { x: e.clientX, y: e.clientY };
+
+      // Calculate velocity based on drag
+      let dx = state.aimEnd.x - state.aimStart.x;
+      let dy = state.aimEnd.y - state.aimStart.y;
+      const power = Math.min(Math.sqrt(dx * dx + dy * dy), 250) * 0.04;
+      const angle = Math.atan2(dy, dx);
+
+      state.satellite.vx = Math.cos(angle) * power;
+      state.satellite.vy = Math.sin(angle) * power;
+
+      if (power > 2) {
+        state.phase = 'playing';
+        state.launchTime = performance.now();
+        playLaunch();
+        state.aimEnd = null;
+        state.aimStart = null;
+      } else {
+        state.phase = 'aiming';
+        state.aimEnd = null;
+        state.aimStart = null;
+      }
+      return;
+    }
+  });
+
+  restartBtn.addEventListener('click', function() {
+    ensureAudio();
+    playClick();
+    state.restartCount++;
+    state.phase = 'aiming';
+    state.satellite = { x: W / 2, y: H - 120, vx: 0, vy: 0 };
+    state.trail = [];
+    state.ringIndex = 0;
+    state.progress = 0;
+    state.completed = false;
+    state.won = false;
+    state.elapsed = 0;
+    initRings();
+    restartBtn.style.display = 'none';
+  });
+
+  // FactoryX evidence
+  window.__factoryxEvidence = function() {
+    return {
+      schema_version: 1,
+      phase: state.phase === 'playing' || state.phase === 'aiming' || state.phase === 'aiming_drag'
+        ? (state.phase === 'playing' ? 'playing' : 'playing')
+        : state.phase === 'payoff' || state.phase === 'failed' ? 'completed' : 'initial',
+      progress: state.progress,
+      target: state.target,
+      completed: state.completed,
+      restart_count: state.restartCount,
+    };
+  };
+
+  // Particle system
+  function spawnParticles(x, y, color, count, speed) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = Math.random() * speed + speed * 0.5;
+      state.particles.push({
+        x, y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        life: 1,
+        decay: Math.random() * 0.02 + 0.01,
+        color,
+        size: Math.random() * 3 + 1,
+      });
+    }
+  }
+
+  // Main game loop
+  let lastTime = performance.now();
+
+  function update(now) {
+    const dt = Math.min((now - lastTime) / 16.67, 3);
+    lastTime = now;
+    state.elapsed += dt;
+
+    // Update satellite
+    if (state.phase === 'playing') {
+      state.satellite.x += state.satellite.vx * dt;
+      state.satellite.y += state.satellite.vy * dt;
+
+      // Trail
+      state.trail.push({ x: state.satellite.x, y: state.satellite.y, alpha: 1 });
+      if (state.trail.length > 80) state.trail.shift();
+      state.trail.forEach(t => t.alpha *= 0.97);
+
+      // Satellite glow
+      state.satelliteGlow = Math.min(state.satelliteGlow + 0.02, 1);
+
+      // Check ring collisions
+      const ring = state.rings[state.ringIndex];
+      if (ring) {
+        const dist = Math.sqrt(
+          (state.satellite.x - W/2) ** 2 + (state.satellite.y - H/2) ** 2
+        );
+
+        // Ring rotation
+        ring.rotation += ring.rotationSpeed * dt;
+        ring.dashOffset -= 2 * dt;
+
+        // Scale in
+        if (ring.scale < 1) {
+          ring.scale = Math.min(1, ring.scale + 0.02 * Math.sqrt(dt));
+        }
+
+        const ringInner = ring.radius - 15;
+        const ringOuter = ring.radius + 15;
+
+        if (dist > ringInner && dist < ringOuter && !ring.passed) {
+          // Check if satellite is moving away from center (through the ring)
+          const dx = state.satellite.x - W/2;
+          const dy = state.satellite.y - H/2;
+          const velFromCenter = (state.satellite.vx * dx + state.satellite.vy * dy) / (dist || 1);
+
+          if (velFromCenter > 0 || ringInner < dist) {
+            ring.passed = true;
+            state.progress = state.ringIndex + 1;
+            state.ringAnimations.push({
+              ringIndex: state.ringIndex,
+              startTime: now,
+              color: ring.color,
+            });
+            playRingPass(state.ringIndex);
+            spawnParticles(
+              state.satellite.x, state.satellite.y,
+              ring.color, 30, 3
+            );
+
+            state.satelliteGlow = 1;
+
+            state.ringIndex++;
+            if (state.ringIndex >= state.rings.length) {
+              // Won!
+              state.completed = true;
+              state.won = true;
+              state.phase = 'payoff';
+              playPayoff();
+
+              // Create postcard elements
+              for (let i = 0; i < 50; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 150 + 50;
+                state.postcardElements.push({
+                  x: W/2 + Math.cos(angle) * dist,
+                  y: H/2 + Math.sin(angle) * dist,
+                  size: Math.random() * 8 + 2,
+                  alpha: 0,
+                  maxAlpha: Math.random() * 0.8 + 0.2,
+                  color: ring.color,
+                  angle: angle,
+                  speed: Math.random() * 0.01 + 0.005,
+                  rotation: Math.random() * Math.PI * 2,
+                  rotSpeed: (Math.random() - 0.5) * 0.05,
+                });
+              }
+            }
+          }
+        }
+
+        // Missed the ring
+        if (dist > ringOuter + 50 && !ring.passed) {
+          ring.passed = true; // Mark as failed
+          state.phase = 'failed';
+          playFail();
+          spawnParticles(state.satellite.x, state.satellite.y, '#ff4444', 40, 4);
+        }
+      }
+
+      // Check if satellite is off screen
+      if (state.satellite.x < -100 || state.satellite.x > W + 100 ||
+          state.satellite.y < -100 || state.satellite.y > H + 100) {
+        if (!ring || !ring.passed) {
+          ring.passed = true;
+          state.phase = 'failed';
+          playFail();
+          spawnParticles(state.satellite.x, state.satellite.y, '#ff4444', 40, 4);
+        }
+      }
+    }
+
+    // Update aim line fade
+    if (state.phase === 'aiming') {
+      state.aimLineAlpha = Math.max(0, state.aimLineAlpha - 0.02 * dt);
+    }
+
+    // Update particles
+    state.particles.forEach(p => {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= p.decay * dt;
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+    });
+    state.particles = state.particles.filter(p => p.life > 0);
+
+    // Update postcard elements
+    state.postcardElements.forEach(el => {
+      el.alpha = Math.min(el.maxAlpha, el.alpha + 0.02 * dt);
+      el.rotation += el.rotSpeed * dt;
+      el.x += Math.cos(el.angle + state.elapsed * el.speed) * 0.3 * dt;
+      el.y += Math.sin(el.angle + state.elapsed * el.speed) * 0.3 * dt;
+    });
+
+    // Update rings scale in
+    state.rings.forEach(ring => {
+      if (!ring.passed && ring.scale < 1) {
+        ring.scale = Math.min(1, ring.scale + 0.015 * dt);
+      }
+    });
+  }
+
+  function draw(now) {
+    const t = now / 1000;
+
+    // Background
+    const bgHueShift = Math.sin(t * 0.1) * 10;
+    const bgGrad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H));
+    bgGrad.addColorStop(0, `hsl(${240 + bgHueShift}, 30%, 12%)`);
+    bgGrad.addColorStop(0.6, `hsl(${260 + bgHueShift}, 40%, 6%)`);
+    bgGrad.addColorStop(1, `hsl(${270 + bgHueShift}, 20%, 3%)`);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars
+    state.stars.forEach(star => {
+      const twinkle = Math.sin(t * star.twinkleSpeed * 10 + star.twinklePhase) * 0.3 + 0.7;
+      ctx.fillStyle = `rgba(255, 255, 240, ${star.alpha * twinkle})`;
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    if (state.phase === 'initial') {
+      // Idle screen
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.font = '48px Georgia';
+      ctx.textAlign = 'center';
+      ctx.fillText('ORBIT', W/2, H/2 - 60);
+      ctx.font = '24px Georgia';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillText('POSTCARD', W/2, H/2 - 20);
+      ctx.font = '18px Georgia';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillText('Click to begin your journey', W/2, H/2 + 40);
+
+      // Draw hint rings
+      const ringRadii = [Math.min(W,H) * 0.15, Math.min(W,H) * 0.28, Math.min(W,H) * 0.42];
+      const hintColors = ['#44ffcc', '#ff88aa', '#ffcc44'];
+      ringRadii.forEach((r, i) => {
+        ctx.beginPath();
+        ctx.arc(W/2, H/2, r, 0, Math.PI * 2);
+        ctx.strokeStyle = hintColors[i] + '33';
+        ctx.lineWidth = 30;
+        ctx.stroke();
+      });
+
+      // Satellite
+      ctx.fillStyle = '#ffeedd';
+      ctx.beginPath();
+      ctx.arc(W/2, H/2 - 140, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffeedd88';
+      ctx.beginPath();
+      ctx.arc(W/2, H/2 - 140, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      return;
+    }
+
+    // Draw rings
+    state.rings.forEach((ring, i) => {
+      if (ring.passed && i !== state.ringIndex - 1) {
+        // Faded passed rings
+        ctx.beginPath();
+        ctx.arc(W/2, H/2, ring.radius * ring.scale, 0, Math.PI * 2);
+        ctx.strokeStyle = ring.color + '22';
+        ctx.lineWidth = 30;
+        ctx.stroke();
+        return;
+      }
+
+      const alpha = ring.passed ? 0.15 : 1;
+      const glow = ring.passed ? 0 : 1;
+
+      // Outer glow
+      if (glow) {
+        ctx.beginPath();
+        ctx.arc(W/2, H/2, ring.radius * ring.scale, 0, Math.PI * 2);
+        ctx.strokeStyle = ring.color + '22';
+        ctx.lineWidth = 60;
+        ctx.stroke();
+      }
+
+      // Main ring
+      ctx.beginPath();
+      ctx.arc(W/2, H/2, ring.radius * ring.scale, 0, Math.PI * 2);
+      ctx.strokeStyle = ring.color + Math.floor(alpha * 255 * 0.8).toString(16).padStart(2, '0');
+      ctx.lineWidth = 30;
+      ctx.lineDash = [40, 20];
+      ctx.lineDashOffset = ring.dashOffset;
+      ctx.stroke();
+      ctx.lineDash = [];
+
+      // Inner bright line
+      if (!ring.passed) {
+        ctx.beginPath();
+        ctx.arc(W/2, H/2, ring.radius * ring.scale, 0, Math.PI * 2);
+        ctx.strokeStyle = ring.color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      // Ring name
+      if (!ring.passed || ring.scale >= 1) {
+        ctx.fillStyle = ring.color + '88';
+        ctx.font = '14px Georgia';
+        ctx.textAlign = 'center';
+        ctx.fillText(ring.name.toUpperCase(), W/2, H/2 - ring.radius * ring.scale - 35);
+      }
+    });
+
+    // Satellite trail
+    state.trail.forEach((point, i) => {
+      const alpha = point.alpha * 0.5;
+      const size = 3 * alpha;
+      if (size > 0.5) {
+        ctx.fillStyle = `rgba(255, 238, 220, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // Particles
+    state.particles.forEach(p => {
+      ctx.fillStyle = p.color + Math.floor(p.life * 255).toString(16).padStart(2, '0');
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Satellite
+    if (state.phase !== 'initial' && state.phase !== 'failed' && state.phase !== 'payoff') {
+      const sat = state.satellite;
+      const glowSize = 25 + state.satelliteGlow * 20;
+
+      // Glow
+      const satGlow = ctx.createRadialGradient(sat.x, sat.y, 0, sat.x, sat.y, glowSize);
+      satGlow.addColorStop(0, 'rgba(255, 238, 200, 0.8)');
+      satGlow.addColorStop(0.5, 'rgba(255, 200, 150, 0.3)');
+      satGlow.addColorStop(1, 'rgba(255, 200, 150, 0)');
+      ctx.fillStyle = satGlow;
+      ctx.beginPath();
+      ctx.arc(sat.x, sat.y, glowSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Satellite body
+      ctx.fillStyle = '#ffeedd';
+      ctx.beginPath();
+      ctx.arc(sat.x, sat.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Satellite accent
+      ctx.fillStyle = '#ffcc88';
+      ctx.beginPath();
+      ctx.arc(sat.x, sat.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Aim line
+    if (state.phase === 'aiming_drag' && state.aimStart && state.aimEnd) {
+      const dx = state.aimEnd.x - state.aimStart.x;
+      const dy = state.aimEnd.y - state.aimStart.y;
+      const power = Math.min(Math.sqrt(dx*dx + dy*dy), 250);
+
+      ctx.beginPath();
+      ctx.moveTo(state.aimStart.x, state.aimStart.y);
+      ctx.lineTo(state.aimEnd.x, state.aimEnd.y);
+      ctx.strokeStyle = `rgba(255, 200, 100, ${Math.min(power/100, 0.8)})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrow head
+      const angle = Math.atan2(dy, dx);
+      const arrowX = state.aimEnd.x;
+      const arrowY = state.aimEnd.y;
+      ctx.beginPath();
+      ctx.moveTo(arrowX, arrowY);
+      ctx.lineTo(arrowX - 12 * Math.cos(angle - 0.4), arrowY - 12 * Math.sin(angle - 0.4));
+      ctx.moveTo(arrowX, arrowY);
+      ctx.lineTo(arrowX - 12 * Math.cos(angle + 0.4), arrowY - 12 * Math.sin(angle + 0.4));
+      ctx.strokeStyle = `rgba(255, 200, 100, ${Math.min(power/100, 0.8)})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Postcard payoff
+    if (state.phase === 'payoff') {
+      // Postcard elements
+      state.postcardElements.forEach(el => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        ctx.rotate(el.rotation);
+        ctx.fillStyle = el.color + Math.floor(el.alpha * 255).toString(16).padStart(2, '0');
+        ctx.globalAlpha = el.alpha;
+
+        // Draw a small decorative shape
+        const s = el.size;
+        ctx.beginPath();
+        if (el.size > 5) {
+          // Star shape
+          for (let j = 0; j < 4; j++) {
+            const a = (j / 4) * Math.PI * 2;
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
+          }
+          ctx.strokeStyle = el.color + Math.floor(el.alpha * 255).toString(16).padStart(2, '0');
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else {
+          ctx.arc(0, 0, s, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      // Center text - Postcard message
+      const textAlpha = Math.min(1, (state.elapsed - 2) * 0.5);
+      if (textAlpha > 0) {
+        ctx.save();
+        ctx.globalAlpha = textAlpha;
+
+        ctx.fillStyle = '#ffeedd';
+        ctx.font = '28px Georgia';
+        ctx.textAlign = 'center';
+        ctx.fillText('✦ Orbit Complete ✦', W/2, H/2 - 80);
+
+        ctx.font = '16px Georgia';
+        ctx.fillStyle = '#ffeedd99';
+        ctx.fillText('All rings navigated', W/2, H/2 - 45);
+
+        ctx.font = '14px Georgia';
+        ctx.fillStyle = '#ffeedd66';
+        ctx.fillText('Press restart to journey again', W/2, H/2 + 20);
+
+        ctx.restore();
+      }
+
+      // Restart button
+      restartBtn.style.display = 'block';
+    }
+
+    if (state.phase === 'failed') {
+      const textAlpha = Math.min(1, (state.elapsed - 0.5) * 0.5);
+      if (textAlpha > 0) {
+        ctx.save();
+        ctx.globalAlpha = textAlpha;
+
+        ctx.fillStyle = '#ff8888';
+        ctx.font = '28px Georgia';
+        ctx.textAlign = 'center';
+        ctx.fillText('Lost in the void', W/2, H/2 - 60);
+
+        ctx.font = '16px Georgia';
+        ctx.fillStyle = '#ff888899';
+        ctx.fillText('The satellite drifted off course', W/2, H/2 - 25);
+
+        ctx.font = '14px Georgia';
+        ctx.fillStyle = '#ff888866';
+        ctx.fillText('Press restart to try again', W/2, H/2 + 20);
+
+        ctx.restore();
+      }
+
+      restartBtn.style.display = 'block';
+    }
+
+    // HUD
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '12px Georgia';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Rings: ${state.progress}/${state.target}`, 20, 30);
+
+    if (state.phase === 'aiming' || state.phase === 'aiming_drag') {
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.font = '12px Georgia';
+      ctx.textAlign = 'center';
+      ctx.fillText('Drag to aim and launch', W/2, H - 25);
+    }
+
+    // Progress bar at bottom
+    const barW = 200;
+    const barH = 4;
+    const barX = W/2 - barW/2;
+    const barY = H - 70;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(barX, barY, barW, barH);
+
+    const progress = state.progress / state.target;
+    if (progress > 0) {
+      const grad = ctx.createLinearGradient(barX, barY, barX + barW * progress, barY);
+      grad.addColorStop(0, '#44ffcc');
+      grad.addColorStop(0.5, '#ff88aa');
+      grad.addColorStop(1, '#ffcc44');
+      ctx.fillStyle = grad;
+      ctx.fillRect(barX, barY, barW * progress, barH);
+    }
+  }
+
+  function loop(now) {
+    update(now);
+    draw(now);
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+
+})();
+</script>
 </body>
 </html>
