@@ -1,594 +1,840 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnetic Moth</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    background: #0a0a1a; 
+    overflow: hidden; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    cursor: none;
+  }
+  canvas { display: block; }
+  #ui-layer {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #restart-btn {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 32px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0;
+    transition: opacity 0.5s, background 0.3s;
+    z-index: 20;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  #restart-btn:hover {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.6);
+    opacity: 1 !important;
+  }
+  #restart-btn.visible { opacity: 1; }
+  #start-hint {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255,255,255,0.7);
+    font-size: 22px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    animation: pulse-text 2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 15;
+  }
+  @keyframes pulse-text {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.9; }
+  }
+  #progress-bar {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 15;
+  }
+  .pulse-indicator {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    transition: background 0.3s, border-color 0.3s, transform 0.3s;
+  }
+  .pulse-indicator.collected {
+    background: #ffe066;
+    border-color: #fff;
+    transform: scale(1.1);
+  }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
+<canvas id="game-canvas"></canvas>
+<div id="ui-layer"></div>
+<div id="progress-bar">
+  <div class="pulse-indicator" id="ind-0"></div>
+  <div class="pulse-indicator" id="ind-1"></div>
+  <div class="pulse-indicator" id="ind-2"></div>
+</div>
+<div id="start-hint">click to begin</div>
+<button id="restart-btn">Restart</button>
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
-  </div>
+<script>
+(function() {
+  // ─── AUDIO ENGINE ─────────────────────────────────────────
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+  let masterGain = null;
 
-  <div class="profile">
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new AudioCtx();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+  }
 
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
+  // Flight thrum - low drone
+  let flightOsc = null, flightGain = null;
+  function startFlightSound() {
+    if (!audioCtx) return;
+    flightOsc = audioCtx.createOscillator();
+    flightGain = audioCtx.createGain();
+    flightOsc.type = 'sine';
+    flightOsc.frequency.value = 80;
+    flightGain.gain.value = 0;
+    flightOsc.connect(flightGain);
+    flightGain.connect(masterGain);
+    flightOsc.start();
+    flightGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.5);
+  }
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
-
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
-
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
-
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
-
-  </div>
-
-  <div id="footer"></div>
-
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
-
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
+  function stopFlightSound() {
+    if (flightGain) {
+      flightGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+      setTimeout(() => {
+        if (flightOsc) { flightOsc.stop(); flightOsc = null; }
+        flightGain = null;
+      }, 350);
     }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+  }
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
+  // Collect chime
+  function playCollectChime() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(523, now);
+    osc.frequency.exponentialRampToValueAtTime(1047, now + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(1318, now + 0.3);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.8);
+  }
 
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
-
-
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
-
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
-
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
-
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
-
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
-
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
-
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
-
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+  // Payoff fanfare
+  function playPayoffMusic() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const notes = [523, 659, 784, 1047, 784, 1047, 1319];
+    const durations = [0.2, 0.2, 0.2, 0.5, 0.2, 0.2, 0.6];
+    let t = now;
+    notes.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.setValueAtTime(0.001, t + durations[i] * 0.9);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(t);
+      osc.stop(t + durations[i]);
+      t += durations[i];
     });
-  </script>
+  }
+
+  // Background ambience - gentle wind
+  function startAmbience() {
+    if (!audioCtx) return;
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.015;
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 400;
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.3;
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    source.start();
+    window._ambienceSource = source;
+  }
+
+  // Pulse warning sound
+  function playPulseWarning() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = 200;
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  }
+
+  // ─── CANVAS SETUP ─────────────────────────────────────────
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // ─── GAME STATE ───────────────────────────────────────────
+  let state = {
+    phase: 'initial', // initial, playing, completed
+    progress: 0,
+    target: 3,
+    completed: false,
+    restartCount: 0,
+    mothX: W / 2,
+    mothY: H / 2,
+    targetX: W / 2,
+    targetY: H / 2,
+    mouseX: W / 2,
+    mouseY: H / 2,
+    flowers: [],
+    particles: [],
+    stars: [],
+    mouseXSmooth: W / 2,
+    mouseYSmooth: H / 2,
+    startTime: 0,
+    elapsed: 0,
+    collecting: null,
+    collectAnim: 0,
+    payoffAnim: 0,
+    payoffActive: false,
+    screenShake: 0,
+    trail: [],
+    flowerPulsePhase: 0,
+    pressure: 1,
+    gameOver: false,
+    gameOverTimer: 0,
+  };
+
+  const MOTH_RADIUS = 12;
+  const FLOWER_RADIUS_MIN = 25;
+  const FLOWER_RADIUS_MAX_START = 45;
+  const FLOWER_SPEED = 2;
+  const MOTH_LERP = 0.08;
+
+  // ─── DRAWING HELPERS ──────────────────────────────────────
+  function drawMoth(x, y, time, glow) {
+    ctx.save();
+    ctx.translate(x, y);
+    const angle = Math.atan2(state.mouseYSmooth - y, state.mouseXSmooth - x);
+    ctx.rotate(angle);
+
+    // Glow
+    if (glow) {
+      const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, MOTH_RADIUS * 3);
+      grd.addColorStop(0, 'rgba(255, 230, 100, 0.3)');
+      grd.addColorStop(1, 'rgba(255, 230, 100, 0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(0, 0, MOTH_RADIUS * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Body
+    ctx.fillStyle = '#ffe864';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, MOTH_RADIUS * 0.4, MOTH_RADIUS, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Wings
+    const wingFlap = Math.sin(time * 12) * 0.3 + 0.7;
+    ctx.save();
+    ctx.scale(1, wingFlap);
+    // Left wing
+    ctx.fillStyle = 'rgba(255, 200, 100, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(-MOTH_RADIUS * 0.8, -MOTH_RADIUS * 0.3, MOTH_RADIUS * 1.2, MOTH_RADIUS * 0.7, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 180, 50, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Right wing
+    ctx.beginPath();
+    ctx.ellipse(MOTH_RADIUS * 0.8, -MOTH_RADIUS * 0.3, MOTH_RADIUS * 1.2, MOTH_RADIUS * 0.7, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // Wing pattern
+    ctx.fillStyle = 'rgba(255, 150, 50, 0.5)';
+    ctx.beginPath();
+    ctx.arc(-MOTH_RADIUS * 0.9, -MOTH_RADIUS * 0.4, 3, 0, Math.PI * 2);
+    ctx.arc(MOTH_RADIUS * 0.9, -MOTH_RADIUS * 0.4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawFlower(flower, time, collected) {
+    const { x, y, pulsePhase, collectedAnim } = flower;
+    const pulse = Math.sin(pulsePhase) * 0.3 + 0.7;
+    const radius = FLOWER_RADIUS_MIN + (FLOWER_RADIUS_MAX_START - FLOWER_RADIUS_MIN) * pulse;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Pulsing aura (danger zone)
+    const auraGrd = ctx.createRadialGradient(0, 0, radius * 0.5, 0, 0, radius);
+    auraGrd.addColorStop(0, `rgba(200, 100, 255, ${0.15 * pulse})`);
+    auraGrd.addColorStop(1, 'rgba(200, 100, 255, 0)');
+    ctx.fillStyle = auraGrd;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Petals
+    const petalCount = 6;
+    for (let i = 0; i < petalCount; i++) {
+      const angle = (i / petalCount) * Math.PI * 2 + time * 0.5;
+      const px = Math.cos(angle) * radius * 0.7;
+      const py = Math.sin(angle) * radius * 0.7;
+      ctx.fillStyle = `hsla(${280 + Math.sin(time + i) * 20}, 80%, ${60 + pulse * 20}%, ${0.8 * pulse})`;
+      ctx.beginPath();
+      ctx.ellipse(px, py, radius * 0.35, radius * 0.2, angle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Center
+    const centerGrd = ctx.createRadialGradient(0, 0, 0, 0, 0, radius * 0.3);
+    centerGrd.addColorStop(0, '#ffe066');
+    centerGrd.addColorStop(1, '#ff9900');
+    ctx.fillStyle = centerGrd;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Collected animation
+    if (collectedAnim !== undefined && collectedAnim > 0) {
+      const scale = 1 + collectedAnim * 2;
+      const alpha = 1 - collectedAnim;
+      ctx.save();
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      // Burst ring
+      ctx.strokeStyle = `rgba(255, 224, 100, ${alpha})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * (1 + collectedAnim * 3), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // ─── INITIALIZATION ───────────────────────────────────────
+  function initStars() {
+    state.stars = [];
+    for (let i = 0; i < 120; i++) {
+      state.stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.5 + 0.3,
+        twinkle: Math.random() * Math.PI * 2,
+        twinkleSpeed: Math.random() * 0.02 + 0.005,
+      });
+    }
+  }
+
+  function initFlowers() {
+    state.flowers = [];
+    const margin = 100;
+    for (let i = 0; i < 3; i++) {
+      state.flowers.push({
+        x: margin + Math.random() * (W - margin * 2),
+        y: margin + Math.random() * (H - margin * 2),
+        pulsePhase: Math.random() * Math.PI * 2,
+        collected: false,
+        collectedAnim: 0,
+        collectedProgress: i, // track order
+      });
+    }
+  }
+
+  function initParticles() {
+    state.particles = [];
+  }
+
+  function initAmbientParticles() {
+    state.particles = [];
+    for (let i = 0; i < 40; i++) {
+      state.particles.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 2 + 0.5,
+        alpha: Math.random() * 0.3 + 0.05,
+      });
+    }
+  }
+
+  function resetGame() {
+    state.phase = 'initial';
+    state.progress = 0;
+    state.completed = false;
+    state.mothX = W / 2;
+    state.mothY = H / 2;
+    state.mouseX = W / 2;
+    state.mouseY = H / 2;
+    state.mouseXSmooth = W / 2;
+    state.mouseYSmooth = H / 2;
+    state.collectAnim = 0;
+    state.payoffAnim = 0;
+    state.payoffActive = false;
+    state.screenShake = 0;
+    state.trail = [];
+    state.flowerPulsePhase = 0;
+    state.pressure = 1;
+    state.gameOver = false;
+    state.gameOverTimer = 0;
+    state.elapsed = 0;
+    state.startTime = 0;
+    initStars();
+    initFlowers();
+    initAmbientParticles();
+    document.getElementById('ind-0').classList.remove('collected');
+    document.getElementById('ind-1').classList.remove('collected');
+    document.getElementById('ind-2').classList.remove('collected');
+    document.getElementById('restart-btn').classList.remove('visible');
+    document.getElementById('start-hint').style.display = window.innerWidth ? 'block' : 'none';
+  }
+
+  // ─── BACKGROUND ───────────────────────────────────────────
+  function drawBackground(time) {
+    // Deep night sky gradient
+    const grd = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
+    grd.addColorStop(0, '#1a1a3a');
+    grd.addColorStop(0.5, '#0d0d2a');
+    grd.addColorStop(1, '#060615');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars
+    state.stars.forEach(s => {
+      s.twinkle += s.twinkleSpeed;
+      const alpha = 0.3 + Math.sin(s.twinkle) * 0.3;
+      ctx.fillStyle = `rgba(255, 255, 240, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Nebula hint
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    const nebGrd = ctx.createRadialGradient(W * 0.3, H * 0.4, 0, W * 0.3, H * 0.4, 200);
+    nebGrd.addColorStop(0, '#6644aa');
+    nebGrd.addColorStop(1, 'transparent');
+    ctx.fillStyle = nebGrd;
+    ctx.fillRect(0, 0, W, H);
+    const nebGrd2 = ctx.createRadialGradient(W * 0.7, H * 0.6, 0, W * 0.7, H * 0.6, 250);
+    nebGrd2.addColorStop(0, '#4433aa');
+    nebGrd2.addColorStop(1, 'transparent');
+    ctx.fillStyle = nebGrd2;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // ─── GAME LOOP ────────────────────────────────────────────
+  let lastTime = 0;
+  let started = false;
+
+  function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+    lastTime = timestamp;
+
+    const time = timestamp / 1000;
+
+    // Update pressure
+    if (state.phase === 'playing') {
+      state.elapsed += dt;
+      state.pressure = 1 + state.elapsed * 0.03;
+    }
+
+    // Smooth mouse
+    state.mouseXSmooth += (state.mouseX - state.mouseXSmooth) * 0.12;
+    state.mouseYSmooth += (state.mouseY - state.mouseYSmooth) * 0.12;
+
+    // Screen shake
+    let shakeX = 0, shakeY = 0;
+    if (state.screenShake > 0) {
+      shakeX = (Math.random() - 0.5) * state.screenShake * 10;
+      shakeY = (Math.random() - 0.5) * state.screenShake * 10;
+      state.screenShake *= 0.9;
+      if (state.screenShake < 0.01) state.screenShake = 0;
+    }
+
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+
+    drawBackground(time);
+
+    if (state.phase === 'playing' || state.phase === 'completed') {
+      // Ambient particles
+      state.particles.forEach(p => {
+        p.x += p.vx + (state.mouseX - W/2) * 0.002;
+        p.y += p.vy + (state.mouseY - H/2) * 0.002;
+        if (p.x < 0) p.x = W;
+        if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H;
+        if (p.y > H) p.y = 0;
+        ctx.fillStyle = `rgba(180, 170, 220, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Moth trail
+      if (state.phase === 'playing') {
+        state.trail.push({ x: state.mothX, y: state.mothY, t: time });
+        if (state.trail.length > 30) state.trail.shift();
+      }
+
+      // Draw trail
+      if (state.trail.length > 2) {
+        for (let i = 1; i < state.trail.length; i++) {
+          const t = i / state.trail.length;
+          ctx.strokeStyle = `rgba(255, 230, 100, ${t * 0.3})`;
+          ctx.lineWidth = 1 + t * 2;
+          ctx.beginPath();
+          ctx.moveTo(state.trail[i-1].x, state.trail[i-1].y);
+          ctx.lineTo(state.trail[i].x, state.trail[i].y);
+          ctx.stroke();
+        }
+      }
+
+      // Draw flowers
+      state.flowers.forEach((flower, i) => {
+        if (flower.collected) {
+          if (flower.collectedAnim < 1) {
+            flower.collectedAnim += dt * 1.5;
+          }
+          if (flower.collectedAnim >= 1) return;
+          drawFlower(flower, time, true);
+        } else {
+          flower.pulsePhase += dt * (1.5 + state.pressure * 0.5);
+          drawFlower(flower, time, false);
+        }
+      });
+
+      if (state.phase === 'playing') {
+        // Move moth
+        const dx = state.mouseXSmooth - state.mothX;
+        const dy = state.mouseYSmooth - state.mothY;
+        state.mothX += dx * MOTH_LERP;
+        state.mothY += dy * MOTH_LERP;
+
+        // Keep moth in bounds
+        state.mothX = Math.max(MOTH_RADIUS, Math.min(W - MOTH_RADIUS, state.mothX));
+        state.mothY = Math.max(MOTH_RADIUS, Math.min(H - MOTH_RADIUS, state.mothY));
+
+        // Update ambient particles wind
+        state.particles.forEach(p => {
+          p.x += Math.cos(time + p.y * 0.01) * 0.1;
+          p.y += Math.sin(time + p.x * 0.01) * 0.1;
+          if (p.x < 0) p.x = W;
+          if (p.x > W) p.x = 0;
+          if (p.y < 0) p.y = H;
+          if (p.y > H) p.y = 0;
+        });
+
+        // Check flower collections
+        state.flowers.forEach((flower, i) => {
+          if (flower.collected) return;
+          const ddx = state.mothX - flower.x;
+          const ddy = state.mothY - flower.y;
+          const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (dist < MOTH_RADIUS + FLOWER_RADIUS_MIN + 10) {
+            // Collect!
+            flower.collected = true;
+            state.progress = state.flowers.filter(f => f.collected).length;
+            flower.collectedAnim = 0;
+            playCollectChime();
+            state.screenShake = 0.5;
+
+            // Spawn burst particles
+            for (let j = 0; j < 20; j++) {
+              const angle = Math.random() * Math.PI * 2;
+              const speed = Math.random() * 4 + 1;
+              state.particles.push({
+                x: flower.x,
+                y: flower.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                r: Math.random() * 3 + 1,
+                alpha: 1,
+                life: 1,
+                isBurst: true,
+                color: `hsl(${40 + Math.random() * 20}, ${80 + Math.random()*20}%, ${70 + Math.random()*20}%)`,
+              });
+            }
+
+            document.getElementById(`ind-${i}`).classList.add('collected');
+
+            // Check for all collected
+            if (state.progress >= 3) {
+              triggerPayoff();
+            }
+          }
+        });
+
+        // Danger pulse warning - if flower radius expands, play warning
+        state.flowers.forEach(flower => {
+          if (flower.collected) return;
+          const pulseVal = Math.sin(flower.pulsePhase);
+          if (pulseVal > 0.9 && Math.random() < 0.02 * state.pressure) {
+            playPulseWarning();
+          }
+        });
+
+        // Update burst particles
+        state.particles = state.particles.filter(p => {
+          if (!p.isBurst) return true;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= dt * 0.8;
+          p.alpha = Math.max(0, p.life);
+          if (p.life <= 0) return false;
+          ctx.fillStyle = p.color || `rgba(255, 224, 100, ${p.alpha})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * p.alpha, 0, Math.PI * 2);
+          ctx.fill();
+          return true;
+        });
+
+        // Draw trail on canvas
+      }
+
+      // Draw moth
+      drawMoth(state.mothX, state.mothY, time, true);
+
+      // Magnetic field lines effect
+      if (state.phase === 'playing') {
+        state.flowers.forEach(flower => {
+          if (flower.collected) return;
+          ctx.save();
+          ctx.globalAlpha = 0.06;
+          ctx.strokeStyle = '#c864ff';
+          ctx.lineWidth = 1;
+          for (let r = 30; r < 200; r += 15) {
+            ctx.beginPath();
+            const pulseOffset = Math.sin(flower.pulsePhase) * 10;
+            ctx.arc(flower.x, flower.y, r + pulseOffset, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+      }
+
+      // Payoff animation
+      if (state.payoffActive) {
+        state.payoffAnim += dt * 0.8;
+        const a = state.payoffAnim;
+        // Expand and brighten
+        const glow = Math.min(1, a * 2);
+        ctx.save();
+        ctx.globalAlpha = glow * 0.3;
+        const glowGrd = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.5);
+        glowGrd.addColorStop(0, '#ffe066');
+        glowGrd.addColorStop(0.5, '#ff9900');
+        glowGrd.addColorStop(1, 'transparent');
+        ctx.fillStyle = glowGrd;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+
+        // Payoff particles
+        for (let i = 0; i < 5; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2 + Math.random() * 3;
+          state.particles.push({
+            x: W/2, y: H/2,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            r: Math.random() * 4 + 1,
+            alpha: 1,
+            life: 1,
+            isBurst: true,
+            color: `hsl(${Math.random()*60 + 30}, 90%, 75%)`,
+          });
+        }
+
+        // Text
+        if (a > 0.5) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, (a - 0.5) * 3);
+          ctx.fillStyle = '#ffe066';
+          ctx.font = 'bold 36px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = '#ff9900';
+          ctx.shadowBlur = 20;
+          ctx.fillText('✦ Pulses Gathered ✦', W/2, H/2 - 40);
+          ctx.font = '18px "Segoe UI", sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          ctx.shadowBlur = 0;
+          ctx.fillText('The magnetic field harmonizes', W/2, H/2);
+          ctx.restore();
+        }
+
+        // End game
+        if (a >= 3) {
+          state.phase = 'completed';
+          state.completed = true;
+          state.payoffActive = false;
+          stopFlightSound();
+          document.getElementById('restart-btn').classList.add('visible');
+        }
+      }
+
+      // Update non-burst particles
+      state.particles.forEach(p => {
+        if (!p.isBurst) return;
+        // handled above
+      });
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function triggerPayoff() {
+    state.payoffActive = true;
+    state.payoffAnim = 0;
+    stopFlightSound();
+    playPayoffMusic();
+    state.screenShake = 2;
+
+    // Massive burst
+    for (let i = 0; i < 80; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 2;
+      state.particles.push({
+        x: W/2 + (Math.random()-0.5)*100,
+        y: H/2 + (Math.random()-0.5)*100,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r: Math.random() * 4 + 1,
+        alpha: 1,
+        life: 1,
+        isBurst: true,
+        color: `hsl(${Math.random()*60 + 30}, ${80+Math.random()*20}%, ${60+Math.random()*30}%)`,
+      });
+    }
+  }
+
+  // ─── INPUT HANDLING ───────────────────────────────────────
+  canvas.addEventListener('mousemove', (e) => {
+    state.mouseX = e.clientX;
+    state.mouseY = e.clientY;
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (state.phase === 'initial') {
+      // Start game
+      initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      state.phase = 'playing';
+      state.startTime = performance.now() / 1000;
+      state.elapsed = 0;
+      started = true;
+      startFlightSound();
+      startAmbience();
+      document.getElementById('start-hint').style.display = 'none';
+      state.mothX = e.clientX;
+      state.mothY = e.clientY;
+    }
+  });
+
+  document.getElementById('restart-btn').addEventListener('click', () => {
+    state.restartCount++;
+    if (window._ambienceSource) {
+      try { window._ambienceSource.stop(); } catch(e) {}
+      window._ambienceSource = null;
+    }
+    stopFlightSound();
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    startFlightSound();
+    startAmbience();
+    resetGame();
+  });
+
+  // ─── FACTORY EVIDENCE ─────────────────────────────────────
+  window.__factoryxEvidence = function() {
+    return {
+      schema_version: 1,
+      phase: state.phase,
+      progress: state.progress,
+      target: state.target,
+      completed: state.completed,
+      restart_count: state.restartCount,
+    };
+  };
+
+  // ─── INIT ─────────────────────────────────────────────────
+  initStars();
+  initFlowers();
+  initAmbientParticles();
+  requestAnimationFrame(gameLoop);
+
+})();
+</script>
 </body>
 </html>
