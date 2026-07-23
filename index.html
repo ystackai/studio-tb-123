@@ -1,594 +1,958 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="studio-slug" content="tb-123">
-  <title>ystackai — Browser synthesizers, drum machines, and sound toys. Built by the legends.</title>
-  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css?v=20260327-avatarfix1">
-  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css?v=20260327-avatarfix1">
-  <style>
-    .profile { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
-    .section-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--studio-border);
-      margin-bottom: 1rem;
-    }
-    .section-header h2 { font-size: 1.1rem; font-weight: 800; color: var(--studio-text); }
-    .section-header a { font-size: 0.8rem; color: var(--studio-accent); text-decoration: none; font-weight: 600; }
-
-    /* Chat */
-    .chat-item { display: flex; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--studio-border); }
-    .chat-item:last-child { border-bottom: none; }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-    .chat-body { flex: 1; min-width: 0; }
-    .chat-head { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.15rem; }
-    .chat-name { font-weight: 700; font-size: 0.85rem; }
-    .chat-time { color: var(--studio-soft); font-size: 0.7rem; margin-left: auto; }
-    .chat-text { color: var(--studio-text); font-size: 0.88rem; line-height: 1.5; }
-    .chat-reactions { display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap; }
-    .chat-reaction { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; font-size: 0.75rem; color: var(--studio-text); }
-    .chat-cta {
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-      padding: 0.6rem; margin-top: 0.75rem;
-      background: #5865F2; border-radius: 8px; color: #fff; text-decoration: none;
-      font-size: 0.85rem; font-weight: 700; transition: all 0.15s;
-    }
-    .chat-cta:hover { background: #4752c4; }
-
-    /* Demos carousel */
-    .demos-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .demos-row::-webkit-scrollbar { height: 4px; }
-    .demos-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .demo-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 240px;
-      border-radius: 12px; overflow: hidden;
-      background: var(--studio-bg); border: 1px solid var(--studio-border);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-    }
-    .demo-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .demo-thumb { width: 100%; height: 140px; background: linear-gradient(135deg, #667eea, #764ba2); }
-    .demo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .demo-info { padding: 0.75rem 1rem; }
-    .demo-info h3 { font-size: 0.95rem; font-weight: 800; }
-    .demo-info .mashup { font-size: 0.72rem; color: var(--studio-accent); margin-top: 0.1rem; }
-    .demo-info p { font-size: 0.8rem; color: var(--studio-muted); margin-top: 0.3rem; line-height: 1.4; }
-
-    /* Blog rail */
-    .blog-row {
-      display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;
-      scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    }
-    .blog-row::-webkit-scrollbar { height: 4px; }
-    .blog-row::-webkit-scrollbar-thumb { background: var(--studio-border); border-radius: 2px; }
-    .blog-card {
-      flex-shrink: 0; scroll-snap-align: start; width: 300px;
-      border-radius: 14px; overflow: hidden;
-      background:
-        radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 38%),
-        linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      text-decoration: none; color: var(--studio-text); transition: all 0.15s;
-      padding: 1rem 1.05rem 1.1rem;
-    }
-    .blog-card:hover { border-color: var(--studio-accent); transform: translateY(-2px); }
-    .blog-card .blog-date {
-      font-size: 0.72rem; color: #fdba74; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .blog-card h3 {
-      margin-top: 0.45rem; font-size: 1rem; line-height: 1.25;
-      font-weight: 850; color: #f8fafc;
-    }
-    .blog-card p {
-      margin-top: 0.55rem; font-size: 0.84rem; line-height: 1.5;
-      color: var(--studio-muted);
-    }
-    .blog-card .blog-link {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      margin-top: 0.85rem; color: #fed7aa; font-size: 0.8rem;
-      font-weight: 700;
-    }
-
-    /* Board */
-    .board-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
-    .board-lane-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
-    .board-lane-header h3 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-soft); }
-    .board-lane-header .lane-count { font-size: 0.65rem; color: var(--studio-soft); background: var(--studio-border); padding: 1px 6px; border-radius: 10px; }
-    .board-lane-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .board-ticket {
-      display: block; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, #1a1a2e, #2a1a3e); border: 1px solid #2a2a4a;
-      border-radius: 8px; text-decoration: none; color: #e2e8f0;
-      font-size: 0.8rem; line-height: 1.3; transition: all 0.15s;
-    }
-    .board-ticket:hover { border-color: var(--studio-accent); transform: translateY(-1px); }
-    .board-ticket .ticket-num { color: var(--studio-soft); font-size: 0.7rem; }
-    .board-ticket .ticket-labels { display: flex; gap: 0.25rem; margin-top: 0.3rem; flex-wrap: wrap; }
-    .board-ticket .ticket-label { font-size: 0.6rem; padding: 1px 5px; border-radius: 4px; font-weight: 600; }
-
-    /* Progress bar */
-    .progress-section { margin-bottom: 1.25rem; }
-    .release-brief { display:none; margin:0.85rem 0 1rem; border:1px solid rgba(255,255,255,0.15); border-radius:16px; background:rgba(10,15,30,0.92); overflow:hidden; }
-    .release-brief summary { cursor:pointer; list-style:none; padding:0.9rem 1rem; color:var(--studio-accent); font-weight:700; font-size:0.95rem; }
-    .release-brief summary::-webkit-details-marker { display:none; }
-    .release-brief summary::after { content:'+'; float:right; color:var(--studio-soft); }
-    .release-brief[open] summary::after { content:'-'; }
-    .release-brief-content { padding:0 1rem 1rem; color:#f1f5f9; }
-    .release-brief-content h2 { margin:0.9rem 0 0.5rem; font-size:1rem; color:#fff; }
-    .release-brief-content p, .release-brief-content li { color:#e2e8f0; line-height:1.6; }
-    .release-brief-content ul { margin:0.35rem 0 0.8rem 1.2rem; padding:0; }
-    .progress-label { font-size: 0.8rem; color: var(--studio-muted); margin-bottom: 0.4rem; }
-    .progress-label strong { color: var(--studio-text); }
-    .progress-track { height: 8px; background: rgba(99,102,241,0.1); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 4px; transition: width 0.5s ease; }
-
-    /* Ship gates */
-    .ship-gates { display: flex; gap: 1rem; margin-top: 0.6rem; }
-    .ship-gate { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--studio-soft); }
-    .ship-gate .gate-icon { font-size: 0.85rem; }
-    .ship-gate.passed { color: #22c55e; }
-    .ship-gate.passed .gate-icon { color: #22c55e; }
-
-    /* Team */
-    .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-
-    /* Crew strip */
-    .crew-strip { display:flex; justify-content:center; gap:1rem; margin-top:1.5rem; padding-bottom:0.5rem; }
-    .crew-member { display:flex; flex-direction:column; align-items:center; width:96px; }
-    .crew-member .rig {
-      display:flex; flex-direction:column; align-items:center;
-      position:relative; will-change:transform;
-    }
-    .crew-member .portrait {
-      width:72px; height:72px; border-radius:50%; overflow:hidden;
-      border:2px solid rgba(255,255,255,0.3); background:rgba(15,23,42,0.16);
-      box-shadow:0 4px 16px rgba(0,0,0,0.2); position:relative; z-index:1;
-    }
-    .crew-member .portrait img {
-      width:100%; height:100%; object-fit:cover; object-position:center 18%;
-      display:block;
-    }
-    .crew-member .desk { width:58px; height:40px; position:relative; z-index:2; margin-top:-12px; filter:drop-shadow(0 8px 10px rgba(15,23,42,0.28)); }
-    .crew-member .desk img { width:100%; height:100%; object-fit:contain; border:none; border-radius:0; box-shadow:none; }
-    .crew-member .role { font-size:0.65rem; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:20px; margin-top:4px; }
-
-    @keyframes bob1 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
-    @keyframes bob2 { 0%,100% { transform:translateY(-2px); } 50% { transform:translateY(5px); } }
-    @keyframes bob3 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
-    @keyframes bob4 { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(4px); } }
-    @keyframes bob5 { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
-    @keyframes bob6 { 0%,100% { transform:translateY(-1px); } 50% { transform:translateY(6px); } }
-    .crew-member:nth-child(1) .rig { animation:bob1 3s ease-in-out infinite; }
-    .crew-member:nth-child(2) .rig { animation:bob2 3.4s ease-in-out 0.5s infinite; }
-    .crew-member:nth-child(3) .rig { animation:bob3 2.8s ease-in-out 1s infinite; }
-    .crew-member:nth-child(4) .rig { animation:bob4 3.6s ease-in-out 0.3s infinite; }
-    .crew-member:nth-child(5) .rig { animation:bob5 3.2s ease-in-out 0.8s infinite; }
-    .crew-member:nth-child(6) .rig { animation:bob6 3.8s ease-in-out 0.2s infinite; }
-
-    @media (max-width:720px) {
-      .board-lanes { grid-template-columns: 1fr; }
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-      .crew-strip { gap:0.4rem; }
-      .crew-member { width:72px; }
-      .crew-member .portrait { width:56px; height:56px; }
-      .crew-member .desk { width:44px; height:30px; margin-top:-9px; }
-      .crew-member .role { font-size:0.55rem; }
-    }
-    /* Signal shard — VU-meter LED strip */
-    .signal-meter {
-      display: flex;
-      gap: 3px;
-      justify-content: center;
-      margin: 0.75rem auto 0.5rem;
-      height: 18px;
-    }
-    .signal-bar {
-      width: 3px;
-      border-radius: 1px;
-      background: var(--studio-accent);
-      opacity: 0.25;
-      transition: opacity 0.1s, height 0.1s;
-      height: 6px;
-      align-self: flex-end;
-    }
-    .signal-bar.lit {
-      opacity: 1;
-    }
-    .signal-bar.lit-2 {
-      opacity: 0.7;
-    }
-    .signal-bar.lit-3 {
-      opacity: 0.5;
-    }
-    @media (max-width:720px) {
-      .signal-meter { gap: 2px; height: 12px; }
-      .signal-bar { width: 2px; }
-    }
-  </style>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rain Dial</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0e1a;
+    overflow: hidden;
+    font-family: 'Georgia', serif;
+    cursor: default;
+    user-select: none;
+  }
+  canvas { display: block; }
+  #restart-btn {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 32px;
+    border: 2px solid #7ba7c9;
+    border-radius: 25px;
+    background: rgba(15, 25, 50, 0.85);
+    color: #a8d4f0;
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #restart-btn:hover {
+    background: rgba(30, 60, 100, 0.95);
+    color: #d0eaff;
+    border-color: #a8d4f0;
+    box-shadow: 0 0 20px rgba(100, 180, 255, 0.3);
+  }
+  #restart-btn.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+</style>
 </head>
-<body data-studio-slug="tb-123">
-  <div id="nav"></div>
+<body>
+<canvas id="game-canvas"></canvas>
+<button id="restart-btn">✦ Play Again</button>
+<script>
+// ============================================================
+// RAIN DIAL - A 60-90 second one-screen browser game
+// Click around the central dial to route falling drops into chimes
+// ============================================================
 
-  <!-- Hero -->
-  <div style="text-align:center;padding:2.5rem 2rem 1rem;background:linear-gradient(135deg,var(--studio-hero-g1),var(--studio-hero-g2),var(--studio-hero-g3));color:#fff;overflow:hidden;">
-    <div style="position:relative;z-index:2;">
-      <h1 id="hero-title" style="font-size:clamp(2rem,4.5vw,3.2rem);font-weight:900;letter-spacing:-2px;margin-bottom:0.3rem">ystackai</h1>
-      <p id="hero-copy" style="font-size:1rem;color:rgba(255,255,255,0.85);max-width:520px;margin:0 auto">Browser synthesizers, drum machines, and sound toys. Built by the legends.</p>
-      <div class="signal-meter" id="signal-meter">
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-        <div class="signal-bar"></div>
-      </div> 
-      <div class="crew-strip" id="crew-strip"></div>
-    </div>
-  </div>
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const restartBtn = document.getElementById('restart-btn');
 
-  <div class="profile">
+let W, H, CX, CY;
 
-    <!-- 1. Blog rail -->
-    <div class="section-header">
-      <h2>Blog</h2>
-      <a id="blog-link" href="/blog/">View all →</a>
-    </div>
-    <div class="blog-row" id="blog-row"></div>
+const CHIME_COUNT = 7;
+const CHIME_SPREAD = 130; // degrees from center
 
-    <!-- 2. Conversation (3 messages) -->
-    <div class="section-header">
-      <h2>Chat</h2>
-      <a id="discord-link" href="#" style="display:none">Join on Discord →</a>
-    </div>
-    <div id="chat-feed"></div>
-    <a id="chime-in" href="#" class="chat-cta" style="display:none">Chime in on Discord →</a>
+const NOTE_FREQS = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77];
+const TARGET_SEQUENCE_LENGTHS = [3, 5, 7, 8, 10, 12];
+const TARGET_SEQUENCE_DURATION = 700; // ms between drops in sequence
+const WIN_SEQUENCE_DURATION = 200; // faster for final sequence
 
-    <!-- 3. Drops carousel -->
-    <div class="section-header">
-      <h2>Drops</h2>
-      <a href="/drops/">View all →</a>
-    </div>
-    <div class="demos-row" id="demos-row"></div>
+const STATE = {
+  INITIAL: 'initial',
+  PLAYING: 'playing',
+  SEQUENCE_PLAYING: 'sequence_playing',
+  PLAY_INPUT: 'play_input',
+  PAUSED: 'paused',
+  PAUSED_WIN: 'paused_win',
+  WIN: 'win',
+  LOSS: 'loss',
+};
 
-    <!-- 4. Board (trimmed) -->
-    <div class="section-header">
-      <h2 id="board-title">Board</h2>
-      <a id="board-link" href="https://github.com/orgs/ystackai/projects/3" target="_blank">Full board on GitHub →</a>
-    </div>
-    <div id="progress-section" class="progress-section" style="display:none">
-      <div class="progress-label"><span id="progress-text"></span></div>
-      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-      <div class="ship-gates" id="ship-gates"></div>
-    </div>
-    <details id="brief-panel" class="release-brief">
-      <summary>Read release brief</summary>
-      <div id="brief-content" class="release-brief-content"></div>
-    </details>
-    <div class="board-lanes" id="board-lanes"></div>
+let game = {
+  state: STATE.INITIAL,
+  dialAngle: 0,
+  dialTargetAngle: 0,
+  dialSpeed: 0,
+  dialVelocity: 0,
+  dropRadius: 6,
+  chimes: [],
+  drops: [],
+  particles: [],
+  rainDrops: [],
+  targetSequence: [],
+  currentStep: 0,
+  progress: 0,
+  target: 0,
+  completed: false,
+  restartCount: 0,
+  phase: 'initial',
+  score: 0,
+  combo: 0,
+  screenShake: 0,
+  time: 0,
+  lastTime: 0,
+  audioStarted: false,
+  audioCtx: null,
+  masterGain: null,
+  rainGain: null,
+  ambientGain: null,
+  rainNodes: [],
+  winNoteTimes: [],
+};
 
-    <!-- 5. Team -->
-    <div class="section-header">
-      <h2>Team</h2>
-    </div>
-    <div class="team-grid" id="team-grid"></div>
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  CX = W / 2;
+  CY = H / 2;
+}
+window.addEventListener('resize', resize);
+resize();
 
-  </div>
+// --- Audio Engine ---
+function initAudio() {
+  if (game.audioStarted) return;
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  game.audioCtx = audioCtx;
+  game.audioStarted = true;
 
-  <div id="footer"></div>
+  game.masterGain = audioCtx.createGain();
+  game.masterGain.gain.value = 0.7;
+  game.masterGain.connect(audioCtx.destination);
 
-  <script src="https://ystackai.com/shared/studio-shell.js"></script>
-  <script src="https://ystackai.com/shared/studio-components.js"></script>
-  <script>
-    var AGENTS = {};
-    var AGENT_COLORS = {
-      brad: '#fb7185',
-      wei: '#67e8f9',
-      jb: '#fca5a5',
-      schneider: '#cbd5e1',
-      derek: '#6ee7b7',
-      megan: '#fde047'
-    };
+  // Rain ambience
+  const bufferSize = audioCtx.sampleRate * 2;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.5;
+  }
 
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function gameUrl(game) {
-      return (game && (game.studio_url || game.play_url)) || '#';
-    }
-    function gameScreenshot(game) {
-      var url = gameUrl(game);
-      return url && url !== '#' ? (url.replace(/\/?$/, '/') + 'screenshot.png') : '';
-    }
+  game.rainGain = audioCtx.createGain();
+  game.rainGain.gain.value = 0; // starts silent, fades in
+  game.rainGain.connect(game.masterGain);
 
-    function buildAgentMap(cast) {
-      var map = {};
-      (cast || []).forEach(function(member) {
-        var payload = {
-          avatar: member.avatar_url,
-          color: AGENT_COLORS[member.person_id] || '#cbd5e1',
-          role: member.canonical_title
-        };
-        [member.display_name].concat(member.aliases || []).forEach(function(alias) {
-          if (alias) map[alias] = payload;
-        });
-      });
-      return map;
-    }
+  // Filter rain to sound like rain
+  const rainFilter = audioCtx.createBiquadFilter();
+  rainFilter.type = 'bandpass';
+  rainFilter.frequency.value = 3000;
+  rainFilter.Q.value = 0.5;
+  rainFilter.connect(game.rainGain);
 
-    function renderCrewStrip(cast) {
-      var target = document.getElementById('crew-strip');
-      if (!target) return;
-      target.innerHTML = (cast || []).map(function(member) {
-        return '<div class="crew-member">'
-          + '<div class="rig">'
-          + '<div class="portrait"><img src="' + esc(member.avatar_url || '/team/avatars/brad.svg') + '" alt="' + esc(member.display_name || '') + '"></div>'
-          + '<div class="desk"><img src="https://ystackai.com/team/crew/laptop-megan.png" alt=""></div>'
-          + '</div>'
-          + '<span class="role">' + esc(member.canonical_title || '') + '</span>'
-          + '</div>';
-      }).join('');
-    }
-    /* Signal-meter VU animation */
-    function animateSignalMeter() {
-      var bars = document.querySelectorAll('#signal-meter .signal-bar');
-      if (!bars.length) return;
-      for (var i = 0; i < bars.length; i++) {
-        var r = Math.random();
-        var cls = '';
-        if (r > 0.92) cls = 'lit';
-        else if (r > 0.82) cls = 'lit-2';
-        else if (r > 0.72) cls = 'lit-3';
-        bars[i].className = 'signal-bar' + (cls ? ' ' + cls : '');
-      }
-      setTimeout(function() { requestAnimationFrame(animateSignalMeter); }, Math.random() * 120 + 80);
-    }
-    setTimeout(function() { animateSignalMeter(); }, 100);
+  const rainSource = audioCtx.createBufferSource();
+  rainSource.buffer = noiseBuffer;
+  rainSource.loop = true;
+  rainSource.connect(rainFilter);
+  rainSource.start();
+  game.rainNodes = [rainSource];
+  game.rainFilter = rainFilter;
 
+  // Subtle ambient tone
+  const ambOsc = audioCtx.createOscillator();
+  ambOsc.type = 'sine';
+  ambOsc.frequency.value = 150;
+  game.ambientGain = audioCtx.createGain();
+  game.ambientGain.gain.value = 0.03;
+  ambOsc.connect(game.ambientGain);
+  game.ambientGain.connect(game.masterGain);
+  ambOsc.start();
+  game.rainNodes.push(ambOsc);
+}
 
-    function publicUrl(path) {
-      return (window.StudioShell && typeof StudioShell.publicUrl === 'function')
-        ? StudioShell.publicUrl(path)
-        : path;
-    }
+function playChimeNote(index, velocity = 1) {
+  if (!game.audioCtx || !game.audioStarted) return;
+  const audioCtx = game.audioCtx;
+  const freq = NOTE_FREQS[index % NOTE_FREQS.length];
 
-    function mdToHtml(md) {
-      var lines = String(md || '').split('\n');
-      var html = '';
-      var inList = false;
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        if (line.match(/^#\s/)) continue;
-        if (line.match(/^##\s/)) {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<h2>' + esc(line.replace(/^##\s*/, '')) + '</h2>';
-        } else if (line.match(/^-\s/)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += '<li>' + esc(line.replace(/^-\s*/, '')) + '</li>';
-        } else if (line.trim() === '') {
-          if (inList) { html += '</ul>'; inList = false; }
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          html += '<p>' + esc(line) + '</p>';
-        }
-      }
-      if (inList) html += '</ul>';
-      return html;
-    }
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
 
-    // Init
-    var studioSlug = StudioShell.detectSlug('tb-123');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
-      var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
-      var homepageDrop = (d.drops || []).find(function(drop) {
-        return drop && drop.id === homepageReleaseId && drop.canonical_url;
-      });
-      var currentPath = window.location.pathname.replace(/\/+$/, '/') || '/';
-      var studioRoot = ('/' + studioSlug + '/').replace(/\/+$/, '/');
-      if (homepageDrop && currentPath === studioRoot) {
-        var targetPath = String(homepageDrop.canonical_url || '').replace(/\/+$/, '/') || '';
-        if (targetPath && targetPath !== currentPath) {
-          window.location.replace(targetPath);
-          return;
-        }
-      }
-      AGENTS = buildAgentMap(d.cast);
-      StudioShell.renderNav('nav');
-      document.title = (d.studio.name || studioSlug) + ' — Crew';
-      renderCrewStrip(d.cast);
-      var heroTitle = document.getElementById('hero-title');
-      if (heroTitle) {
-        heroTitle.textContent = d.studio.name || studioSlug;
-      }
-      var heroCopy = document.getElementById('hero-copy');
-      if (heroCopy) {
-        heroCopy.textContent = d.studio.hero_text || 'Browser synthesizers, drum machines, and sound toys. Built by the legends.';
-      }
-      var blogLink = document.getElementById('blog-link');
-      if (blogLink && d.blog_url) blogLink.href = d.blog_url;
-      var boardLink = document.getElementById('board-link');
-      if (boardLink && d.board_url) boardLink.href = d.board_url;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.3 * velocity, audioCtx.currentTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
 
-      // Discord links
-      var dl = document.getElementById('discord-link');
-      var ci = document.getElementById('chime-in');
-      if (d.discord_invite) {
-        if (dl) {
-          dl.href = d.discord_invite;
-          dl.style.display = '';
-        }
-        if (ci) {
-          ci.href = d.discord_invite;
-          ci.style.display = '';
-        }
-      } else {
-        if (dl) dl.style.display = 'none';
-        if (ci) ci.style.display = 'none';
-      }
+  // Add harmonics for glass quality
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 2;
+  const gain2 = audioCtx.createGain();
+  gain2.gain.setValueAtTime(0, audioCtx.currentTime);
+  gain2.gain.linearRampToValueAtTime(0.1 * velocity, audioCtx.currentTime + 0.005);
+  gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
 
-      // Blog rail
-      var posts = (d.blog_posts || []).slice(0, 4);
-      var blogCards = posts.map(function(post) {
-        return '<a class="blog-card" href="' + esc(post.url || '#') + '">'
-          + '<div class="blog-date">' + esc(post.date || '') + '</div>'
-          + '<h3>' + esc(post.title || '') + '</h3>'
-          + '<p>' + esc(post.teaser || '') + '</p>'
-          + '<span class="blog-link">Read post <span aria-hidden="true">→</span></span>'
-          + '</a>';
-      });
-      document.getElementById('blog-row').innerHTML = blogCards.join('') || '<p style="color:var(--studio-soft)">No blog posts yet</p>';
+  osc.connect(gain);
+  osc2.connect(gain2);
+  gain.connect(game.masterGain);
+  gain2.connect(game.masterGain);
 
-      // Drops carousel
-      var shipped = (d.drops && d.drops.length) ? d.drops : ((d.games && d.games.shipped) || []);
-      var building = d.active_drop && d.active_drop.id ? d.active_drop : (d.games && d.games.upcoming);
-      var demos = [];
-      if (building && building.title && building.status !== 'shipped') {
-        demos.push('<a class="demo-card" href="' + esc(gameUrl(building)) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(building)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(building.title) + '</h3>'
-          + '<div class="mashup">' + esc(building.homepage_takeover ? 'homepage takeover' : 'now building') + '</div>'
-          + '<p>' + esc((building.summary || '').substring(0, 80)) + '</p></div></a>');
-      }
-      shipped.forEach(function(g) {
-        var playUrl = gameUrl(g);
-        demos.push('<a class="demo-card" href="' + esc(playUrl) + '">'
-          + '<div class="demo-thumb"><img src="' + esc(gameScreenshot(g)) + '" alt="" onerror="this.style.display=\'none\'"></div>'
-          + '<div class="demo-info"><h3>' + esc(g.title) + '</h3>'
-          + '<div class="mashup">' + esc((g.tags || []).join(' · ') || g.mashup || '') + '</div>'
-          + '<p>' + esc((g.summary || '').substring(0, 80)) + '</p></div></a>');
-      });
-      document.getElementById('demos-row').innerHTML = demos.join('') || '<p style="color:var(--studio-soft)">No drops shipped yet</p>';
+  osc.start(audioCtx.currentTime);
+  osc2.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 1.5);
+  osc2.stop(audioCtx.currentTime + 0.8);
 
-      // Board title
-      if (building) document.getElementById('board-title').textContent = 'Board: Current Release ' + building.title;
+  // Visual ripple
+  const chime = game.chimes[index % game.chimes.length];
+  if (chime) {
+    chime.ripple = 1;
+    chime.glow = 1;
+  }
 
-      // Progress bar + ship gates
-      var snapshotBoard = d.board && typeof d.board === 'object' ? d.board : null;
-      if (snapshotBoard && Array.isArray(snapshotBoard.all_open_issues)) {
-        renderBoard(snapshotBoard);
-      } else {
-        document.getElementById('board-lanes').innerHTML = '<p style="color:var(--studio-soft)">Board unavailable</p>';
-      }
-
-      var release = d.release || {};
-      var briefPanel = document.getElementById('brief-panel');
-      var briefContent = document.getElementById('brief-content');
-      if (briefPanel && briefContent && building && building.brief_url) {
-        briefPanel.style.display = 'block';
-        fetch(publicUrl(building.brief_url))
-          .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('brief unavailable')); })
-          .then(function(md) {
-            briefContent.innerHTML = mdToHtml(md);
-          })
-          .catch(function() {
-            briefContent.innerHTML = mdToHtml(building.brief_excerpt || 'Brief unavailable.');
-          });
-      }
-      var gates = [
-        { name: 'Creative', passed: !!release.creative_signoff },
-        { name: 'QA', passed: !!release.qa_signoff },
-        { name: 'Integration', passed: !!release.integration_signoff }
-      ];
-      document.getElementById('ship-gates').innerHTML = gates.map(function(g) {
-        return '<div class="ship-gate ' + (g.passed ? 'passed' : '') + '">'
-          + '<span class="gate-icon">' + (g.passed ? '✓' : '○') + '</span>'
-          + g.name
-          + '</div>';
-      }).join('');
-
-      function renderBoard(boardData) {
-        var laneConfig = [
-          { key: 'backlog', label: 'Backlog', color: '#94a3b8' },
-          { key: 'in-progress', label: 'In Progress', color: '#22c55e' },
-          { key: 'in-review', label: 'In Review', color: '#eab308' },
-          { key: 'done', label: 'Done', color: '#8b5cf6' }
-        ];
-        var issues = boardData.all_open_issues || [];
-        var lanes = { 'backlog': [], 'in-progress': [], 'in-review': [], 'done': [] };
-        issues.forEach(function(i) {
-          var labels = (i.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-          if (labels.indexOf('done') >= 0) lanes['done'].push(i);
-          else if (labels.indexOf('in-review') >= 0) lanes['in-review'].push(i);
-          else if (labels.indexOf('in-progress') >= 0) lanes['in-progress'].push(i);
-          else lanes['backlog'].push(i);
-        });
-        var laneHTML = '';
-        var issueBaseUrl = d.issues_url || (d.github_repo_url ? (String(d.github_repo_url).replace(/\/$/, '') + '/issues') : '#');
-        laneConfig.forEach(function(cfg) {
-          var all = lanes[cfg.key];
-          var tickets = all.slice(0, 3);
-          laneHTML += '<div class="board-lane">'
-            + '<div class="board-lane-header">'
-            + '<div class="board-lane-dot" style="background:' + cfg.color + '"></div>'
-            + '<h3>' + cfg.label + '</h3>'
-            + '<span class="lane-count">' + all.length + '</span>'
-            + '</div>';
-          if (tickets.length === 0) {
-            laneHTML += '<div style="color:var(--studio-soft);font-size:0.8rem;padding:0.5rem 0">—</div>';
-          }
-          tickets.forEach(function(t) {
-            var labels = (t.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
-            var typeLabels = labels.filter(function(l) { return ['feature','bug','polish','audio','visual','writing','playtest','test'].indexOf(l) >= 0; });
-            laneHTML += '<a class="board-ticket" href="' + esc(issueBaseUrl ? (String(issueBaseUrl).replace(/\/$/, '') + '/' + t.number) : '#') + '" target="_blank">'
-              + '<span class="ticket-num">#' + t.number + '</span> ' + esc(t.title);
-            if (typeLabels.length) {
-              laneHTML += '<div class="ticket-labels">' + typeLabels.map(function(l) {
-                return '<span class="ticket-label" style="background:rgba(99,102,241,0.1);color:var(--studio-accent)">' + l + '</span>';
-              }).join('') + '</div>';
-            }
-            laneHTML += '</a>';
-          });
-          if (all.length > 3) {
-            laneHTML += '<div style="font-size:0.75rem;color:var(--studio-soft);padding-top:0.25rem">+' + (all.length - 3) + ' more</div>';
-          }
-          laneHTML += '</div>';
-        });
-        document.getElementById('board-lanes').innerHTML = laneHTML;
-      }
-
-      // Team
-      document.getElementById('team-grid').innerHTML = d.cast.map(Components.teamCard).join('');
-
-      // Footer
-      document.getElementById('footer').innerHTML = Components.footer();
-
-      // Chat (3 messages only)
-      fetch(StudioShell.publicUrl('/studio-data/' + d.slug + '/chat.json'))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          var msgs = ((data && data.messages) || []).slice(-3);
-          var html = msgs.map(function(m) {
-            var agent = AGENTS[m.author] || {};
-            var time = '';
-            try { time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-            return '<div class="chat-item">'
-              + ((m.avatar_url || agent.avatar) ? '<img class="chat-avatar" src="' + esc(m.avatar_url || agent.avatar) + '" alt="">' : '<div class="chat-avatar" style="background:#333;border-radius:50%"></div>')
-              + '<div class="chat-body"><div class="chat-head">'
-              + '<span class="chat-name" style="color:' + (agent.color || '#999') + '">' + esc(m.author) + '</span>'
-              + '<span class="chat-time">' + time + '</span>'
-              + '</div><div class="chat-text">' + esc(String(m.content || '')).replace(/\n/g, '<br>') + '</div>'
-              + ((m.reactions && m.reactions.length) ? '<div class="chat-reactions">' + m.reactions.map(function(r) { return '<span class="chat-reaction">' + r.emoji + ' ' + r.count + '</span>'; }).join('') + '</div>' : '')
-              + '</div></div>';
-          }).join('');
-          document.getElementById('chat-feed').innerHTML = html || '<p style="color:var(--studio-soft)">No chatter yet</p>';
-        })
-        .catch(function() {
-          document.getElementById('chat-feed').innerHTML = '<p style="color:var(--studio-soft)">Chat unavailable</p>';
-        });
+  // Spark particles
+  if (!chime) return;
+  for (let i = 0; i < 8; i++) {
+    game.particles.push({
+      x: chime.x,
+      y: chime.y,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.5) * 4,
+      life: 1,
+      decay: 0.015 + Math.random() * 0.02,
+      color: `hsl(${200 + Math.random() * 40}, 80%, ${70 + Math.random() * 20}%)`,
+      size: 2 + Math.random() * 3,
     });
-  </script>
+  }
+}
+
+function playTick() {
+  if (!game.audioCtx || !game.audioStarted) return;
+  const audioCtx = game.audioCtx;
+  const osc = audioCtx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = 1200;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  osc.connect(gain);
+  gain.connect(game.masterGain);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
+function playWinMelody() {
+  if (!game.audioCtx || !game.audioStarted) return;
+  const audioCtx = game.audioCtx;
+  const notes = [523.25, 659.25, 783.99, 880, 783.99, 1046.5];
+  notes.forEach((freq, i) => {
+    const delay = (200 + i * 120) / 1000;
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, audioCtx.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.6);
+    osc.connect(gain);
+    gain.connect(game.masterGain);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 0.7);
+    game.winNoteTimes.push({ t: audioCtx.currentTime + delay, freq });
+  });
+}
+
+function playLossSound() {
+  if (!game.audioCtx || !game.audioStarted) return;
+  const audioCtx = game.audioCtx;
+  for (let i = 0; i < 3; i++) {
+    const delay = (200 + i * 150) / 1000;
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 200 - i * 40;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.5);
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 800;
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(game.masterGain);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 0.6);
+  }
+}
+
+// --- Game Setup ---
+function setupChimes() {
+  game.chimes = [];
+  const radius = Math.min(W, H) * 0.25;
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    const angleDeg = -90 + (CHIME_SPREAD / 2) + (i / (CHIME_COUNT - 1)) * CHIME_SPREAD;
+    const angleRad = angleDeg * Math.PI / 180;
+    const chime = {
+      x: CX + Math.cos(angleRad) * radius,
+      y: CY + Math.sin(angleRad) * radius,
+      angle: angleDeg,
+      radius: radius,
+      index: i,
+      ripple: 0,
+      glow: 0,
+      height: 30 + Math.random() * 20,
+      width: 4 + Math.random() * 2,
+      hue: 200 + i * 8,
+    };
+    game.chimes.push(chime);
+  }
+}
+
+function generateTargetSequence(length) {
+  const seq = [];
+  for (let i = 0; i < length; i++) {
+    seq.push(Math.floor(Math.random() * CHIME_COUNT));
+  }
+  return seq;
+}
+
+function startPlay() {
+  initAudio();
+  game.rainGain.gain.linearRampToValueAtTime(0.15, game.audioCtx.currentTime + 2);
+
+  const seqLength = TARGET_SEQUENCE_LENGTHS[Math.floor(Math.random() * TARGET_SEQUENCE_LENGTHS.length)];
+  game.targetSequence = generateTargetSequence(seqLength);
+  game.target = game.targetSequence.length;
+  game.progress = 0;
+  game.currentStep = 0;
+  game.score = 0;
+  game.combo = 0;
+  game.state = STATE.SEQUENCE_PLAYING;
+  game.phase = 'playing';
+  game.completed = false;
+  game.dropRadius = 6;
+
+  // Play the sequence
+  playSequence();
+}
+
+function playSequence() {
+  if (game.state !== STATE.SEQUENCE_PLAYING) return;
+  if (game.currentStep >= game.targetSequence.length) {
+    game.state = STATE.PLAY_INPUT;
+    game.phase = 'playing';
+    return;
+  }
+
+  const noteIndex = game.targetSequence[game.currentStep];
+  const chime = game.chimes[noteIndex];
+
+  // Visual cue on the chime
+  chime.ripple = 1.5;
+  chime.glow = 2;
+
+  // Play the note after a short visual flash
+  setTimeout(() => {
+    if (game.state === STATE.SEQUENCE_PLAYING) {
+      playChimeNote(noteIndex, 0.8);
+    }
+    game.currentStep++;
+    setTimeout(playSequence, TARGET_SEQUENCE_DURATION);
+  }, 300);
+}
+
+function checkDrop(chimeIndex) {
+  if (game.state !== STATE.PLAY_INPUT) return;
+  const expected = game.targetSequence[game.currentStep];
+  if (chimeIndex === expected) {
+    game.progress++;
+    game.score += 10 + game.combo * 5;
+    game.combo++;
+    game.currentStep++;
+    playChimeNote(chimeIndex, 1 + game.combo * 0.1);
+
+    if (game.progress >= game.target) {
+      triggerWin();
+    }
+  } else {
+    game.combo = 0;
+    game.screenShake = 10;
+    playLossSound();
+    // Visual feedback - wrong chime shakes
+    game.chimes[chimeIndex].ripple = 0.3;
+  }
+}
+
+function triggerWin() {
+  game.state = STATE.WIN;
+  game.phase = 'completed';
+  game.completed = true;
+  game.screenShake = 5;
+  playWinMelody();
+
+  // Big particle burst from center
+  for (let i = 0; i < 50; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 4;
+    game.particles.push({
+      x: CX,
+      y: CY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.005 + Math.random() * 0.01,
+      color: `hsl(${190 + Math.random() * 60}, 90%, ${60 + Math.random() * 30}%)`,
+      size: 2 + Math.random() * 4,
+    });
+  }
+
+  setTimeout(() => {
+    restartBtn.classList.add('visible');
+  }, 2000);
+}
+
+function triggerLoss() {
+  // Not used in current design - all games are winnable
+}
+
+function restart() {
+  game.restartCount++;
+  game.state = STATE.SEQUENCE_PLAYING;
+  game.phase = 'playing';
+  game.completed = false;
+  game.progress = 0;
+  game.drops = [];
+  game.particles = [];
+  game.dialAngle = 0;
+  game.dialTargetAngle = 0;
+  game.dialVelocity = 0;
+  game.screenShake = 0;
+
+  const seqLength = TARGET_SEQUENCE_LENGTHS[Math.floor(Math.random() * TARGET_SEQUENCE_LENGTHS.length)];
+  game.targetSequence = generateTargetSequence(seqLength);
+  game.target = game.targetSequence.length;
+  game.currentStep = 0;
+  game.score = 0;
+  game.combo = 0;
+
+  restartBtn.classList.remove('visible');
+  playSequence();
+}
+
+// --- Rain System ---
+function initRain() {
+  game.rainDrops = [];
+  for (let i = 0; i < 200; i++) {
+    game.rainDrops.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      speed: 2 + Math.random() * 4,
+      length: 10 + Math.random() * 20,
+      opacity: 0.1 + Math.random() * 0.3,
+    });
+  }
+}
+
+function updateRain(dt) {
+  for (const drop of game.rainDrops) {
+    drop.y += drop.speed * dt * 60;
+    drop.x -= 0.3 * dt * 60; // slight wind
+    if (drop.y > H + 10) {
+      drop.y = -drop.length;
+      drop.x = Math.random() * W;
+    }
+    if (drop.x < -20) {
+      drop.x = W + 10;
+    }
+  }
+}
+
+// --- Drop Routing ---
+function getChimeFromAngle(angleDeg) {
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < CHIME_COUNT; i++) {
+    const diff = Math.abs(angleDeg - game.chimes[i].angle);
+    const normDiff = diff > 180 ? 360 - diff : diff;
+    if (normDiff < bestDist) {
+      bestDist = normDiff;
+      best = i;
+    }
+  }
+  return best;
+}
+
+function updateDrops(dt) {
+  if (game.state !== STATE.PLAY_INPUT && game.state !== STATE.SEQUENCE_PLAYING) return;
+
+  // Spawn drops at center
+  if (Math.random() < 0.03 * (1 + game.progress / game.target)) {
+    game.drops.push({
+      x: CX,
+      y: CY,
+      vy: 1.5 + Math.random() * 0.5,
+      vx: 0,
+      life: 1,
+      routed: false,
+      routedChime: -1,
+    });
+  }
+
+  for (let i = game.drops.length - 1; i >= 0; i--) {
+    const drop = game.drops[i];
+    drop.vy += 0.02 * dt * 60; // gravity
+    drop.x += drop.vx * dt * 60;
+    drop.y += drop.vy * dt * 60;
+
+    // Stop if reached a chime
+    const dx = drop.x - game.chimes[drop.routedChime]?.x || 999;
+    const dy = drop.y - game.chimes[drop.routedChime]?.y || 999;
+    if (drop.routed) {
+      if (Math.sqrt(dx * dx + dy * dy) < 20) {
+        game.drops.splice(i, 1);
+      }
+      continue;
+    }
+
+    // Check if drop reaches chime plane
+    if (drop.y >= CY && !drop.routeChecked) {
+      // Route to nearest chime based on dial angle
+      const angleDeg = ((game.dialAngle % 360) + 360) % 360;
+      const dropAngle = Math.atan2(drop.y - CY, drop.x - CX) * 180 / Math.PI;
+      const diff = dropAngle - angleDeg;
+      const normDiff = ((diff % 360) + 540) % 360 - 180;
+
+      if (Math.abs(normDiff) < 45) {
+        drop.routeChecked = true;
+        drop.routed = true;
+        drop.routedChime = getChimeFromAngle(angleDeg);
+      }
+    }
+
+    // Chime catch
+    if (drop.routed && drop.routedChime >= 0) {
+      const chime = game.chimes[drop.routedChime];
+      if (chime && Math.abs(drop.x - chime.x) < 20 && Math.abs(drop.y - chime.y) < 20) {
+        checkDrop(drop.routedChime);
+        game.drops.splice(i, 1);
+        continue;
+      }
+    }
+
+    // Off screen
+    if (drop.y > H + 50 || drop.x < -50 || drop.x > W + 50) {
+      game.drops.splice(i, 1);
+    }
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = game.particles.length - 1; i >= 0; i--) {
+    const p = game.particles[i];
+    p.x += p.vx * dt * 60;
+    p.y += p.vy * dt * 60;
+    p.life -= p.decay * dt * 60;
+    if (p.life <= 0) {
+      game.particles.splice(i, 1);
+    }
+  }
+}
+
+function updateChimes(dt) {
+  for (const chime of game.chimes) {
+    if (chime.ripple > 0) chime.ripple = Math.max(0, chime.ripple - 0.008 * dt * 60);
+    if (chime.glow > 0) chime.glow = Math.max(0, chime.glow - 0.01 * dt * 60);
+  }
+}
+
+// --- Drawing ---
+function drawBackground(dt) {
+  // Dark gradient background
+  const grad = ctx.createRadialGradient(CX, CY, 50, CX, CY, Math.max(W, H) * 0.7);
+  grad.addColorStop(0, '#121a2e');
+  grad.addColorStop(1, '#060a14');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw rain
+  ctx.save();
+  for (const drop of game.rainDrops) {
+    ctx.strokeStyle = `rgba(140, 180, 220, ${drop.opacity})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(drop.x, drop.y);
+    ctx.lineTo(drop.x - 2, drop.y + drop.length);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawChimes() {
+  for (const chime of game.chimes) {
+    const angleRad = chime.angle * Math.PI / 180;
+
+    // Glow effect
+    if (chime.glow > 0) {
+      ctx.save();
+      ctx.globalAlpha = chime.glow * 0.3;
+      ctx.beginPath();
+      ctx.arc(chime.x, chime.y, 30 + chime.ripple * 20, 0, Math.PI * 2);
+      const glowGrad = ctx.createRadialGradient(chime.x, chime.y, 0, chime.x, chime.y, 30 + chime.ripple * 20);
+      glowGrad.addColorStop(0, `hsla(${chime.hue}, 80%, 70%, 0.5)`);
+      glowGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = glowGrad;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Chime body - glass tube
+    ctx.save();
+    ctx.translate(chime.x, chime.y);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(-chime.width * 0.6 + 2, -chime.height * 0.5 + 2, chime.width * 1.2, chime.height);
+
+    // Glass tube
+    const glassGrad = ctx.createLinearGradient(-chime.width, 0, chime.width, 0);
+    glassGrad.addColorStop(0, 'rgba(140, 190, 230, 0.3)');
+    glassGrad.addColorStop(0.3, 'rgba(200, 230, 255, 0.6)');
+    glassGrad.addColorStop(0.5, `hsla(${chime.hue}, 60%, 80%, 0.8)`);
+    glassGrad.addColorStop(0.7, 'rgba(200, 230, 255, 0.6)');
+    glassGrad.addColorStop(1, 'rgba(140, 190, 230, 0.3)');
+
+    const rippleOffset = chime.ripple * 4;
+    ctx.fillStyle = glassGrad;
+    ctx.beginPath();
+    ctx.roundRect(-chime.width + rippleOffset, -chime.height * 0.5, chime.width * 2 - rippleOffset * 2, chime.height, 3);
+    ctx.fill();
+
+    // Rim highlight
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + chime.ripple * 0.5})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Inner line for glass effect
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.beginPath();
+    ctx.moveTo(-chime.width * 0.5, -chime.height * 0.4);
+    ctx.lineTo(-chime.width * 0.5, chime.height * 0.4);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+function drawDial() {
+  ctx.save();
+  ctx.translate(CX, CY);
+  ctx.rotate(game.dialAngle * Math.PI / 180);
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(0, 0, 60, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(100, 160, 220, 0.4)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Fill ring
+  ctx.beginPath();
+  ctx.arc(0, 0, 60, 0, Math.PI * 2);
+  const dialGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 55);
+  dialGrad.addColorStop(0, 'rgba(40, 80, 130, 0.4)');
+  dialGrad.addColorStop(1, 'rgba(20, 50, 90, 0.2)');
+  ctx.fillStyle = dialGrad;
+  ctx.fill();
+
+  // Inner decorative lines
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * 45, Math.sin(angle) * 45);
+    ctx.lineTo(Math.cos(angle) * 55, Math.sin(angle) * 55);
+    ctx.strokeStyle = 'rgba(120, 180, 230, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Pointer - indicates direction of flow
+  ctx.beginPath();
+  ctx.moveTo(0, -60);
+  ctx.lineTo(-8, -50);
+  ctx.lineTo(8, -50);
+  ctx.closePath();
+  ctx.fillStyle = game.state === STATE.PLAY_INPUT ? '#5bc0eb' : 'rgba(100, 150, 200, 0.5)';
+  ctx.fill();
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(0, 0, 6, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(160, 200, 240, 0.8)';
+  ctx.fill();
+
+  // Arrow showing route direction
+  const arrowAngle = -Math.PI / 2 + Math.PI * game.progress / Math.max(game.target, 1);
+  const arrowLen = 50 + 20 * (game.progress / Math.max(game.target, 1));
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(Math.cos(arrowAngle) * arrowLen, Math.sin(arrowAngle) * arrowLen);
+  ctx.strokeStyle = `rgba(100, 220, 255, ${0.3 + 0.3 * (game.progress / Math.max(game.target, 1))})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawDrops() {
+  for (const drop of game.drops) {
+    ctx.save();
+    ctx.translate(drop.x, drop.y);
+
+    // Drop glow
+    ctx.beginPath();
+    const dropGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, drop.radius * 2);
+    dropGrad.addColorStop(0, 'rgba(140, 200, 255, 0.8)');
+    dropGrad.addColorStop(0.5, 'rgba(100, 170, 240, 0.3)');
+    dropGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = dropGrad;
+    ctx.arc(0, 0, drop.radius * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    ctx.beginPath();
+    ctx.arc(0, 0, drop.radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(180, 220, 255, 0.9)';
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+function drawParticles() {
+  for (const p of game.particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawHUD() {
+  // Progress bar
+  const barWidth = Math.min(300, W * 0.3);
+  const barX = CX - barWidth / 2;
+  const barY = H - 50;
+  const barHeight = 6;
+
+  ctx.fillStyle = 'rgba(30, 50, 80, 0.6)';
+  ctx.beginPath();
+  ctx.roundRect(barX, barY, barWidth, barHeight, 3);
+  ctx.fill();
+
+  const progress = game.target > 0 ? game.progress / game.target : 0;
+  const barGrad = ctx.createLinearGradient(barX, 0, barX + barWidth * progress, 0);
+  barGrad.addColorStop(0, 'rgba(80, 180, 240, 0.8)');
+  barGrad.addColorStop(1, 'rgba(140, 220, 255, 0.9)');
+  ctx.fillStyle = barGrad;
+  ctx.beginPath();
+  ctx.roundRect(barX, barY, barWidth * progress, barHeight, 3);
+  ctx.fill();
+
+  // Score
+  if (game.score > 0) {
+    ctx.fillStyle = 'rgba(180, 220, 255, 0.7)';
+    ctx.font = '14px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${game.score} pts`, CX, barY - 15);
+  }
+
+  // Combo
+  if (game.combo > 1 && game.state === STATE.PLAY_INPUT) {
+    ctx.fillStyle = `rgba(100, 255, 200, ${0.5 + 0.3 * Math.sin(game.time * 5)})`;
+    ctx.font = '12px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Combo x${game.combo}`, CX, barY + 30);
+  }
+}
+
+function drawPrompt() {
+  if (game.state === STATE.INITIAL) {
+    ctx.fillStyle = 'rgba(180, 210, 240, 0.9)';
+    ctx.font = 'italic 24px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('Rain Dial', CX, CY - 60);
+
+    ctx.fillStyle = 'rgba(140, 180, 220, 0.7)';
+    ctx.font = '16px Georgia';
+    ctx.fillText('Click anywhere to begin', CX, CY - 20);
+
+    ctx.fillStyle = 'rgba(120, 160, 200, 0.5)';
+    ctx.font = '14px Georgia';
+    ctx.fillText('Click around the dial to route rain into the chimes', CX, CY + 30);
+    ctx.fillText('Listen to the melody, then reproduce it', CX, CY + 55);
+
+    drawDial();
+    return;
+  }
+
+  if (game.state === STATE.SEQUENCE_PLAYING) {
+    ctx.fillStyle = 'rgba(140, 180, 220, 0.5)';
+    ctx.font = '14px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('Listen...', CX, CY + 100);
+    return;
+  }
+
+  if (game.state === STATE.PLAY_INPUT) {
+    const pulse = 0.7 + 0.3 * Math.sin(game.time * 3);
+    ctx.fillStyle = `rgba(100, 200, 255, ${pulse})`;
+    ctx.font = 'italic 18px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('Route the rain — click around the dial', CX, CY + 110);
+
+    const steps = game.targetSequence.length;
+    const remain = game.target - game.progress;
+    ctx.fillStyle = 'rgba(140, 180, 220, 0.6)';
+    ctx.font = '13px Georgia';
+    ctx.fillText(`${remain} of ${steps} drops to catch`, CX, CY + 130);
+    return;
+  }
+
+  if (game.state === STATE.WIN) {
+    const pulse = 0.8 + 0.2 * Math.sin(game.time * 2);
+    ctx.fillStyle = `rgba(180, 240, 255, ${pulse})`;
+    ctx.font = 'italic 28px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('✨ Melody Complete ✨', CX, CY - 80);
+
+    ctx.fillStyle = 'rgba(160, 210, 250, 0.8)';
+    ctx.font = '16px Georgia';
+    ctx.fillText(`Score: ${game.score}`, CX, CY - 40);
+    ctx.fillText(`Restart: ${game.restartCount}`, CX, CY - 15);
+
+    ctx.fillStyle = 'rgba(120, 180, 220, 0.6)';
+    ctx.font = '13px Georgia';
+    ctx.fillText('Press the play button to try again', CX, CY + 30);
+  }
+}
+
+// --- Main Loop ---
+function update(dt) {
+  const dtMs = dt;
+
+  game.time += dt / 1000;
+
+  // Dial physics
+  const dialDiff = game.dialTargetAngle - game.dialAngle;
+  game.dialVelocity += dialDiff * 0.05 * dtMs * 0.1;
+  game.dialVelocity *= 0.85; // damping
+  game.dialAngle += game.dialVelocity;
+  game.dialAngle = ((game.dialAngle % 360) + 360) % 360;
+
+  // Screen shake
+  if (game.screenShake > 0) {
+    game.screenShake *= 0.9;
+  }
+
+  updateRain(dtMs);
+  updateDrops(dtMs);
+  updateParticles(dtMs);
+  updateChimes(dtMs);
+}
+
+function draw() {
+  ctx.save();
+
+  // Screen shake
+  if (game.screenShake > 0) {
+    ctx.translate(
+      (Math.random() - 0.5) * game.screenShake,
+      (Math.random() - 0.5) * game.screenShake
+    );
+  }
+
+  drawBackground();
+  drawChimes();
+  drawDrops();
+  drawParticles();
+  drawDial();
+  drawHUD();
+  drawPrompt();
+
+  ctx.restore();
+}
+
+function gameLoop(timestamp) {
+  if (!game.lastTime) game.lastTime = timestamp;
+  const dt = Math.min(timestamp - game.lastTime, 50); // cap delta
+  game.lastTime = timestamp;
+
+  update(dt);
+  draw();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// --- Input ---
+canvas.addEventListener('click', (e) => {
+  if (game.state === STATE.INITIAL) {
+    startPlay();
+    return;
+  }
+
+  if (game.state !== STATE.PLAY_INPUT) return;
+
+  // Calculate angle from center to click
+  const dx = e.clientX - CX;
+  const dy = e.clientY - CY;
+  const angleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  // Route the dial
+  game.dialTargetAngle = angleDeg;
+  playTick();
+});
+
+restartBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  restart();
+});
+
+// Round rect polyfill
+if (!ctx.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = [r, r, r, r];
+    else if (!Array.isArray(r)) r = [0, 0, 0, 0];
+    this.moveTo(x + r[0], y);
+    this.lineTo(x + w - r[1], y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r[1]);
+    this.lineTo(x + w, y + h - r[2]);
+    this.quadraticCurveTo(x + w, y + h, x + w - r[2], y + h);
+    this.lineTo(x + r[3], y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r[3]);
+    this.lineTo(x, y + r[0]);
+    this.quadraticCurveTo(x, y, x + r[0], y);
+    this.closePath();
+    return this;
+  };
+}
+
+// --- Expose Evidence ---
+window.__factoryxEvidence = function() {
+  return {
+    schema_version: 1,
+    phase: game.phase,
+    progress: game.progress,
+    target: game.target,
+    completed: game.completed,
+    restart_count: game.restartCount,
+  };
+};
+
+// --- Start ---
+initRain();
+setupChimes();
+requestAnimationFrame(gameLoop);
+</script>
 </body>
 </html>
